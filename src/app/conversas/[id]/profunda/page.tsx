@@ -15,13 +15,52 @@ type RecItem = DeepAnalysisV2["recommendations"][number];
 
 type DeepState =
   | "IDLE"
-  | "CONFIRM_COST_DEEP"
   | "LOADING_DEEP"
   | "SUCCESS_DEEP"
   | "BLOCKED_DEEP_LIMIT"
   | "BLOCKED_INSUFFICIENT"
   | "UNAUTH"
   | "ERROR";
+
+const KEY_DEEP_PREFIX = "decoder.deep.v1.";
+const DEEP_INTENT_KEY_PREFIX = "decoder.deep.intent.v1.";
+
+function saveLastDeep(conversaId: string, payload: DeepAnalyzeSuccessV11) {
+  try {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(`${KEY_DEEP_PREFIX}${conversaId}`, JSON.stringify(payload));
+  } catch {
+    // silencioso
+  }
+}
+
+function loadLastDeep(conversaId: string): DeepAnalyzeSuccessV11 | null {
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem(`${KEY_DEEP_PREFIX}${conversaId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as DeepAnalyzeSuccessV11;
+    if (!parsed?.deep) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function consumeDeepIntent(conversaId: string): boolean {
+  try {
+    if (typeof window === "undefined") return false;
+    const k = `${DEEP_INTENT_KEY_PREFIX}${conversaId}`;
+    const v = sessionStorage.getItem(k);
+    if (v === "1") {
+      sessionStorage.removeItem(k);
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 export default function ProfundaPage() {
   const { id } = useParams<{ id: string }>();
@@ -35,10 +74,7 @@ export default function ProfundaPage() {
   const [payload, setPayload] = useState<DeepAnalyzeSuccessV11 | null>(null);
   const [deep, setDeep] = useState<DeepAnalysisV2 | null>(null);
 
-  const [limitPayload, setLimitPayload] = useState<{
-    cycleRef: string;
-  } | null>(null);
-
+  const [limitPayload, setLimitPayload] = useState<{ cycleRef: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const headerTitle = useMemo(() => "Leitura Profunda", []);
@@ -60,14 +96,17 @@ export default function ProfundaPage() {
     };
   }, []);
 
-  function openConfirm() {
-    if (loading) return;
-    setError(null);
-    setPayload(null);
-    setDeep(null);
-    setLimitPayload(null);
-    setState("CONFIRM_COST_DEEP");
-  }
+  // Ao abrir: mostra última DEEP persistida (se existir). Não executa nova sem intenção explícita.
+  useEffect(() => {
+    const last = loadLastDeep(id);
+    if (last) {
+      setPayload(last);
+      setDeep(last.deep);
+      setState("SUCCESS_DEEP");
+    } else {
+      setState("IDLE");
+    }
+  }, [id]);
 
   async function runDeep() {
     if (loading) return;
@@ -84,6 +123,8 @@ export default function ProfundaPage() {
       setPayload(data);
       setDeep(data.deep);
       setState("SUCCESS_DEEP");
+
+      saveLastDeep(id, data);
     } catch (e: unknown) {
       if (e instanceof ApiError) {
         if (e.status === 401) {
@@ -112,6 +153,14 @@ export default function ProfundaPage() {
       setLoading(false);
     }
   }
+
+  // ✅ Execução automática SOMENTE se houve intenção explícita do usuário (CTA)
+  useEffect(() => {
+    const intent = consumeDeepIntent(id);
+    if (!intent) return;
+    runDeep();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const isUnlimited = planContext?.isUnlimited === true;
 
@@ -149,73 +198,73 @@ export default function ProfundaPage() {
           </div>
 
           <div className="text-right space-y-1">
-            <div className="text-xs text-zinc-500">Confianca</div>
-            <div className="text-sm font-semibold text-zinc-200">
-              {confidence}/100
-            </div>
+            <div className="text-xs text-zinc-500">Confiança</div>
+            <div className="text-sm font-semibold text-zinc-200">{confidence}/100</div>
           </div>
         </div>
 
-        {/* ACTION (IDLE) */}
-        {state === "IDLE" && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button className="btn btn-primary" type="button" onClick={openConfirm}>
-              Iniciar análise profunda
-            </button>
-            <Link className="btn" href={`/conversas/${id}`}>
-              Voltar para esta conversa
-            </Link>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button className="btn btn-primary" type="button" onClick={runDeep} disabled={loading}>
+            Recalcular
+          </button>
+          <Link className="btn" href={`/conversas/${id}`}>
+            Voltar para esta conversa
+          </Link>
+        </div>
+
+        {/* saldo/limites pós-consumo (se vier payload) */}
+        {payload && (
+          <div className="mt-3 text-sm text-zinc-300">
+            {isUnlimited ? (
+              <>Plano ilimitado: créditos não são consumidos.</>
+            ) : (
+              <>
+                Consumiu{" "}
+                <span className="font-semibold text-zinc-50">{payload.creditsUsed}</span>{" "}
+                crédito(s). Saldo após:{" "}
+                <span className="font-semibold text-zinc-50">{payload.creditsBalanceAfter}</span>.{" "}
+                <span className="text-zinc-400">
+                  (DEEP mensal: {payload.deepMonthly.used}/{payload.deepMonthly.limit} • restante{" "}
+                  {payload.deepMonthly.remaining} • ciclo {payload.deepMonthly.cycleRef})
+                </span>
+              </>
+            )}
           </div>
         )}
       </div>
 
-      {/* CONFIRM MODAL */}
-      {state === "CONFIRM_COST_DEEP" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="card w-full max-w-lg p-5 space-y-4">
-            <div className="text-sm font-semibold">
-              Esta análise utilizará 1 análise profunda do seu plano e créditos do seu saldo.
-            </div>
-
-            <div className="flex flex-wrap gap-2 justify-end">
-              <button
-                type="button"
-                className="btn"
-                onClick={() => setState("IDLE")}
-                disabled={loading}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={runDeep}
-                disabled={loading}
-              >
-                Confirmar
-              </button>
-            </div>
+      {/* IDLE (estado vazio: sem DEEP persistida) */}
+      {state === "IDLE" && (
+        <div className="card p-5 space-y-2">
+          <div className="text-sm text-zinc-400">Nenhuma análise profunda ainda.</div>
+          <div className="flex flex-wrap gap-2">
+            <button className="btn btn-primary" type="button" onClick={runDeep} disabled={loading}>
+              Fazer Análise Profunda
+            </button>
+            <Link className="btn" href={`/conversas/${id}`}>
+              Voltar
+            </Link>
           </div>
         </div>
       )}
 
-      {/* LOADING (microcopy oficial) */}
+      {/* LOADING */}
       {state === "LOADING_DEEP" && (
         <div className="card p-5">
-          <div className="text-sm text-zinc-400">Executando análise profunda…</div>
+          <div className="text-sm text-zinc-400">Gerando análise profunda…</div>
         </div>
       )}
 
       {/* BLOCKED: INSUFFICIENT */}
       {state === "BLOCKED_INSUFFICIENT" && (
-        <div className="card p-5 space-y-3">
+        <div className="card p-5 space-y-2">
           <div className="text-sm font-semibold">Créditos insuficientes</div>
-          <div className="text-sm text-zinc-300">
-            Você não tem créditos suficientes para concluir esta análise.
+          <div className="text-sm text-zinc-400">
+            Você não tem saldo para concluir a análise profunda agora.
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2">
             <Link className="btn btn-primary" href="/account/credits">
-              Ver planos e créditos
+              Ver créditos
             </Link>
             <Link className="btn" href={`/conversas/${id}`}>
               Voltar
@@ -224,19 +273,19 @@ export default function ProfundaPage() {
         </div>
       )}
 
-      {/* BLOCKED: DEEP LIMIT (sem retry) */}
+      {/* BLOCKED: DEEP LIMIT */}
       {state === "BLOCKED_DEEP_LIMIT" && (
-        <div className="card p-5 space-y-3">
+        <div className="card p-5 space-y-2">
           <div className="text-sm font-semibold">Limite mensal atingido</div>
-          <div className="text-sm text-zinc-300">
-            Você já utilizou todas as análises profundas do seu plano neste ciclo.
+          <div className="text-sm text-zinc-400">
+            Você atingiu o limite mensal de análises profundas.
           </div>
-          <div className="text-sm text-zinc-300">
-            Renovação em {limitPayload?.cycleRef || "—"}.
-          </div>
-          <div className="flex flex-wrap gap-2">
+          {limitPayload?.cycleRef && (
+            <div className="text-xs text-zinc-500">Ciclo: {limitPayload.cycleRef}</div>
+          )}
+          <div className="flex gap-2">
             <Link className="btn btn-primary" href="/account/subscription">
-              Gerenciar plano
+              Ver plano
             </Link>
             <Link className="btn" href={`/conversas/${id}`}>
               Voltar
@@ -246,231 +295,162 @@ export default function ProfundaPage() {
       )}
 
       {/* ERROR */}
-      {state === "ERROR" && !loading && (
-        <div className="card p-5 space-y-3">
-          <div className="text-sm text-zinc-300">
-            Algo não saiu como esperado. Tente novamente em instantes.
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button className="btn btn-primary" type="button" onClick={openConfirm}>
+      {state === "ERROR" && (
+        <div className="card p-5 space-y-2">
+          <div className="text-sm font-semibold">Falha ao gerar análise</div>
+          <div className="text-sm text-zinc-400">{error ?? "Erro inesperado."}</div>
+          <div className="flex gap-2">
+            <button className="btn btn-primary" type="button" onClick={runDeep} disabled={loading}>
               Tentar novamente
             </button>
-            <Link className="btn" href="/conversas">
-              Voltar para lista de conversas
+            <Link className="btn" href={`/conversas/${id}`}>
+              Voltar
             </Link>
           </div>
         </div>
       )}
 
-      {/* SUCCESS (201) */}
-      {state === "SUCCESS_DEEP" && payload && deep && (
+      {/* SUCCESS */}
+      {state === "SUCCESS_DEEP" && deep && (
         <div className="space-y-4">
-          <div className="card p-5 space-y-2">
-            <div className="text-sm font-semibold">Análise profunda concluída</div>
-
-            {isUnlimited ? (
-              <div className="text-sm text-zinc-300">Plano ilimitado ativo</div>
-            ) : (
-              <div className="text-sm text-zinc-300 space-y-1">
-                <div>Créditos utilizados: {payload.creditsUsed}</div>
-                <div>Saldo atual: {payload.creditsBalanceAfter} créditos</div>
+          <div className="card p-5 space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <div className="text-sm font-semibold">Evolução do objetivo</div>
+                <div className="text-xs text-zinc-500">Comparação: anterior vs atual</div>
               </div>
-            )}
 
-            <div className="text-sm text-zinc-300">
-              Análises profundas restantes neste ciclo:{" "}
-              {payload.deepMonthly?.remaining ?? "—"}
+              <div className={`rounded-2xl border px-3 py-2 text-sm font-semibold ${deltaClass}`}>
+                Δ {deltaBadge}
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
+                <div className="text-xs text-zinc-500">Anterior</div>
+                <div className="text-lg font-semibold text-zinc-200">{scorePrev}</div>
+              </div>
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
+                <div className="text-xs text-zinc-500">Atual</div>
+                <div className="text-lg font-semibold text-zinc-200">{scoreCur}</div>
+              </div>
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
+                <div className="text-xs text-zinc-500">Status</div>
+                <div className="text-sm font-semibold text-zinc-200 mt-1">
+                  {deep.summary.statusLabel}
+                </div>
+                <div className="text-xs text-zinc-500 mt-1">{deep.summary.headline}</div>
+              </div>
             </div>
           </div>
 
-          {/* SCORE STRIP */}
-          <div className="card p-5 space-y-2">
-            <div className="mt-2 grid grid-cols-3 gap-3">
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
-                <div className="text-xs text-zinc-500">Score anterior</div>
-                <div className="text-xl font-semibold">{scorePrev}</div>
-              </div>
+          <div className="card p-5 space-y-3">
+            <div className="text-sm font-semibold">Eventos & impactos</div>
 
-              <div className={`rounded-2xl border p-4 ${deltaClass}`}>
-                <div className="text-xs opacity-80">Variacao</div>
-                <div className="text-xl font-semibold">{deltaBadge}</div>
-              </div>
+            <div className="space-y-2">
+              {deep.messageImpacts.map((it: ImpactItem, i: number) => {
+                const d = it.delta ?? 0;
+                const sign = d > 0 ? "+" : "";
+                return (
+                  <div
+                    key={`${it.eventLabel}-${i}`}
+                    className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-zinc-200 truncate">
+                          {it.eventLabel}
+                        </div>
+                        <div className="text-xs text-zinc-500 mt-1">{it.rationale}</div>
+                      </div>
 
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
-                <div className="text-xs text-zinc-500">Score atual</div>
-                <div className="text-xl font-semibold">{scoreCur}</div>
-              </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-sm font-semibold text-zinc-200">
+                          {sign}
+                          {d}
+                        </div>
+                        <div className="text-xs text-zinc-500">{it.direction}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {deep.messageImpacts.length === 0 && (
+                <div className="text-sm text-zinc-400">
+                  Ainda não há eventos suficientes para detalhar impacto.
+                </div>
+              )}
             </div>
-
-            {deep?.summary?.headline && (
-              <div className="mt-3 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
-                <div className="text-sm text-zinc-200 font-medium">
-                  {deep.summary.headline}
-                </div>
-                <div className="text-xs text-zinc-500 mt-1">
-                  Status: {deep.summary.statusLabel}
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* DASHBOARD */}
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* IMPACTO */}
-            <div className="card p-5 space-y-3 md:col-span-2">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-sm font-semibold">Impacto por evento</div>
-                  <div className="text-xs text-zinc-500">
-                    Quanto cada evento contribuiu para a variacao desta leitura.
+          <div className="card p-5 space-y-3">
+            <div className="text-sm font-semibold">Padrões detectados</div>
+
+            <div className="space-y-2">
+              {deep.patterns.map((p: PatternItem, i: number) => (
+                <div
+                  key={`${p.title}-${i}`}
+                  className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4"
+                >
+                  <div className="text-sm font-medium text-zinc-200">
+                    {p.type === "POSITIVE" ? "✅ " : "⚠️ "}
+                    {p.title}
                   </div>
+                  <div className="text-xs text-zinc-500 mt-1">{p.description}</div>
                 </div>
-                <div className="text-xs text-zinc-500">
-                  Eventos: {deep.snapshot.eventCount}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                {deep.messageImpacts.map((m: ImpactItem) => {
-                  const d = m.delta;
-                  const badge = d > 0 ? `+${d}` : d < 0 ? `${d}` : "0";
-
-                  const badgeClass =
-                    d > 0
-                      ? "bg-emerald-950/30 border-emerald-800/40 text-emerald-200"
-                      : d < 0
-                      ? "bg-red-950/30 border-red-800/40 text-red-200"
-                      : "bg-zinc-900/40 border-zinc-800 text-zinc-200";
-
-                  return (
-                    <div
-                      key={m.eventId}
-                      className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 space-y-2"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="text-sm font-medium text-zinc-200">
-                            {m.eventLabel}
-                          </div>
-                          <div className="text-xs text-zinc-500">{m.rationale}</div>
-                        </div>
-
-                        <div
-                          className={`shrink-0 rounded-xl border px-3 py-1 text-sm font-semibold ${badgeClass}`}
-                          title="Impacto deste evento na variacao"
-                        >
-                          {badge}
-                        </div>
-                      </div>
-
-                      <div className="h-2 w-full rounded-full bg-zinc-900 overflow-hidden">
-                        <div
-                          className="h-2 rounded-full bg-zinc-200"
-                          style={{
-                            width: `${Math.min(100, Math.max(8, Math.abs(d) * 12))}%`,
-                            opacity: d === 0 ? 0.3 : 0.9,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {deep.messageImpacts.length === 0 && (
-                  <div className="text-sm text-zinc-400">
-                    Ainda nao ha eventos suficientes para detalhar impacto.
-                  </div>
-                )}
-              </div>
+              ))}
             </div>
+          </div>
 
-            {/* PADROES */}
-            <div className="card p-5 space-y-3">
-              <div className="text-sm font-semibold">Padroes detectados</div>
+          <div className="card p-5 space-y-3">
+            <div className="text-sm font-semibold">Riscos & alertas</div>
 
-              <div className="space-y-2">
-                {deep.patterns.map((p: PatternItem, i: number) => (
+            <div className="space-y-2">
+              {deep.risks.map((r: RiskItem, i: number) => (
+                <div
+                  key={`${r.level}-${i}`}
+                  className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4"
+                >
+                  <div className="text-sm font-medium text-zinc-200">
+                    {r.level === "HIGH"
+                      ? "🔴 Alto"
+                      : r.level === "MEDIUM"
+                      ? "🟠 Médio"
+                      : "🟡 Baixo"}
+                  </div>
+                  <div className="text-xs text-zinc-500 mt-1">{r.description}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card p-5 space-y-3">
+            <div className="text-sm font-semibold">Próximos passos</div>
+
+            <div className="grid gap-2 md:grid-cols-2">
+              {deep.recommendations
+                .slice()
+                .sort((a: RecItem, b: RecItem) => a.priority - b.priority)
+                .map((rec: RecItem, i: number) => (
                   <div
-                    key={`${p.title}-${i}`}
+                    key={`${rec.priority}-${i}`}
                     className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4"
                   >
-                    <div className="text-sm font-medium text-zinc-200">
-                      {p.type === "POSITIVE" ? "✅ " : "⚠️ "}
-                      {p.title}
-                    </div>
-                    <div className="text-xs text-zinc-500 mt-1">{p.description}</div>
+                    <div className="text-xs text-zinc-500">Prioridade {rec.priority}</div>
+                    <div className="text-sm text-zinc-200 mt-1">{rec.text}</div>
                   </div>
                 ))}
-              </div>
             </div>
+          </div>
 
-            {/* RISCOS */}
-            <div className="card p-5 space-y-3">
-              <div className="text-sm font-semibold">Riscos & alertas</div>
-
-              <div className="space-y-2">
-                {deep.risks.map((r: RiskItem, i: number) => (
-                  <div
-                    key={`${r.level}-${i}`}
-                    className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4"
-                  >
-                    <div className="text-sm font-medium text-zinc-200">
-                      {r.level === "HIGH"
-                        ? "🔴 Alto"
-                        : r.level === "MEDIUM"
-                        ? "🟠 Medio"
-                        : "🟡 Baixo"}
-                    </div>
-                    <div className="text-xs text-zinc-500 mt-1">{r.description}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* RECOMENDACOES */}
-            <div className="card p-5 space-y-3 md:col-span-2">
-              <div className="text-sm font-semibold">Proximos passos</div>
-
-              <div className="grid gap-2 md:grid-cols-2">
-                {deep.recommendations
-                  .slice()
-                  .sort((a: RecItem, b: RecItem) => a.priority - b.priority)
-                  .map((rec: RecItem, i: number) => (
-                    <div
-                      key={`${rec.priority}-${i}`}
-                      className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4"
-                    >
-                      <div className="text-xs text-zinc-500">
-                        Prioridade {rec.priority}
-                      </div>
-                      <div className="text-sm text-zinc-200 mt-1">{rec.text}</div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-
-            {/* ACOES */}
-            <div className="card p-5 flex flex-wrap gap-2 md:col-span-2">
-              <button
-                className="btn btn-primary"
-                type="button"
-                onClick={() => router.push(`/conversas/${id}`)}
-              >
-                Voltar para esta conversa
-              </button>
-
-              <button
-                className="btn"
-                type="button"
-                onClick={() => router.push(`/conversas/${id}/analisar`)}
-              >
-                Fazer nova analise
-              </button>
-
-              <Link className="btn" href="/conversas">
-                Ver lista de conversas
-              </Link>
-            </div>
+          <div className="card p-5 flex flex-wrap gap-2">
+            <button className="btn btn-primary" type="button" onClick={runDeep} disabled={loading}>
+              Recalcular
+            </button>
+            <Link className="btn" href={`/conversas/${id}`}>
+              Voltar
+            </Link>
           </div>
         </div>
       )}

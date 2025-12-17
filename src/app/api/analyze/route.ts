@@ -1,107 +1,72 @@
-import { NextResponse } from "next/server";
+// src/app/api/analyze/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { routeOrMock } from "@/lib/backend/proxy";
 
-type RelationshipType = "ROMANTICA" | "AMIZADE" | "FAMILIA" | "TRABALHO";
-
-type QuickAnalyzeRequest = {
-  conversation: string;
-  relationshipType: RelationshipType;
-};
-
-type QuickAnalyzeResult = {
-  score: { value: number; label: string };
-  insights: Array<{ title: string; description: string }>;
-  redFlags: Array<{ title: string; description: string }>;
-  replySuggestion: string | null;
-  meta: {
-    messageCountApprox: number;
-    creditsUsed?: number;
-  };
-  // contrato UX v1.1 (quando aplicável)
-  creditsUsed?: number;
-  creditsBalanceAfter?: number;
-};
-
-type MockCode = "200" | "401" | "403" | "500";
+type MockCode = "200" | "401" | "403" | "429" | "500";
 
 function getMockCode(url: string): MockCode {
-  const u = new URL(url);
-  const m = (u.searchParams.get("mock") || "").trim();
-  if (m === "401" || m === "403" || m === "500") return m;
-  return "200";
+  const code = new URL(url).searchParams.get("code") as MockCode | null;
+  return code ?? "200";
 }
 
-function safeString(v: unknown) {
-  return typeof v === "string" ? v : "";
-}
+async function mockAnalyze(req: NextRequest): Promise<NextResponse> {
+  const code = getMockCode(req.url);
 
-function clamp(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
-}
+  // Importante: mock é dormente por padrão e NÃO pode interferir no fluxo real.
+  // Mantém a estrutura de respostas genéricas sem criar regra de crédito local.
+  if (code === "401") {
+    return NextResponse.json(
+      { error: { code: "UNAUTHORIZED", message: "Não autenticado." } },
+      { status: 401 }
+    );
+  }
 
-function simpleHash(s: string) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return h;
-}
+  if (code === "403") {
+    return NextResponse.json(
+      { error: { code: "FORBIDDEN", message: "Acesso negado." } },
+      { status: 403 }
+    );
+  }
 
-function buildMockQuick(body: QuickAnalyzeRequest): QuickAnalyzeResult {
-  const conv = safeString(body?.conversation);
-  const rel = safeString(body?.relationshipType);
+  if (code === "429") {
+    return NextResponse.json(
+      { error: { code: "RATE_LIMIT", message: "Muitas requisições." } },
+      { status: 429 }
+    );
+  }
 
-  const msgApprox = Math.max(1, Math.round(conv.replace(/\s+/g, "").length / 40));
+  if (code === "500") {
+    return NextResponse.json(
+      { error: { code: "INTERNAL", message: "Erro interno." } },
+      { status: 500 }
+    );
+  }
 
-  const h = simpleHash(conv + "|" + rel + "|" + String(Date.now()));
-  const scoreValue = clamp(h % 101, 0, 100);
-
-  const creditsUsed = clamp(Math.ceil(conv.length / 50), 1, 99);
-  const creditsBalanceAfter = 340;
-
-  return {
-    score: {
-      value: scoreValue,
-      label: scoreValue >= 70 ? "Forte" : scoreValue >= 40 ? "Boa" : "Fraca",
-    },
-    insights: [
-      { title: "Direção geral", description: "Leitura simulada (MOCK) para teste de UI." },
-      { title: "Risco principal", description: "Conteúdo simulado para validação do layout." },
-      { title: "Próximo passo", description: "Conteúdo simulado para validar renderização." },
-    ],
-    redFlags: [],
-    replySuggestion:
-      "Curti. Só pra alinhar: eu tô na mesma intenção, mas prefiro ir com calma e com clareza.",
-    meta: { messageCountApprox: msgApprox, creditsUsed },
-    creditsUsed,
-    creditsBalanceAfter,
-  };
-}
-
-function respondMock(mock: MockCode) {
-  if (mock === "401") return NextResponse.json({}, { status: 401 });
-  if (mock === "403") return NextResponse.json({ code: "INSUFFICIENT_CREDITS" }, { status: 403 });
-  if (mock === "500") return NextResponse.json({}, { status: 500 });
-  return null;
-}
-
-// ✅ GET só para você abrir no browser e validar o mock
-export async function GET(req: Request) {
-  const mock = getMockCode(req.url);
-  const mocked = respondMock(mock);
-  if (mocked) return mocked;
-
+  // 200 genérico (somente para desenvolvimento quando explicitamente ativado)
   return NextResponse.json(
     {
-      ok: true,
-      info: "GET de teste ativo. Para simular erros use ?mock=401|403|500. Para fluxo real a UI usa POST.",
+      result: {
+        score: 72,
+        label: "TENSÃO LEVE",
+        highlights: ["Mock ativo via ?mock=1"],
+      },
+      creditsUsed: 0,
+      creditsBalanceAfter: 0,
     },
-    { status: 200 },
+    { status: 200 }
   );
 }
 
-export async function POST(req: Request) {
-  const mock = getMockCode(req.url);
-  const mocked = respondMock(mock);
-  if (mocked) return mocked;
+export async function POST(req: NextRequest) {
+  return routeOrMock(req, () => mockAnalyze(req));
+}
 
-  const body = (await req.json().catch(() => ({}))) as QuickAnalyzeRequest;
-  return NextResponse.json(buildMockQuick(body), { status: 200 });
+// Se existir GET no seu front por algum motivo, mantenha proxy puro:
+export async function GET(req: NextRequest) {
+  return routeOrMock(req, () =>
+    NextResponse.json(
+      { error: { code: "MOCK_ONLY", message: "Ative ?mock=1 para mock." } },
+      { status: 400 }
+    )
+  );
 }

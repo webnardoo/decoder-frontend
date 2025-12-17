@@ -10,7 +10,6 @@ import {
   type QuickAnalyzeSuccess,
 } from "@/lib/analyze-client";
 import { ResultView } from "@/components/result-view";
-import { LoaderCard } from "@/components/loader-card";
 import { saveHistoryItem } from "@/lib/history";
 import { addConversaAnalysis, getConversa } from "@/lib/conversas";
 import {
@@ -28,7 +27,6 @@ type Banner = {
 
 type QuickState =
   | "IDLE"
-  | "CONFIRM_COST"
   | "LOADING"
   | "SUCCESS"
   | "BLOCKED_INSUFFICIENT"
@@ -66,7 +64,6 @@ export default function AnalyzeInConversationPage() {
         if (!alive) return;
         setPlanContext(ctx);
       } catch {
-        // fora do contrato: UI tratará como erro genérico quando necessário
         if (!alive) return;
         setPlanContext(null);
       }
@@ -88,7 +85,7 @@ export default function AnalyzeInConversationPage() {
 
   const helperText = `Regra mínima: ${MIN_NON_WHITESPACE_LENGTH} caracteres úteis (sem espaços).`;
 
-  function openConfirm() {
+  async function runQuick() {
     if (loading) return;
 
     setBanner(null);
@@ -96,6 +93,7 @@ export default function AnalyzeInConversationPage() {
 
     const c = getConversa(id);
     if (!c) {
+      setState("ERROR");
       setBanner({
         title: "Conversa não encontrada",
         reason: "Essa conversa não existe mais (ou foi removida).",
@@ -108,22 +106,14 @@ export default function AnalyzeInConversationPage() {
     if (!v.ok) {
       const msg = getConversationValidationMessage(v.code, v.stats);
       setBanner(msg);
+      setState("IDLE");
       return;
     }
 
-    setState("CONFIRM_COST");
-  }
-
-  async function runQuick() {
-    if (loading) return;
-
     setState("LOADING");
     setLoading(true);
-    setBanner(null);
-    setResult(null);
 
-    const v = validateConversationText(conversation);
-    const normalizedText = v.ok ? v.normalized : conversation;
+    const normalizedText = v.normalized;
 
     try {
       const data = await analyzeConversation({
@@ -257,7 +247,7 @@ export default function AnalyzeInConversationPage() {
           <button
             className={`btn btn-primary ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
             disabled={loading}
-            onClick={openConfirm}
+            onClick={runQuick}
           >
             Analisar
           </button>
@@ -272,40 +262,28 @@ export default function AnalyzeInConversationPage() {
         </div>
       </div>
 
-      {/* CONFIRM MODAL */}
-      {state === "CONFIRM_COST" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="card w-full max-w-lg p-5 space-y-4">
-            <div className="text-sm font-semibold">
-              Esta análise utilizará créditos do seu saldo.
-            </div>
-
-            <div className="flex flex-wrap gap-2 justify-end">
-              <button
-                type="button"
-                className="btn"
-                onClick={() => setState("IDLE")}
-                disabled={loading}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={runQuick}
-                disabled={loading}
-              >
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* LOADING (microcopy oficial) */}
       {state === "LOADING" && (
         <div className="card p-5">
           <div className="text-sm text-zinc-400">Analisando a conversa…</div>
+        </div>
+      )}
+
+      {/* BLOCKED */}
+      {state === "BLOCKED_INSUFFICIENT" && (
+        <div className="card p-5 space-y-2">
+          <div className="text-sm font-semibold">Créditos insuficientes</div>
+          <div className="text-sm text-zinc-400">
+            Você não tem saldo para concluir esta análise agora.
+          </div>
+          <div className="flex gap-2">
+            <button className="btn btn-primary" type="button" onClick={() => setState("IDLE")} disabled={loading}>
+              Voltar
+            </button>
+            <Link className="btn" href="/account/credits">
+              Ver créditos
+            </Link>
+          </div>
         </div>
       )}
 
@@ -317,53 +295,30 @@ export default function AnalyzeInConversationPage() {
 
             {/* Saldo/consumo (regra ilimitado) */}
             {isUnlimited ? (
-              <div className="text-sm text-zinc-300">Plano ilimitado ativo</div>
+              <div className="text-sm text-zinc-300">
+                Plano ilimitado: créditos não são consumidos.
+              </div>
             ) : (
-              <div className="text-sm text-zinc-300 space-y-1">
-                <div>Créditos utilizados: {result.creditsUsed}</div>
-                <div>Saldo atual: {result.creditsBalanceAfter} créditos</div>
+              <div className="text-sm text-zinc-300">
+                Consumiu <span className="font-semibold text-zinc-50">{result.creditsUsed}</span>{" "}
+                crédito(s). Saldo após:{" "}
+                <span className="font-semibold text-zinc-50">{result.creditsBalanceAfter}</span>.
               </div>
             )}
           </div>
 
           <ResultView result={result} />
-        </div>
-      )}
 
-      {/* BLOCKED: INSUFFICIENT */}
-      {state === "BLOCKED_INSUFFICIENT" && (
-        <div className="card p-5 space-y-3">
-          <div className="text-sm font-semibold">Créditos insuficientes</div>
-          <div className="text-sm text-zinc-300">
-            Você não tem créditos suficientes para concluir esta análise.
-          </div>
           <div className="flex flex-wrap gap-2">
-            <Link className="btn btn-primary" href="/account/credits">
-              Ver planos e créditos
-            </Link>
-            <Link className="btn" href={`/conversas/${id}`}>
-              Voltar
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* ERROR */}
-      {state === "ERROR" && !loading && (
-        <div className="card p-5 space-y-3">
-          <div className="text-sm text-zinc-300">
-            Algo não saiu como esperado. Tente novamente em instantes.
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button className="btn btn-primary" type="button" onClick={openConfirm}>
-              Tentar novamente
+            <button className="btn btn-primary" type="button" onClick={() => setState("IDLE")} disabled={loading}>
+              Fazer outra análise
             </button>
+            <Link className="btn" href={`/conversas/${id}`}>
+              Voltar para a conversa
+            </Link>
           </div>
         </div>
       )}
-
-      {/* mantém o LoaderCard existente, mas agora o loading oficial está acima */}
-      {loading && state !== "LOADING" && <LoaderCard />}
     </div>
   );
 }

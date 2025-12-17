@@ -11,6 +11,7 @@ import { saveHistoryItem } from "@/lib/history";
 import { addConversaAnalysis, listConversas } from "@/lib/conversas";
 import { validateConversationText } from "@/lib/validation/conversation";
 import { getConversationValidationMessage } from "@/lib/validation/conversationMessages";
+import { fetchCreditsBalance } from "@/lib/credits-balance";
 
 type AnalyzeResult = Awaited<ReturnType<typeof analyzeConversation>>;
 type Mode = "AVULSA" | "CONVERSA";
@@ -43,10 +44,31 @@ export default function HomePage() {
 
   const [conversas, setConversas] = useState<{ id: string; name: string }[]>([]);
 
+  // ✅ saldo visível na Home (FASE ORION)
+  const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
+
   useEffect(() => {
     const list = listConversas().map((c) => ({ id: c.id, name: c.name }));
     setConversas(list);
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+
+    fetchCreditsBalance()
+      .then((r) => {
+        if (!alive) return;
+        setCreditsBalance(r.balance);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setCreditsBalance(null);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [runId]);
 
   const chars = conversation.length;
   const inConversaMode = mode === "CONVERSA";
@@ -79,73 +101,59 @@ export default function HomePage() {
       return;
     }
 
-    const v = validateConversationText(conversation);
-    if (!v.ok) {
-      setBanner(getConversationValidationMessage(v.code, v.stats));
+    const validation = validateConversationText(conversation);
+    if (!validation.ok) {
+      const ux = getConversationValidationMessage(validation.code, validation.stats);
+      setBanner({ title: ux.title, reason: ux.reason, fix: ux.fix });
       return;
     }
 
-    // ✅ reset visual ANTES do request
-    setResult(null);
-    setRunId((id) => id + 1);
     setLoading(true);
-
-    // ✅ garante que o Loader seja pintado antes do fetch (evita “piscar”)
-    // e garante um loading mínimo para evidenciar execução (especialmente com mock local)
-    const startedAt = Date.now();
-    await sleep(40);
+    setResult(null);
 
     try {
-      const data = await analyzeConversation({
-        conversation: v.normalized,
+      // micro-delay só pra manter o LoaderCard perceptível (MVP)
+      await sleep(250);
+
+      const r = await analyzeConversation({
+        conversation,
         relationshipType,
       });
 
-      setResult(data);
+      setResult(r);
 
-      const scoreValue =
-        typeof data?.score?.value === "number" ? data.score.value : null;
-
-      const messageCountApprox =
-        typeof (data as any)?.meta?.messageCountApprox === "number"
-          ? (data as any).meta.messageCountApprox
-          : Math.max(1, Math.round(v.normalized.length / 40));
-
-      const creditsUsed =
-        typeof (data as any)?.creditsUsed === "number"
-          ? (data as any).creditsUsed
-          : null;
-
+      // histórico global (AVULSA)
       saveHistoryItem({
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
         relationshipType,
-        messageCountApprox,
-        score: scoreValue,
+        messageCountApprox: r.meta?.messageCountApprox ?? 1,
+        score: r.score?.value ?? null,
         containerId: inConversaMode ? conversaId : null,
-        creditsUsed,
+        creditsUsed: typeof (r as any)?.creditsUsed === "number" ? (r as any).creditsUsed : null,
       });
 
+      // histórico da conversa (CONVERSA)
       if (inConversaMode && conversaId) {
         addConversaAnalysis({
           conversaId,
-          score: scoreValue,
-          label: (data as any)?.score?.label ?? null,
-          messageCountApprox,
-          creditsUsed,
+          score: r.score?.value ?? null,
+          label: r.score?.label ?? null,
+          messageCountApprox: r.meta?.messageCountApprox ?? 1,
+          creditsUsed: typeof (r as any)?.creditsUsed === "number" ? (r as any).creditsUsed : null,
         });
       }
-    } catch (e: unknown) {
-      const msg =
-        e instanceof Error ? e.message : "Falha ao analisar. Tente novamente.";
-      setError(msg);
+
+      // força refetch do saldo
+      setRunId((x) => x + 1);
+    } catch (e: any) {
+      setError("Algo não saiu como esperado. Tente novamente em instantes.");
+      setBanner({
+        title: "Falha ao analisar",
+        reason: "Algo não saiu como esperado. Tente novamente em instantes.",
+        fix: "Tente novamente. Se persistir, revise o texto e a conexão.",
+      });
     } finally {
-      // ✅ loading mínimo para não “piscar” com mock
-      const elapsed = Date.now() - startedAt;
-      const minLoadingMs = 350;
-      if (elapsed < minLoadingMs) {
-        await sleep(minLoadingMs - elapsed);
-      }
       setLoading(false);
     }
   }
@@ -154,21 +162,40 @@ export default function HomePage() {
     if (loading) return;
     setConversation("");
     setResult(null);
-    setError(null);
     setBanner(null);
+    setError(null);
   }
 
   return (
     <div className="space-y-6">
-      <section className="card p-5 space-y-4">
-        <div className="space-y-1">
-          <div className="text-lg font-semibold tracking-tight">
-            Análise rápida, clara e confortável
+      {/* SALDO DESTACADO (ORION) */}
+      <div className="card p-5 flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <div className="text-xs text-zinc-500">Saldo de créditos</div>
+          <div className="text-lg font-semibold tabular-nums truncate">
+            {creditsBalance == null ? "—" : creditsBalance}
           </div>
-          <div className="text-sm text-zinc-400">
-            Você pode analisar avulso ou acompanhar evolução dentro de uma{" "}
-            <span className="text-zinc-200 font-medium">Conversa</span>.
+          <div className="text-xs text-zinc-500 mt-1">
+            Análises consomem créditos automaticamente.
           </div>
+        </div>
+
+        <div className="shrink-0 flex gap-2">
+          <Link className="btn btn-primary" href="/account/credits">
+            Ver créditos
+          </Link>
+          <Link className="btn" href="/conversas">
+            Conversas
+          </Link>
+        </div>
+      </div>
+
+      {/* HEADER */}
+      <div className="card p-5 space-y-2">
+        <div className="text-sm font-semibold">HINT</div>
+        <div className="text-sm text-zinc-400">
+          Você pode analisar avulso ou acompanhar evolução dentro de uma{" "}
+          <span className="text-zinc-200 font-medium">Conversa</span>.
         </div>
 
         <div className="space-y-2">
@@ -220,7 +247,7 @@ export default function HomePage() {
 
           <textarea
             className="min-h-[180px] w-full rounded-2xl border border-zinc-800 bg-zinc-950/40 p-3 text-sm text-zinc-200 outline-none"
-            placeholder="Cole aqui a conversa..."
+            placeholder="Cole aqui a conversa."
             value={conversation}
             onChange={(e) => setConversation(e.target.value)}
             disabled={loading}
@@ -234,9 +261,7 @@ export default function HomePage() {
               <button
                 key={opt.value}
                 type="button"
-                className={`btn ${
-                  relationshipType === opt.value ? "btn-primary" : ""
-                }`}
+                className={`btn ${relationshipType === opt.value ? "btn-primary" : ""}`}
                 onClick={() => setRelationshipType(opt.value)}
                 disabled={loading}
               >
@@ -246,51 +271,44 @@ export default function HomePage() {
           </div>
         </div>
 
+        {banner && (
+          <div className="rounded-xl border border-yellow-700/30 bg-yellow-950/20 p-3 text-sm text-yellow-100/90 space-y-1">
+            <div className="font-medium">{banner.title}</div>
+            <div className="text-yellow-100/80">{banner.reason}</div>
+            <div className="text-yellow-100/90">{banner.fix}</div>
+          </div>
+        )}
+
+        {error && !banner && (
+          <div className="rounded-xl border border-red-700/30 bg-red-950/20 p-3 text-sm text-red-100/90">
+            {error}
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-2">
           <button
-            className={`btn btn-primary ${
-              !canClickAnalyze ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+            className={`btn btn-primary ${!canClickAnalyze ? "opacity-50 cursor-not-allowed" : ""}`}
             disabled={!canClickAnalyze}
             onClick={onAnalyze}
           >
             {loading ? "Analisando…" : "Analisar"}
           </button>
 
-          <button
-            className={`btn ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
-            type="button"
-            onClick={onClear}
-            disabled={loading}
-          >
+          <button className="btn" onClick={onClear} disabled={loading}>
             Limpar
           </button>
-
-          <Link className="btn" href="/conversas">
-            Ir para Conversas
-          </Link>
         </div>
+      </div>
 
-        {banner && (
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 space-y-1">
-            <div className="text-sm font-medium text-zinc-200">{banner.title}</div>
-            <div className="text-sm text-zinc-400">{banner.reason}</div>
-            <div className="text-sm text-zinc-300">{banner.fix}</div>
-          </div>
-        )}
-
-        {error && (
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 text-sm text-zinc-300">
-            {error}
-          </div>
-        )}
-      </section>
-
-      {/* ✅ LOADING dominante (agora sempre perceptível) */}
+      {/* LOADING */}
       {loading && <LoaderCard />}
 
-      {/* ✅ SUCCESS “novo” a cada execução */}
-      {!loading && result && <ResultView key={runId} result={result} />}
+      {/* RESULT */}
+      {result && !loading && (
+        <div className="space-y-4">
+          <ResultView result={result} />
+        </div>
+      )}
     </div>
   );
 }
