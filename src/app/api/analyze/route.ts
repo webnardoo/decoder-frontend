@@ -1,72 +1,105 @@
-// src/app/api/analyze/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { routeOrMock } from "@/lib/backend/proxy";
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
-type MockCode = "200" | "401" | "403" | "429" | "500";
+type QuickMode = "RESUMO" | "RESPONDER" | "resumo" | "responder";
 
-function getMockCode(url: string): MockCode {
-  const code = new URL(url).searchParams.get("code") as MockCode | null;
-  return code ?? "200";
+type AnalyzeRequestBody = {
+  text?: string;
+  relationshipType?: string;
+  quickMode?: QuickMode;
+};
+
+function getBackendBaseUrl() {
+  return (
+    process.env.DECODER_BACKEND_BASE_URL ||
+    process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL ||
+    "http://localhost:4100"
+  );
 }
 
-async function mockAnalyze(req: NextRequest): Promise<NextResponse> {
-  const code = getMockCode(req.url);
+function normalizeQuickMode(mode?: QuickMode) {
+  if (typeof mode !== "string") return "resumo";
+  const v = mode.trim().toLowerCase();
+  return v === "responder" ? "responder" : "resumo";
+}
 
-  // Importante: mock é dormente por padrão e NÃO pode interferir no fluxo real.
-  // Mantém a estrutura de respostas genéricas sem criar regra de crédito local.
-  if (code === "401") {
-    return NextResponse.json(
-      { error: { code: "UNAUTHORIZED", message: "Não autenticado." } },
-      { status: 401 }
-    );
+function extractJwtFromCookieValue(v: string) {
+  // cookie já pode ser o JWT puro
+  const raw = (v || "").trim();
+  if (!raw) return "";
+
+  // se vier como "Bearer xxx"
+  if (raw.toLowerCase().startsWith("bearer ")) return raw.slice(7).trim();
+
+  // se vier como "token=xxx" ou algo parecido
+  const eq = raw.indexOf("=");
+  if (eq > -1 && raw.slice(0, eq).toLowerCase().includes("token")) {
+    return raw.slice(eq + 1).trim();
   }
 
-  if (code === "403") {
-    return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "Acesso negado." } },
-      { status: 403 }
-    );
-  }
+  return raw;
+}
 
-  if (code === "429") {
-    return NextResponse.json(
-      { error: { code: "RATE_LIMIT", message: "Muitas requisições." } },
-      { status: 429 }
-    );
-  }
+export async function POST(req: Request) {
+  try {
+    const body = (await req.json()) as AnalyzeRequestBody;
 
-  if (code === "500") {
+    const text = String(body?.text ?? "").trim();
+    const relationshipType = String(body?.relationshipType ?? "").trim();
+    const quickMode = normalizeQuickMode(body?.quickMode);
+
+    if (!text) {
+      return NextResponse.json(
+        { error: "Payload inválido: text é obrigatório." },
+        { status: 400 }
+      );
+    }
+
+    if (!relationshipType) {
+      return NextResponse.json(
+        { error: "Payload inválido: relationshipType é obrigatório." },
+        { status: 400 }
+      );
+    }
+
+    // Next (versões novas) -> cookies() é async
+    const cookieStore = await cookies();
+
+    // ✅ FIX: o login seta decoder_auth (print do Set-Cookie)
+    const token =
+      extractJwtFromCookieValue(cookieStore.get("decoder_auth")?.value || "") ||
+      extractJwtFromCookieValue(cookieStore.get("token")?.value || "") ||
+      extractJwtFromCookieValue(cookieStore.get("accessToken")?.value || "") ||
+      extractJwtFromCookieValue(cookieStore.get("jwt")?.value || "");
+
+    if (!token) {
+      return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    }
+
+    const backendBaseUrl = getBackendBaseUrl();
+
+    const upstream = await fetch(`${backendBaseUrl}/api/v1/quick-analysis`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        conversation: text,
+        relationshipType,
+        quickMode, // "resumo" | "responder"
+      }),
+    });
+
+    const contentType = upstream.headers.get("content-type") || "";
+    const isJson = contentType.includes("application/json");
+    const data = isJson ? await upstream.json() : await upstream.text();
+
+    return NextResponse.json(data, { status: upstream.status });
+  } catch {
     return NextResponse.json(
-      { error: { code: "INTERNAL", message: "Erro interno." } },
+      { error: "Falha ao processar requisição." },
       { status: 500 }
     );
   }
-
-  // 200 genérico (somente para desenvolvimento quando explicitamente ativado)
-  return NextResponse.json(
-    {
-      result: {
-        score: 72,
-        label: "TENSÃO LEVE",
-        highlights: ["Mock ativo via ?mock=1"],
-      },
-      creditsUsed: 0,
-      creditsBalanceAfter: 0,
-    },
-    { status: 200 }
-  );
-}
-
-export async function POST(req: NextRequest) {
-  return routeOrMock(req, () => mockAnalyze(req));
-}
-
-// Se existir GET no seu front por algum motivo, mantenha proxy puro:
-export async function GET(req: NextRequest) {
-  return routeOrMock(req, () =>
-    NextResponse.json(
-      { error: { code: "MOCK_ONLY", message: "Ative ?mock=1 para mock." } },
-      { status: 400 }
-    )
-  );
 }

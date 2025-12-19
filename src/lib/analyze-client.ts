@@ -1,106 +1,85 @@
 import type { RelationshipType } from "@/lib/relationships";
+import type { QuickAnalysisResponseV11 } from "@/components/result-view";
 
-export type QuickAnalyzeRequest = {
-  conversation: string;
+export type { RelationshipType };
+export type { QuickAnalysisResponseV11 };
+
+export type QuickMode = "RESUMO" | "RESPONDER";
+
+export type AnalyzeConversationInput = {
+  text: string;
   relationshipType: RelationshipType;
+  quickMode?: QuickMode; // default RESUMO
 };
 
-export type QuickAnalyzeSuccess = {
-  // resultado funcional do QUICK (mantém o que você já usa)
-  score: { value: number; label: string };
-  insights: Array<{ title: string; description: string }>;
-  redFlags: Array<{ title: string; description: string }>;
-  replySuggestion: string | null;
-  meta: {
-    messageCountApprox: number;
-  };
-
-  // contrato v1.1 (pós-consumo)
-  creditsUsed: number;
-  creditsBalanceAfter: number;
-};
-
-export type ApiErrorCode = "INSUFFICIENT_CREDITS" | "DEEP_MONTHLY_LIMIT_REACHED";
-
-export class ApiError extends Error {
-  status: number;
-  code?: ApiErrorCode;
+export type ApiError = {
+  code: string;
+  message: string;
+  status?: number;
   payload?: any;
+};
 
-  constructor(args: { status: number; message: string; code?: ApiErrorCode; payload?: any }) {
-    super(args.message);
-    this.name = "ApiError";
-    this.status = args.status;
-    this.code = args.code;
-    this.payload = args.payload;
-  }
+export function apiError(code: string, message: string, status?: number, payload?: any): ApiError {
+  return { code, message, status, payload };
 }
 
-async function safeJson(res: Response): Promise<any | null> {
+function normalizeMessage(payload: any, status: number) {
+  return (
+    payload?.message ??
+    payload?.payload?.message ??
+    payload?.error?.message ??
+    payload?.error ??
+    `Falha ao analisar. Status ${status}`
+  );
+}
+
+export async function analyzeConversation(input: AnalyzeConversationInput) {
   try {
-    return await res.json();
-  } catch {
-    return null;
-  }
-}
+    const res = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: input.text,
+        relationshipType: input.relationshipType,
+        quickMode: input.quickMode ?? "RESUMO",
+      }),
+      cache: "no-store",
+    });
 
-/**
- * Lê `mock` da URL atual (ex: /?mock=403) e repassa para a API route.
- * Importante: só roda no browser.
- */
-function getMockQueryFromBrowser(): string {
-  try {
-    if (typeof window === "undefined") return "";
-    const v = new URLSearchParams(window.location.search).get("mock");
-    if (!v) return "";
-    return `?mock=${encodeURIComponent(v)}`;
-  } catch {
-    return "";
-  }
-}
+    const contentType = res.headers.get("content-type") || "";
+    const isJson = contentType.includes("application/json");
+    const payload = isJson ? await res.json().catch(() => null) : await res.text();
 
-export async function analyzeConversation(
-  input: QuickAnalyzeRequest,
-): Promise<QuickAnalyzeSuccess> {
-  const mockQs = getMockQueryFromBrowser();
+    if (!res.ok) {
+      const msg = normalizeMessage(payload, res.status);
 
-  const res = await fetch(`/api/analyze${mockQs}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-    cache: "no-store",
-  });
+      if (
+        res.status === 403 &&
+        typeof msg === "string" &&
+        msg.toLowerCase().includes("créditos insuficientes")
+      ) {
+        return apiError("INSUFFICIENT_CREDITS", "Créditos insuficientes.", 403, payload);
+      }
 
-  if (res.ok) {
-    return (await res.json()) as QuickAnalyzeSuccess;
-  }
+      if (res.status === 401) {
+        return apiError("UNAUTHORIZED", String(msg), 401, payload);
+      }
 
-  // contrato: status + payload.code
-  const data = await safeJson(res);
-  const code = typeof data?.code === "string" ? (data.code as ApiErrorCode) : undefined;
+      if (res.status === 429) {
+        return apiError("RATE_LIMIT", String(msg), 429, payload);
+      }
 
-  if (res.status === 401) {
-    throw new ApiError({
-      status: 401,
-      message: "Não autenticado.",
-      payload: data,
+      if (res.status >= 500) {
+        return apiError("SERVER_ERROR", String(msg), res.status, payload);
+      }
+
+      return apiError("ANALYZE_FAILED", String(msg), res.status, payload);
+    }
+
+    return payload as QuickAnalysisResponseV11;
+  } catch (e: any) {
+    return apiError("ANALYZE_NETWORK_ERROR", "Não foi possível conectar ao servidor.", 0, {
+      detail: e?.message ?? String(e),
     });
   }
-
-  if (res.status === 403 && code === "INSUFFICIENT_CREDITS") {
-    throw new ApiError({
-      status: 403,
-      code,
-      message: "Créditos insuficientes.",
-      payload: data,
-    });
-  }
-
-  // QUICK não usa 429 por contrato, mas fallback geral existe
-  throw new ApiError({
-    status: res.status,
-    code,
-    message: "Algo não saiu como esperado. Tente novamente em instantes.",
-    payload: data,
-  });
 }

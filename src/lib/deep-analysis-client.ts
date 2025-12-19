@@ -1,93 +1,109 @@
-import type { DeepAnalysisV2 } from "@/lib/deep-analysis-contract";
-import { ApiError, type ApiErrorCode } from "@/lib/analyze-client";
+import { apiError, ApiError } from "./analyze-client";
 
-export type DeepMonthly = {
-  limit: number;
-  used: number;
-  remaining: number;
-  cycleRef: string; // YYYY-MM
-};
-
+/**
+ * Shape usado na UI (conversa/[id]/page.tsx):
+ * - deep: análise profunda (DeepAnalysisV2)
+ * - creditsUsed / creditsBalanceAfter
+ * - deepMonthly: { limit, used, remaining, cycleRef }
+ */
 export type DeepAnalyzeSuccessV11 = {
-  deep: DeepAnalysisV2;
-
+  deep: any;
   creditsUsed: number;
   creditsBalanceAfter: number;
-
-  deepMonthly: DeepMonthly;
+  deepMonthly: {
+    limit: number;
+    used: number;
+    remaining: number;
+    cycleRef: string;
+  };
 };
 
-async function safeJson(res: Response): Promise<any | null> {
-  try {
-    return await res.json();
-  } catch {
-    return null;
-  }
-}
-
 /**
- * Lê `mock` da URL atual (ex: /conversas/ID/analisar?mock=429) e repassa para a API route.
- * Importante: só roda no browser.
+ * Contract: chama API Route do Next que faz proxy pro backend real.
+ * Observação: esta rota precisa existir no Front:
+ *   POST /api/conversas/[id]/deep
  */
-function getMockQueryFromBrowser(): string {
-  try {
-    if (typeof window === "undefined") return "";
-    const v = new URLSearchParams(window.location.search).get("mock");
-    if (!v) return "";
-    return `?mock=${encodeURIComponent(v)}`;
-  } catch {
-    return "";
-  }
-}
-
-/**
- * DEEP (Contrato UX v1.1)
- * POST /api/conversas/:id/deep-analysis (API route do front)
- * -> deve refletir o backend v1.3+ e devolver shape v1.1
- */
-export async function fetchDeepAnalysis(conversaId: string): Promise<DeepAnalyzeSuccessV11> {
-  const mockQs = getMockQueryFromBrowser();
-
-  const res = await fetch(`/api/conversas/${conversaId}/deep-analysis${mockQs}`, {
+export async function fetchDeepAnalysis(
+  conversationId: string
+): Promise<DeepAnalyzeSuccessV11> {
+  const res = await fetch(`/api/conversas/${conversationId}/deep`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ mode: "AUTO", forceRecompute: false }),
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
     cache: "no-store",
   });
 
-  if (res.ok) {
-    return (await res.json()) as DeepAnalyzeSuccessV11;
+  const contentType = res.headers.get("content-type") || "";
+  const isJson = contentType.includes("application/json");
+  const payload = isJson ? await res.json() : await res.text();
+
+  if (!res.ok) {
+    // Padroniza em ApiError e joga no catch da UI
+    const backendCode = (payload as any)?.code as any;
+
+    if (res.status === 401) {
+      throw apiError("UNAUTHORIZED", "Não autorizado.", 401, payload);
+    }
+
+    if (res.status === 403) {
+      // pode ser créditos insuficientes
+      if (backendCode === "INSUFFICIENT_CREDITS") {
+        throw apiError(
+          "INSUFFICIENT_CREDITS",
+          "Créditos insuficientes.",
+          403,
+          payload
+        );
+      }
+      throw apiError("FORBIDDEN", "Acesso negado.", 403, payload);
+    }
+
+    if (res.status === 429) {
+      // limite mensal DEEP
+      if (backendCode === "DEEP_MONTHLY_LIMIT_REACHED") {
+        throw apiError(
+          "DEEP_MONTHLY_LIMIT_REACHED",
+          "Limite mensal de análises profundas atingido.",
+          429,
+          payload
+        );
+      }
+      throw apiError("RATE_LIMITED", "Muitas requisições.", 429, payload);
+    }
+
+    throw apiError(
+      "BACKEND_ERROR",
+      "Falha ao executar análise profunda.",
+      res.status,
+      payload
+    );
   }
 
-  const data = await safeJson(res);
-  const code = typeof data?.code === "string" ? (data.code as ApiErrorCode) : undefined;
+  return payload as DeepAnalyzeSuccessV11;
+}
 
-  if (res.status === 401) {
-    throw new ApiError({ status: 401, message: "Não autenticado.", payload: data });
+/**
+ * Compat: mantém o nome antigo usado em outras telas que eu mesmo introduzi.
+ * Retorna ApiError no union (não lança).
+ */
+type DeepSuccess = { data: DeepAnalyzeSuccessV11 };
+
+export async function runDeepAnalysis(
+  conversationId: string
+): Promise<DeepSuccess | ApiError> {
+  try {
+    const data = await fetchDeepAnalysis(conversationId);
+    return { data };
+  } catch (e: any) {
+    // fetchDeepAnalysis lança ApiError via apiError(...)
+    if (e && typeof e === "object" && typeof e.code === "string") {
+      return e as ApiError;
+    }
+
+    return apiError(
+      "INTERNAL_ERROR",
+      "Erro inesperado ao executar análise profunda.",
+      500,
+      e?.message ?? String(e)
+    );
   }
-
-  if (res.status === 403 && code === "INSUFFICIENT_CREDITS") {
-    throw new ApiError({
-      status: 403,
-      code,
-      message: "Créditos insuficientes.",
-      payload: data,
-    });
-  }
-
-  if (res.status === 429 && code === "DEEP_MONTHLY_LIMIT_REACHED") {
-    throw new ApiError({
-      status: 429,
-      code,
-      message: "Limite mensal atingido.",
-      payload: data,
-    });
-  }
-
-  throw new ApiError({
-    status: res.status,
-    code,
-    message: "Algo não saiu como esperado. Tente novamente em instantes.",
-    payload: data,
-  });
 }

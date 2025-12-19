@@ -1,72 +1,84 @@
-// src/app/api/conversas/[id]/deep-analysis/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { routeOrMock } from "@/lib/backend/proxy";
 
-type MockCode = "201" | "401" | "403" | "429" | "500";
+const BACKEND_BASE_URL = process.env.DECODER_BACKEND_BASE_URL ?? "http://127.0.0.1:4100";
 
-function getMockCode(url: string): MockCode {
-  const code = new URL(url).searchParams.get("code") as MockCode | null;
-  return code ?? "201";
-}
+/**
+ * POST /api/conversas/:id/deep-analysis
+ * Repassa para: POST http://127.0.0.1:4100/api/v1/boxes/:id/deep-analyses
+ */
+export async function POST(
+  req: NextRequest,
+  ctx: { params: Promise<{ id: string }> } | { params: { id: string } },
+) {
+  try {
+    const { id } =
+      "then" in (ctx as any).params
+        ? await (ctx as any).params
+        : (ctx as any).params;
 
-async function mockDeep(req: NextRequest): Promise<NextResponse> {
-  const code = getMockCode(req.url);
+    const auth = req.headers.get("authorization") ?? req.headers.get("Authorization");
+    if (!auth) {
+      return NextResponse.json(
+        { code: "UNAUTHORIZED", message: "Não autenticado." },
+        { status: 401 },
+      );
+    }
 
-  if (code === "401") {
-    return NextResponse.json(
-      { error: { code: "UNAUTHORIZED", message: "Não autenticado." } },
-      { status: 401 }
-    );
-  }
+    // Mantém suporte a mock via querystring (ex.: ?mock=1) — se você quiser desligar, remova este bloco.
+    const mock = req.nextUrl.searchParams.get("mock");
+    if (mock) {
+      // mock=1 => 201 (sucesso fake mínimo)
+      if (mock === "1" || mock === "201") {
+        return NextResponse.json(
+          {
+            deep: {
+              source: "MOCK",
+              score: { previous: 0, current: 0, delta: 0 },
+              summary: { statusLabel: "Mock", headline: "Resposta mock.", confidenceLevel: 0 },
+              messageImpacts: [],
+              patterns: [],
+              risks: [],
+              recommendations: [],
+            },
+            creditsUsed: 0,
+            creditsBalanceAfter: 0,
+            deepMonthly: { limit: 0, used: 0, remaining: 0, cycleRef: "0000-00" },
+          },
+          { status: 201 },
+        );
+      }
 
-  if (code === "403") {
-    return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "Acesso negado." } },
-      { status: 403 }
-    );
-  }
+      // mock=401/403/429 etc.
+      const s = Number(mock);
+      if (!Number.isNaN(s) && s >= 400) {
+        return NextResponse.json(
+          { code: "MOCK_ERROR", message: "Erro mock.", statusCode: s },
+          { status: s },
+        );
+      }
+    }
 
-  if (code === "429") {
-    return NextResponse.json(
-      { error: { code: "RATE_LIMIT", message: "Muitas requisições." } },
-      { status: 429 }
-    );
-  }
+    const body = await req.json().catch(() => ({}));
 
-  if (code === "500") {
-    return NextResponse.json(
-      { error: { code: "INTERNAL", message: "Erro interno." } },
-      { status: 500 }
-    );
-  }
-
-  // 201 genérico (somente para desenvolvimento quando explicitamente ativado)
-  return NextResponse.json(
-    {
-      deepAnalysis: {
-        id: "mock-deep-1",
-        createdAt: new Date().toISOString(),
-        snapshotVersion: "v1.1",
-        // snapshot mínimo, sem inventar regra:
-        summary: "Mock ativo via ?mock=1",
+    const upstream = await fetch(`${BACKEND_BASE_URL}/api/v1/boxes/${encodeURIComponent(id)}/deep-analyses`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: auth,
       },
-      creditsUsed: 0,
-      creditsBalanceAfter: 0,
-      deepMonthly: { limit: 0, used: 0, remaining: 0 },
-    },
-    { status: 201 }
-  );
-}
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
 
-export async function POST(req: NextRequest) {
-  return routeOrMock(req, () => mockDeep(req));
-}
-
-export async function GET(req: NextRequest) {
-  return routeOrMock(req, () =>
-    NextResponse.json(
-      { error: { code: "MOCK_ONLY", message: "Ative ?mock=1 para mock." } },
-      { status: 400 }
-    )
-  );
+    const text = await upstream.text();
+    return new NextResponse(text, {
+      status: upstream.status,
+      headers: { "Content-Type": upstream.headers.get("Content-Type") ?? "application/json" },
+    });
+  } catch (e: any) {
+    return NextResponse.json(
+      { code: "UNKNOWN", message: "Falha ao chamar o backend.", detail: String(e?.message ?? e) },
+      { status: 500 },
+    );
+  }
 }

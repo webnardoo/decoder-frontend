@@ -12,9 +12,12 @@ import {
 } from "@/lib/conversas";
 import { getStateLabel } from "@/lib/objectives";
 
-import { fetchDeepAnalysis, type DeepAnalyzeSuccessV11 } from "@/lib/deep-analysis-client";
+import {
+  fetchDeepAnalysis,
+  type DeepAnalyzeSuccessV11,
+} from "@/lib/deep-analysis-client";
 import type { DeepAnalysisV2 } from "@/lib/deep-analysis-contract";
-import { ApiError } from "@/lib/analyze-client";
+import type { ApiError } from "@/lib/analyze-client";
 import { fetchPlanContext, type PlanContext } from "@/lib/subscriptions-context";
 
 const MIN_ANALYSES_FOR_DEEP = 5;
@@ -26,7 +29,10 @@ const KEY_DEEP_PREFIX = "decoder.deep.v1.";
 function saveLastDeep(conversaId: string, payload: DeepAnalyzeSuccessV11) {
   try {
     if (typeof window === "undefined") return;
-    localStorage.setItem(`${KEY_DEEP_PREFIX}${conversaId}`, JSON.stringify(payload));
+    localStorage.setItem(
+      `${KEY_DEEP_PREFIX}${conversaId}`,
+      JSON.stringify(payload),
+    );
   } catch {
     // silencioso
   }
@@ -59,6 +65,12 @@ type PatternItem = DeepAnalysisV2["patterns"][number];
 type RiskItem = DeepAnalysisV2["risks"][number];
 type RecItem = DeepAnalysisV2["recommendations"][number];
 
+function isApiError(e: unknown): e is ApiError {
+  if (!e || typeof e !== "object") return false;
+  const anyE = e as any;
+  return typeof anyE.code === "string" && typeof anyE.message === "string";
+}
+
 export default function ConversaDetailPage() {
   const { id } = useParams<{ id: string }>();
 
@@ -72,10 +84,14 @@ export default function ConversaDetailPage() {
   const [deepState, setDeepState] = useState<DeepState>("IDLE");
   const [deepLoading, setDeepLoading] = useState(false);
 
-  const [deepPayload, setDeepPayload] = useState<DeepAnalyzeSuccessV11 | null>(null);
+  const [deepPayload, setDeepPayload] = useState<DeepAnalyzeSuccessV11 | null>(
+    null,
+  );
   const [deep, setDeep] = useState<DeepAnalysisV2 | null>(null);
 
-  const [deepLimitPayload, setDeepLimitPayload] = useState<{ cycleRef: string } | null>(null);
+  const [deepLimitPayload, setDeepLimitPayload] = useState<{
+    cycleRef: string;
+  } | null>(null);
   const [deepError, setDeepError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -153,7 +169,8 @@ export default function ConversaDetailPage() {
       setDeepState("SUCCESS_DEEP");
       saveLastDeep(id, data);
     } catch (e: unknown) {
-      if (e instanceof ApiError) {
+      // ✅ FIX: ApiError é um objeto tipado, não uma classe (não usar instanceof)
+      if (isApiError(e)) {
         if (e.status === 401) {
           setDeepState("UNAUTH");
           setDeepError("Não autenticado.");
@@ -167,7 +184,9 @@ export default function ConversaDetailPage() {
 
         if (e.status === 429 && e.code === "DEEP_MONTHLY_LIMIT_REACHED") {
           const cycleRef =
-            typeof e.payload?.cycleRef === "string" ? e.payload.cycleRef : "";
+            typeof (e as any).payload?.cycleRef === "string"
+              ? (e as any).payload.cycleRef
+              : "";
           setDeepLimitPayload({ cycleRef });
           setDeepState("BLOCKED_DEEP_LIMIT");
           return;
@@ -195,8 +214,8 @@ export default function ConversaDetailPage() {
     scoreDelta > 0
       ? "bg-emerald-950/30 border-emerald-800/40 text-emerald-200"
       : scoreDelta < 0
-      ? "bg-red-950/30 border-red-800/40 text-red-200"
-      : "bg-zinc-900/40 border-zinc-800 text-zinc-200";
+        ? "bg-red-950/30 border-red-800/40 text-red-200"
+        : "bg-zinc-900/40 border-zinc-800 text-zinc-200";
 
   const confidence = deep?.summary.confidenceLevel ?? 0;
 
@@ -237,7 +256,12 @@ export default function ConversaDetailPage() {
           </Link>
 
           {canDeepByMin ? (
-            <button className="btn btn-primary" type="button" onClick={runDeep} disabled={deepLoading}>
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={runDeep}
+              disabled={deepLoading}
+            >
               Análise profunda
             </button>
           ) : (
@@ -275,7 +299,9 @@ export default function ConversaDetailPage() {
             <tbody>
               {visibleAnalyses.map((a) => (
                 <tr key={a.id} className="border-t border-zinc-800">
-                  <td className="px-3 py-2">{new Date(a.createdAt).toLocaleString()}</td>
+                  <td className="px-3 py-2">
+                    {new Date(a.createdAt).toLocaleString()}
+                  </td>
                   <td className="px-3 py-2">{a.messageCountApprox}</td>
                   <td className="px-3 py-2">{a.score ?? "—"}</td>
                   <td className="px-3 py-2">{a.label ?? "—"}</td>
@@ -301,14 +327,20 @@ export default function ConversaDetailPage() {
 
       {deepState === "IDLE" && (
         <div className="card p-5 space-y-2">
-          <div className="text-sm text-zinc-400">Nenhuma análise profunda ainda.</div>
+          <div className="text-sm text-zinc-400">
+            Nenhuma análise profunda ainda.
+          </div>
           <div className="flex flex-wrap gap-2">
             <button
               className="btn btn-primary"
               type="button"
               onClick={runDeep}
               disabled={deepLoading || !canDeepByMin}
-              title={!canDeepByMin ? `Disponível após ${MIN_ANALYSES_FOR_DEEP} análises` : undefined}
+              title={
+                !canDeepByMin
+                  ? `Disponível após ${MIN_ANALYSES_FOR_DEEP} análises`
+                  : undefined
+              }
             >
               Fazer Análise Profunda
             </button>
@@ -318,7 +350,9 @@ export default function ConversaDetailPage() {
 
       {deepState === "LOADING_DEEP" && (
         <div className="card p-5">
-          <div className="text-sm text-zinc-400">Gerando análise profunda…</div>
+          <div className="text-sm text-zinc-400">
+            Gerando análise profunda…
+          </div>
         </div>
       )}
 
@@ -343,7 +377,9 @@ export default function ConversaDetailPage() {
             Você atingiu o limite mensal de análises profundas.
           </div>
           {deepLimitPayload?.cycleRef && (
-            <div className="text-xs text-zinc-500">Ciclo: {deepLimitPayload.cycleRef}</div>
+            <div className="text-xs text-zinc-500">
+              Ciclo: {deepLimitPayload.cycleRef}
+            </div>
           )}
           <div className="flex gap-2">
             <Link className="btn btn-primary" href="/account/subscription">
@@ -356,9 +392,16 @@ export default function ConversaDetailPage() {
       {deepState === "ERROR" && (
         <div className="card p-5 space-y-2">
           <div className="text-sm font-semibold">Falha ao gerar análise</div>
-          <div className="text-sm text-zinc-400">{deepError ?? "Erro inesperado."}</div>
+          <div className="text-sm text-zinc-400">
+            {deepError ?? "Erro inesperado."}
+          </div>
           <div className="flex gap-2">
-            <button className="btn btn-primary" type="button" onClick={runDeep} disabled={deepLoading}>
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={runDeep}
+              disabled={deepLoading}
+            >
               Tentar novamente
             </button>
           </div>
@@ -372,7 +415,8 @@ export default function ConversaDetailPage() {
               <div className="space-y-1">
                 <div className="text-xs text-zinc-500">Leitura Profunda</div>
                 <div className="text-sm text-zinc-400">
-                  Conversa: <span className="text-zinc-200 font-medium">{id}</span>
+                  Conversa:{" "}
+                  <span className="text-zinc-200 font-medium">{id}</span>
                 </div>
                 {deep?.source && (
                   <div className="text-xs text-zinc-500">
@@ -383,7 +427,9 @@ export default function ConversaDetailPage() {
 
               <div className="text-right space-y-1">
                 <div className="text-xs text-zinc-500">Confiança</div>
-                <div className="text-sm font-semibold text-zinc-200">{confidence}/100</div>
+                <div className="text-sm font-semibold text-zinc-200">
+                  {confidence}/100
+                </div>
               </div>
             </div>
 
@@ -405,12 +451,19 @@ export default function ConversaDetailPage() {
                 ) : (
                   <>
                     Consumiu{" "}
-                    <span className="font-semibold text-zinc-50">{deepPayload.creditsUsed}</span>{" "}
+                    <span className="font-semibold text-zinc-50">
+                      {deepPayload.creditsUsed}
+                    </span>{" "}
                     crédito(s). Saldo após:{" "}
-                    <span className="font-semibold text-zinc-50">{deepPayload.creditsBalanceAfter}</span>.{" "}
+                    <span className="font-semibold text-zinc-50">
+                      {deepPayload.creditsBalanceAfter}
+                    </span>
+                    .{" "}
                     <span className="text-zinc-400">
-                      (DEEP mensal: {deepPayload.deepMonthly.used}/{deepPayload.deepMonthly.limit} • restante{" "}
-                      {deepPayload.deepMonthly.remaining} • ciclo {deepPayload.deepMonthly.cycleRef})
+                      (DEEP mensal: {deepPayload.deepMonthly.used}/
+                      {deepPayload.deepMonthly.limit} • restante{" "}
+                      {deepPayload.deepMonthly.remaining} • ciclo{" "}
+                      {deepPayload.deepMonthly.cycleRef})
                     </span>
                   </>
                 )}
@@ -422,10 +475,14 @@ export default function ConversaDetailPage() {
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1">
                 <div className="text-sm font-semibold">Evolução do objetivo</div>
-                <div className="text-xs text-zinc-500">Comparação: anterior vs atual</div>
+                <div className="text-xs text-zinc-500">
+                  Comparação: anterior vs atual
+                </div>
               </div>
 
-              <div className={`rounded-2xl border px-3 py-2 text-sm font-semibold ${deltaClass}`}>
+              <div
+                className={`rounded-2xl border px-3 py-2 text-sm font-semibold ${deltaClass}`}
+              >
                 Δ {deltaBadge}
               </div>
             </div>
@@ -433,18 +490,24 @@ export default function ConversaDetailPage() {
             <div className="grid gap-3 md:grid-cols-3">
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
                 <div className="text-xs text-zinc-500">Anterior</div>
-                <div className="text-lg font-semibold text-zinc-200">{scorePrev}</div>
+                <div className="text-lg font-semibold text-zinc-200">
+                  {scorePrev}
+                </div>
               </div>
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
                 <div className="text-xs text-zinc-500">Atual</div>
-                <div className="text-lg font-semibold text-zinc-200">{scoreCur}</div>
+                <div className="text-lg font-semibold text-zinc-200">
+                  {scoreCur}
+                </div>
               </div>
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
                 <div className="text-xs text-zinc-500">Status</div>
                 <div className="text-sm font-semibold text-zinc-200 mt-1">
                   {deep.summary.statusLabel}
                 </div>
-                <div className="text-xs text-zinc-500 mt-1">{deep.summary.headline}</div>
+                <div className="text-xs text-zinc-500 mt-1">
+                  {deep.summary.headline}
+                </div>
               </div>
             </div>
           </div>
@@ -466,7 +529,9 @@ export default function ConversaDetailPage() {
                         <div className="text-sm font-medium text-zinc-200 truncate">
                           {it.eventLabel}
                         </div>
-                        <div className="text-xs text-zinc-500 mt-1">{it.rationale}</div>
+                        <div className="text-xs text-zinc-500 mt-1">
+                          {it.rationale}
+                        </div>
                       </div>
 
                       <div className="text-right shrink-0">
@@ -474,7 +539,9 @@ export default function ConversaDetailPage() {
                           {sign}
                           {d}
                         </div>
-                        <div className="text-xs text-zinc-500">{it.direction}</div>
+                        <div className="text-xs text-zinc-500">
+                          {it.direction}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -502,7 +569,9 @@ export default function ConversaDetailPage() {
                     {p.type === "POSITIVE" ? "✅ " : "⚠️ "}
                     {p.title}
                   </div>
-                  <div className="text-xs text-zinc-500 mt-1">{p.description}</div>
+                  <div className="text-xs text-zinc-500 mt-1">
+                    {p.description}
+                  </div>
                 </div>
               ))}
             </div>
@@ -521,10 +590,12 @@ export default function ConversaDetailPage() {
                     {r.level === "HIGH"
                       ? "🔴 Alto"
                       : r.level === "MEDIUM"
-                      ? "🟠 Médio"
-                      : "🟡 Baixo"}
+                        ? "🟠 Médio"
+                        : "🟡 Baixo"}
                   </div>
-                  <div className="text-xs text-zinc-500 mt-1">{r.description}</div>
+                  <div className="text-xs text-zinc-500 mt-1">
+                    {r.description}
+                  </div>
                 </div>
               ))}
             </div>
@@ -542,7 +613,9 @@ export default function ConversaDetailPage() {
                     key={`${rec.priority}-${i}`}
                     className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4"
                   >
-                    <div className="text-xs text-zinc-500">Prioridade {rec.priority}</div>
+                    <div className="text-xs text-zinc-500">
+                      Prioridade {rec.priority}
+                    </div>
                     <div className="text-sm text-zinc-200 mt-1">{rec.text}</div>
                   </div>
                 ))}
@@ -550,7 +623,12 @@ export default function ConversaDetailPage() {
           </div>
 
           <div className="card p-5 flex flex-wrap gap-2">
-            <button className="btn btn-primary" type="button" onClick={runDeep} disabled={deepLoading}>
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={runDeep}
+              disabled={deepLoading}
+            >
               Recalcular
             </button>
           </div>
