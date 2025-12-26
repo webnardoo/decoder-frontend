@@ -1,104 +1,45 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-type LoginBody = {
-  email?: string;
-  password?: string;
-};
+const BACKEND_URL = "http://localhost:4100";
 
-function normalizeBackendBaseUrl(raw?: string) {
-  const v = (raw || "").trim();
-  if (!v) return "http://localhost:4100";
-  return v.replace("http://127.0.0.1", "http://localhost").replace("https://127.0.0.1", "https://localhost");
-}
-
-function getBackendBaseUrl() {
-  return normalizeBackendBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL);
-}
-
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as LoginBody;
+    const body = await req.json();
 
-    const email = (body.email ?? "").trim();
-    const password = (body.password ?? "").trim();
-
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: "BAD_REQUEST", message: "E-mail e senha são obrigatórios." },
-        { status: 400 }
-      );
-    }
-
-    const backendUrl = `${getBackendBaseUrl()}/api/v1/auth/login`;
-
-    const backendRes = await fetch(backendUrl, {
+    const upstream = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ email, password }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
       cache: "no-store",
     });
 
-    const contentType = backendRes.headers.get("content-type") || "";
-    const isJson = contentType.includes("application/json");
-    const payload = isJson ? await backendRes.json().catch(() => null) : await backendRes.text();
+    const text = await upstream.text().catch(() => "");
+    let data: any = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = null;
+    }
 
-    if (!backendRes.ok) {
+    const accessToken = String(data?.accessToken ?? "").trim();
+
+    if (!upstream.ok || !accessToken) {
       return NextResponse.json(
-        {
-          error: "AUTH_FAILED",
-          status: backendRes.status,
-          message:
-            (payload && (payload.message || payload.error?.message)) ||
-            `Falha ao autenticar. Status ${backendRes.status}`,
-          payload,
-        },
-        { status: backendRes.status }
+        { message: "Login não retornou token (accessToken/token)." },
+        { status: 401 },
       );
     }
 
-    const token: string | undefined = payload?.accessToken;
-    if (!token || typeof token !== "string") {
-      return NextResponse.json(
-        {
-          error: "AUTH_INVALID_RESPONSE",
-          message: "Backend não retornou accessToken.",
-          payload,
-        },
-        { status: 502 }
-      );
-    }
-
-    const res = NextResponse.json(
-      {
-        ok: true,
-        user: payload?.user ?? null,
-      },
-      { status: 200 }
-    );
-
-    const isProd = process.env.NODE_ENV === "production";
-
-    res.cookies.set({
-      name: "decoder_auth",
-      value: token,
+    const res = NextResponse.json(data, { status: 200 });
+    res.cookies.set("decoder_auth", accessToken, {
       httpOnly: true,
       sameSite: "lax",
-      secure: isProd,
       path: "/",
+      secure: process.env.NODE_ENV === "production",
     });
 
     return res;
-  } catch (err: any) {
-    return NextResponse.json(
-      {
-        error: "AUTH_PROXY_ERROR",
-        message: "Falha inesperada no /api/auth/login.",
-        detail: err?.message ?? String(err),
-      },
-      { status: 502 }
-    );
+  } catch {
+    return NextResponse.json({ message: "LOGIN_PROXY_FAILED" }, { status: 500 });
   }
 }

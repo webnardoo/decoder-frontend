@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useOnboardingStatus } from "@/lib/onboarding/OnboardingStore";
 
 const NavLink = ({ href, label }: { href: string; label: string }) => {
   const pathname = usePathname();
@@ -20,6 +21,10 @@ const NavLink = ({ href, label }: { href: string; label: string }) => {
 };
 
 export function TopNav() {
+  const { status, loading } = useOnboardingStatus();
+
+  const isReady = !loading && status?.onboardingStage === "READY";
+
   return (
     <header className="sticky top-0 z-50 border-b border-zinc-900 bg-zinc-950/70 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
@@ -30,11 +35,17 @@ export function TopNav() {
           <span className="text-sm font-semibold tracking-wide">HINT</span>
         </Link>
 
-        <nav className="flex items-center gap-5">
-          <NavLink href="/" label="Home" />
-          <NavLink href="/conversas" label="Conversas" />
-          <NavLink href="/account" label="Conta" />
-        </nav>
+        {/* 🔒 Durante onboarding, navegação mínima */}
+        {!isReady && <div className="text-xs text-zinc-400">Configurando sua conta…</div>}
+
+        {/* ✅ Pós-onboarding */}
+        {isReady && (
+          <nav className="flex items-center gap-5">
+            <NavLink href="/" label="Home" />
+            <NavLink href="/conversas" label="Conversas" />
+            <NavLink href="/account" label="Conta" />
+          </nav>
+        )}
       </div>
     </header>
   );

@@ -1,21 +1,32 @@
 import { NextResponse } from "next/server";
 
-export async function GET() {
+function apiBase() {
+  // Ex.: http://localhost:4100/api/v1
+  return (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100/api/v1")
+    .trim()
+    .replace(/\/$/, "");
+}
+
+export async function POST(req: Request) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!baseUrl || typeof baseUrl !== "string") {
-      return NextResponse.json({ exists: false }, { status: 200 });
-    }
+    const body = await req.json().catch(() => ({}));
 
-    const url = `${baseUrl.replace(/\/$/, "")}/api/v1/auth/register`;
+    const res = await fetch(`${apiBase()}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
 
-    // OPTIONS costuma retornar 404 quando a rota não existe.
-    const res = await fetch(url, { method: "OPTIONS", cache: "no-store" });
-
-    // Heurística mínima (sem inferência de regra): 404 => não existe; qualquer outro => existe
-    if (res.status === 404) return NextResponse.json({ exists: false }, { status: 200 });
-    return NextResponse.json({ exists: true }, { status: 200 });
-  } catch {
-    return NextResponse.json({ exists: false }, { status: 200 });
+    const text = await res.text();
+    return new NextResponse(text, {
+      status: res.status,
+      headers: { "Content-Type": res.headers.get("content-type") || "application/json" },
+    });
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: "PROXY_REGISTER_FAILED", message: e?.message || "Failed to proxy register" },
+      { status: 502 },
+    );
   }
 }

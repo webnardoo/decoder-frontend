@@ -15,6 +15,15 @@ export type ReplySuggestionObject = {
   text: string;
 };
 
+/**
+ * Formatos aceitos (compat):
+ * - Legado: Array<string | { intent, text }>
+ * - Canônico (BACK): { apaziguar: string[], explicar: string[], neutro: string[], afirmar_limite: string[] }
+ */
+export type ReplySuggestionsPayload =
+  | Array<string | ReplySuggestionObject>
+  | Record<string, unknown>;
+
 export type QuickAnalysisResponseV11 = {
   score?: { value?: number; label?: string };
 
@@ -27,7 +36,7 @@ export type QuickAnalysisResponseV11 = {
 
   redFlags?: string[];
 
-  replySuggestions?: Array<string | ReplySuggestionObject>;
+  replySuggestions?: ReplySuggestionsPayload;
 
   creditsUsed?: number;
   creditsBalanceAfter?: number;
@@ -76,10 +85,57 @@ function normalizeIntent(raw: unknown): ReplyIntent {
   return "neutro";
 }
 
+function coerceStringArray(v: unknown): string[] {
+  if (Array.isArray(v)) {
+    return v
+      .filter((x) => typeof x === "string")
+      .map((x) => x.trim())
+      .filter(Boolean);
+  }
+  if (typeof v === "string") {
+    const t = v.trim();
+    return t ? [t] : [];
+  }
+  return [];
+}
+
 function normalizeReplySuggestions(
-  raw: Array<string | ReplySuggestionObject>
+  raw: ReplySuggestionsPayload | undefined,
 ): ReplySuggestionObject[] {
-  return raw
+  if (!raw) return [];
+
+  // Caso 1: formato canônico (objeto)
+  if (!Array.isArray(raw) && typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+
+    const intents: ReplyIntent[] = [
+      "apaziguar",
+      "explicar",
+      "neutro",
+      "afirmar_limite",
+    ];
+    const out: ReplySuggestionObject[] = [];
+
+    for (const intent of intents) {
+      const bucket =
+        intent === "afirmar_limite"
+          ? (obj["afirmar_limite"] ?? obj["afirmar-limite"])
+          : obj[intent];
+
+      const lines = coerceStringArray(bucket);
+
+      for (const text of lines) {
+        if (text) out.push({ intent, text });
+      }
+    }
+
+    return out;
+  }
+
+  // Caso 2: formato legado (array)
+  const arr = raw as Array<string | ReplySuggestionObject>;
+
+  return arr
     .map((s) => {
       if (typeof s === "string") {
         const t = s.trim();
@@ -131,36 +187,46 @@ export function ResultView({
   const insights = Array.isArray(data?.insights) ? data.insights : [];
   const redFlags = Array.isArray(data?.redFlags) ? data.redFlags : [];
 
-  const replySuggestionsRaw = Array.isArray(data?.replySuggestions)
-    ? data.replySuggestions
-    : [];
-  const replySuggestions = normalizeReplySuggestions(replySuggestionsRaw);
+  const replySuggestions = normalizeReplySuggestions(data?.replySuggestions);
 
   const isResumo = quickMode === "RESUMO";
   const isResponder = quickMode === "RESPONDER";
 
+  const shouldRenderResultBlock = isResumo && (canRenderQuickCard || analysis.length > 0);
+
   return (
     <div className="space-y-4">
-      {/* CARD RESULTADO — invariável entre modos */}
-      {canRenderQuickCard && (
-        <QuickResultCard
-          scoreValue={scoreValue}
-          scoreLabel={scoreLabel}
-          scoreExplanation={scoreExplanation}
-          labelExplanation={labelExplanation}
-        />
-      )}
+      {/* ✅ BLOCO ÚNICO PARA O OVERLAY (Score + Análise) */}
+      {shouldRenderResultBlock && (
+        <div data-tour-id="quick-result-block" className="space-y-4">
+          {/* CARD RESULTADO */}
+          {canRenderQuickCard && (
+            <div data-tour-id="quick-score-card">
+              <QuickResultCard
+                scoreValue={scoreValue}
+                scoreLabel={scoreLabel}
+                scoreExplanation={scoreExplanation}
+                labelExplanation={labelExplanation}
+              />
+            </div>
+          )}
 
-      {/* RESUMO */}
-      {isResumo && analysis.length > 0 && (
-        <div className="rounded-2xl border p-4 space-y-2">
-          <div className="text-sm font-medium">Análise</div>
-          <div className="text-sm leading-relaxed whitespace-pre-line">
-            {analysis}
-          </div>
+          {/* CARD ANÁLISE */}
+          {analysis.length > 0 && (
+            <div
+              className="rounded-2xl border p-4 space-y-2"
+              data-tour-id="quick-analysis-card"
+            >
+              <div className="text-sm font-medium">Análise</div>
+              <div className="text-sm leading-relaxed whitespace-pre-line">
+                {analysis}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
+      {/* RED FLAGS (somente RESUMO) */}
       {isResumo && redFlags.length > 0 && (
         <div className="rounded-2xl border p-4 space-y-2">
           <div className="text-sm font-medium">Red flags</div>
@@ -172,7 +238,7 @@ export function ResultView({
         </div>
       )}
 
-      {/* RESPONDER: Insights devem vir ANTES das sugestões */}
+      {/* RESPONDER: Insights antes das sugestões */}
       {isResponder && insights.length > 0 && (
         <div className="rounded-2xl border p-4 space-y-2">
           <div className="text-sm font-medium">Insights</div>
@@ -185,7 +251,10 @@ export function ResultView({
       )}
 
       {isResponder && replySuggestions.length > 0 && (
-        <div className="rounded-2xl border p-4 space-y-3">
+        <div
+          className="rounded-2xl border p-4 space-y-3"
+          data-tour-id="quick-reply-suggestions-card"
+        >
           <div className="text-sm font-medium">Sugestões de resposta</div>
           <div className="space-y-2">
             {replySuggestions.map((s, idx) => (
