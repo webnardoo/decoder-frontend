@@ -2,148 +2,140 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { runQuickTutorial, completeTutorial } from "@/lib/onboarding/onboarding.api";
 import { useOnboardingStatus } from "@/lib/onboarding/OnboardingStore";
+import { runQuickTutorial, completeTutorial, ackTutorialPopups } from "@/lib/onboarding/onboarding.api";
+
+const TRIAL_MIN = 60;
+const TRIAL_MAX = 200;
+
+function clampText(input: string) {
+  const t = input ?? "";
+  if (t.length <= TRIAL_MAX) return t;
+  return t.slice(0, TRIAL_MAX);
+}
 
 export default function TutorialPage() {
   const router = useRouter();
-  const { status, refreshStatus, loading: statusLoading } = useOnboardingStatus();
+  const { status, loading, error, refreshStatus } = useOnboardingStatus();
 
   const [text, setText] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [banner, setBanner] = useState<string | null>(null);
 
-  // ✅ Gate: se TRIAL estiver ativo, tutorial não pode abrir
+  // ✅ HARD OVERRIDE: assinante ativo NÃO pode ficar em /tutorial
   useEffect(() => {
-    if (statusLoading) return;
+    if (loading) return;
     if (!status) return;
 
-    if ((status as any)?.onboardingStage === "TRIAL_ACTIVE") {
+    if (status.subscriptionActive === true) {
       router.replace("/");
       return;
     }
+  }, [loading, status, router]);
 
-    // tutorial só faz sentido com assinatura ativa
-    if (status.subscriptionActive !== true) {
-      router.replace("/billing/plan");
-      return;
-    }
-  }, [statusLoading, status, router]);
+  const effectiveText = useMemo(() => clampText(text), [text]);
+  const chars = effectiveText.length;
+  const charsOk = chars >= TRIAL_MIN && chars <= TRIAL_MAX;
 
-  const remaining = useMemo(() => 200 - (text?.length ?? 0), [text]);
-  const count = useMemo(() => (text?.length ?? 0), [text]);
-  const countOk = count >= 60;
+  async function onRunTutorial() {
+    if (busy) return;
+    setBanner(null);
 
-  async function onRun() {
-    const t = text.trim();
-    if (t.length < 60) {
-      setErr("Texto muito curto (mínimo 60 caracteres).");
-      return;
-    }
-    if (t.length > 200) {
-      setErr("Texto excede 200 caracteres.");
+    if (!charsOk) {
+      setBanner(`Use entre ${TRIAL_MIN} e ${TRIAL_MAX} caracteres.`);
       return;
     }
 
-    setLoading(true);
-    setErr(null);
+    setBusy(true);
     try {
-      const r = await runQuickTutorial(t);
-      setResult(r);
-    } catch (e: any) {
-      const msg =
-        e?.body?.error === "NICKNAME_REQUIRED"
-          ? "Defina sua identidade antes do tutorial."
-          : "Falha ao executar tutorial.";
-      setErr(msg);
-    } finally {
-      setLoading(false);
-    }
-  }
+      await runQuickTutorial(effectiveText);
 
-  async function onCompleteFlow() {
-    setLoading(true);
-    setErr(null);
-    try {
+      // opcional: marcar popups/ack se existir
+      try {
+        await ackTutorialPopups();
+      } catch {
+        // silencioso (não quebra tutorial)
+      }
+
+      // conclui tutorial no backend
       await completeTutorial();
 
+      // atualiza status e segue fluxo normal
       await refreshStatus();
-      window.dispatchEvent(new Event("onboarding:refresh"));
-      // Gate externo decide o próximo passo
-    } catch {
-      setErr("Falha ao concluir tutorial.");
+      router.replace("/conversas");
+    } catch (e: any) {
+      setBanner(
+        e?.message ||
+          e?.body?.message ||
+          "Falha ao executar o tutorial. Tente novamente."
+      );
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   }
 
+  if (loading) {
+    return <div className="card p-5 text-sm text-zinc-400">Carregando…</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="card p-5 space-y-2">
+        <div className="text-sm font-medium">Falha ao carregar seu status.</div>
+        <button className="btn btn-primary" onClick={() => void refreshStatus()}>
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
+
+  // se já tiver status mas ainda não redirecionou, renderiza tutorial (não-assinante)
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-lg font-semibold">Tutorial</h1>
+    <div className="p-6 space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-xl font-semibold">Tutorial</h1>
         <p className="text-sm text-zinc-400">
           A análise utiliza a capacidade disponível no seu plano.
         </p>
       </div>
 
-      <div className="card p-5 space-y-3">
-        <div className="text-xs text-zinc-500">
-          Créditos: <span className="text-zinc-300">{status?.creditsBalance ?? "—"}</span>
-          <br />
+      <div className="card p-4 space-y-3">
+        <div className="text-sm text-zinc-300">
+          Créditos: {typeof status?.creditsBalance === "number" ? status.creditsBalance : 0}
+        </div>
+        <div className="text-sm text-zinc-300">
           Você será reconhecido no diálogo como:{" "}
-          <span className="text-zinc-300">{status?.dialogueNickname ?? "—"}</span>
+          <span className="text-zinc-100">{status?.dialogueNickname ?? "—"}</span>
         </div>
 
         <textarea
-          className="w-full min-h-[140px] rounded-xl bg-zinc-900 border border-zinc-800 px-3 py-2 text-sm"
-          value={text}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v.length <= 200) setText(v);
-            else setText(v.slice(0, 200));
-          }}
-          placeholder="Cole aqui um trecho (60–200 caracteres)…"
+          className="w-full rounded-xl border p-3 min-h-45"
+          value={effectiveText}
+          onChange={(e) => setText(clampText(e.target.value))}
+          placeholder={`Cole aqui um trecho (${TRIAL_MIN}–${TRIAL_MAX} caracteres)...`}
+          disabled={busy}
         />
 
         <div className="flex items-center justify-between text-xs">
-          <div className={countOk ? "text-emerald-400" : "text-red-400"}>
-            Caracteres: {count}/200
+          <div className={charsOk ? "text-emerald-400" : "text-red-400"}>
+            Caracteres: {chars}/{TRIAL_MAX}
           </div>
-          <div className="text-zinc-500">
-            Restante: <span className="text-zinc-300">{remaining}</span>
-          </div>
+          <div className="text-zinc-400">Restante: {Math.max(0, TRIAL_MAX - chars)}</div>
         </div>
 
-        {err && <div className="text-sm text-red-400">{err}</div>}
+        <button
+          className="btn btn-primary"
+          type="button"
+          onClick={onRunTutorial}
+          disabled={busy || !charsOk}
+        >
+          {busy ? "Executando…" : "Executar tutorial"}
+        </button>
 
-        {!result && (
-          <button className="btn btn-primary" onClick={() => void onRun()} disabled={loading}>
-            {loading ? "Processando…" : "Executar tutorial"}
-          </button>
-        )}
-
-        {result && (
-          <div className="space-y-3">
-            <div className="text-xs text-zinc-500">
-              Disclaimer: As análises são interpretações baseadas em padrões de linguagem e não representam verdades absolutas.
-            </div>
-
-            <div className="card p-4 space-y-2">
-              <div className="text-sm font-medium">
-                Score: {result?.score?.value} • {result?.score?.label}
-              </div>
-              <div className="text-sm text-zinc-300 whitespace-pre-line">
-                {result?.analysis}
-              </div>
-              <div className="text-xs text-zinc-500">
-                creditsUsed: <span className="text-zinc-300">{result?.creditsUsed ?? "—"}</span>
-              </div>
-            </div>
-
-            <button className="btn btn-primary" onClick={() => void onCompleteFlow()} disabled={loading}>
-              {loading ? "Concluindo…" : "Concluir tutorial"}
-            </button>
+        {banner && (
+          <div className="rounded-xl border p-3 text-sm">
+            <div className="font-medium">Falha</div>
+            <div className="text-muted-foreground">{banner}</div>
           </div>
         )}
       </div>
