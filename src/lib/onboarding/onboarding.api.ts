@@ -31,7 +31,11 @@ export async function getOnboardingStatus(): Promise<OnboardingStatus> {
   const ct = res.headers.get("content-type") ?? "";
   if (!ct.includes("application/json")) {
     const text = await res.text();
-    throw { status: res.status, message: "Resposta não-JSON do /status", body: text };
+    throw {
+      status: res.status,
+      message: "Resposta não-JSON do /status",
+      body: text,
+    };
   }
 
   const data = (await res.json()) as OnboardingStatusResponse;
@@ -76,45 +80,27 @@ export async function ackTrialStart() {
   return body;
 }
 
+/**
+ * =========================================================
+ * TUTORIAL LEGADO — REMOVIDO NO FRONT
+ * =========================================================
+ * Motivo:
+ * - evitar que qualquer parte do front ainda chame rotas de tutorial
+ * - manter compatibilidade temporária caso ainda exista algum import antigo
+ *
+ * Importante:
+ * - NÃO chama backend
+ * - retorna payload "ok" pra não quebrar fluxo legado acidentalmente
+ * - depois, quando removermos o gate/redirect e os imports, a gente apaga de vez.
+ */
 export async function ackTutorialPopups() {
-  const res = await fetch("/api/v1/onboarding/tutorial/ack", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  });
-
-  const ct = res.headers.get("content-type") ?? "";
-  const body = ct.includes("application/json") ? await res.json() : await res.text();
-
-  if (!res.ok) throw { status: res.status, body };
-
-  return body;
+  return { ok: true, tutorialPopupsPending: false, tutorialRemoved: true };
 }
 
 export async function completeTutorial() {
-  const res = await fetch("/api/v1/onboarding/tutorial/complete", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  });
-
-  const ct = res.headers.get("content-type") ?? "";
-  const body = ct.includes("application/json") ? await res.json() : await res.text();
-
-  if (!res.ok) throw { status: res.status, body };
-
-  return body;
+  return { ok: true, tutorialCompleted: true, tutorialPopupsPending: false, tutorialRemoved: true };
 }
 
-export async function runQuickTutorial(text: string) {
-  const res = await fetch("/api/v1/onboarding/tutorial/run", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
-  });
-
-  const ct = res.headers.get("content-type") ?? "";
-  const body = ct.includes("application/json") ? await res.json() : await res.text();
-
-  if (!res.ok) throw { status: res.status, body };
-
-  return body;
+export async function runQuickTutorial(_text: string) {
+  return { ok: true, tutorialRemoved: true };
 }

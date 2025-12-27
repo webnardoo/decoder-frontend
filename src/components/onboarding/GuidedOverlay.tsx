@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export type GuidedOverlayStep = {
   id: string;
@@ -76,6 +76,40 @@ function getElByTourId(tourId: string) {
   return document.querySelector(`[data-tour-id="${tourId}"]`) as HTMLElement | null;
 }
 
+function isVisibleFocusable(el: HTMLElement) {
+  if (!el) return false;
+  const style = window.getComputedStyle(el);
+  if (style.display === "none" || style.visibility === "hidden") return false;
+  if ((el as any).disabled) return false;
+  const r = el.getBoundingClientRect();
+  if (r.width <= 0 || r.height <= 0) return false;
+  return true;
+}
+
+function isFocusable(el: HTMLElement) {
+  const tag = el.tagName;
+  if (tag === "BUTTON" || tag === "A" || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+    return true;
+  }
+  const ti = el.getAttribute("tabindex");
+  if (ti != null) {
+    const n = Number(ti);
+    return Number.isFinite(n) && n >= 0;
+  }
+  return false;
+}
+
+function collectFocusableWithin(el: HTMLElement): HTMLElement[] {
+  const nodes = Array.from(
+    el.querySelectorAll<HTMLElement>(
+      `a[href],button,input,textarea,select,[tabindex]:not([tabindex="-1"])`
+    )
+  );
+  const list = [el, ...nodes].filter((x) => isFocusable(x) && isVisibleFocusable(x));
+  // de-dup
+  return Array.from(new Set(list));
+}
+
 export default function GuidedOverlay({
   enabled,
   step,
@@ -83,6 +117,17 @@ export default function GuidedOverlay({
   onBlockedClick,
 }: Props) {
   const [rect, setRect] = useState<Rect | null>(null);
+
+  // foco-trap: manter referência sempre atual do step/estado
+  const stepRef = useRef<GuidedOverlayStep | null>(null);
+  const enabledRef = useRef(false);
+  const allowPointerPassThroughRef = useRef(false);
+
+  useEffect(() => {
+    stepRef.current = step ?? null;
+    enabledRef.current = enabled;
+    allowPointerPassThroughRef.current = !!step && step.requireTargetClick === false;
+  }, [enabled, step]);
 
   const targetSelector = useMemo(() => {
     if (!enabled || !step?.targetTourId) return null;
@@ -155,7 +200,7 @@ export default function GuidedOverlay({
         animation: el.style.animation,
         tabIndex: el.getAttribute("tabindex"),
         hadPulseClass: el.classList.contains("guidedOverlayPulse"),
-        dataOverlayTabindexApplied: el.dataset?.overlayTabindexApplied === "1",
+        dataOverlayTabindexApplied: (el as any)?.dataset?.overlayTabindexApplied === "1",
       };
       prevMap.set(el, prev);
 
@@ -182,10 +227,10 @@ export default function GuidedOverlay({
         el.style.animation = prev.animation;
 
         // restaura tabindex apenas se a gente tiver aplicado
-        if (el.dataset?.overlayTabindexApplied === "1") {
+        if ((el as any)?.dataset?.overlayTabindexApplied === "1") {
           if (prev.tabIndex === null) el.removeAttribute("tabindex");
           else el.setAttribute("tabindex", prev.tabIndex);
-          delete el.dataset.overlayTabindexApplied;
+          delete (el as any).dataset.overlayTabindexApplied;
         }
 
         if (!prev.hadPulseClass) el.classList.remove("guidedOverlayPulse");
@@ -194,7 +239,6 @@ export default function GuidedOverlay({
   }, [enabled, step?.id, allHighlightIds, step]);
 
   // ✅ AUTO-FOCUS (sem clique) quando o step exige clique no alvo
-  // - garante que o usuário já pode clicar direto no botão (sem “clique na página”)
   useEffect(() => {
     if (!enabled || !step) return;
     if (!step.requireTargetClick) return;
@@ -212,7 +256,7 @@ export default function GuidedOverlay({
     // se não for focável, torna focável só pro overlay (e restaura no cleanup do efeito de destaque)
     if (!isNaturallyFocusable && !el.hasAttribute("tabindex")) {
       el.setAttribute("tabindex", "-1");
-      el.dataset.overlayTabindexApplied = "1";
+      (el as any).dataset.overlayTabindexApplied = "1";
     }
 
     const t = window.setTimeout(() => {
@@ -268,6 +312,107 @@ export default function GuidedOverlay({
       el.removeEventListener("click", handler);
     };
   }, [enabled, step?.id, step?.requireTargetClick, step?.targetTourId, onAdvance, step]);
+
+  // ✅ HARD focus-trap: bloqueia TAB/SHIFT+TAB e impede foco fora do(s) alvo(s)
+  useEffect(() => {
+    if (!enabled || !step) return;
+
+    const getAllowedCycle = (): HTMLElement[] => {
+      const s = stepRef.current;
+      if (!enabledRef.current || !s) return [];
+
+      // regra:
+      // - se requireTargetClick=true => foco só no target (e filhos focáveis)
+      // - se requireTargetClick=false => foco só no target (e filhos focáveis) também
+      // (mantém o usuário preso no passo atual; evita “andar” na tela)
+      const target = getElByTourId(s.targetTourId);
+      if (!target) return [];
+
+      const focusables = collectFocusableWithin(target);
+      // se nada focável, pelo menos o próprio target (forçando tabindex no efeito acima)
+      return focusables.length > 0 ? focusables : [target];
+    };
+
+    const focusFirst = () => {
+      const allowed = getAllowedCycle();
+      const first = allowed[0];
+      if (!first) return;
+      try {
+        first.focus({ preventScroll: true });
+      } catch {}
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!enabledRef.current) return;
+      const s = stepRef.current;
+      if (!s) return;
+
+      // Só faz sentido quando overlay está ativo na tela (não quando pointer pass-through)
+      // Mesmo em passos de digitação, ainda queremos travar TAB para não sair do input.
+      if (e.key !== "Tab") return;
+
+      const allowed = getAllowedCycle();
+      if (allowed.length === 0) return;
+
+      const active = document.activeElement as HTMLElement | null;
+      const idx = active ? allowed.indexOf(active) : -1;
+
+      e.preventDefault();
+
+      const nextIdx = (() => {
+        if (e.shiftKey) {
+          if (idx <= 0) return allowed.length - 1;
+          return idx - 1;
+        }
+        // forward
+        if (idx < 0 || idx >= allowed.length - 1) return 0;
+        return idx + 1;
+      })();
+
+      const next = allowed[nextIdx];
+      if (!next) return;
+      try {
+        next.focus({ preventScroll: true });
+      } catch {}
+    };
+
+    const onFocusIn = (e: FocusEvent) => {
+      if (!enabledRef.current) return;
+      const s = stepRef.current;
+      if (!s) return;
+
+      const allowed = getAllowedCycle();
+      if (allowed.length === 0) return;
+
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      // se o foco foi parar fora do ciclo permitido, puxa de volta
+      if (!allowed.includes(target)) {
+        // pequena tolerância: se for um filho do target permitido, aceita
+        const root = getElByTourId(s.targetTourId);
+        if (root && root.contains(target)) return;
+
+        // volta pro primeiro permitido
+        focusFirst();
+      }
+    };
+
+    // capturar antes de outros handlers
+    document.addEventListener("keydown", onKeyDown, true);
+    document.addEventListener("focusin", onFocusIn, true);
+
+    // ao habilitar, força foco inicial dentro do trap
+    const t = window.setTimeout(() => {
+      focusFirst();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(t);
+      document.removeEventListener("keydown", onKeyDown, true);
+      document.removeEventListener("focusin", onFocusIn, true);
+    };
+  }, [enabled, step?.id]);
 
   if (!enabled || !step) return null;
 

@@ -32,7 +32,23 @@ export function OnboardingRouteGuard({ children }: { children: React.ReactNode }
       return;
     }
 
-    // ✅ exceção canônica do GAP: permite ficar em /checkout (sem loop)
+    // ✅ REGRA CANÔNICA: assinante ativo NUNCA é obrigado a tutorial/onboarding/billing.
+    // Se estiver em qualquer rota de jornada, força saída para Home.
+    if (status.subscriptionActive === true) {
+      const isJourneyRoute =
+        pathname === "/tutorial" ||
+        pathname === "/start" ||
+        pathname.startsWith("/onboarding") ||
+        pathname.startsWith("/billing") ||
+        pathname.startsWith("/checkout");
+
+      if (isJourneyRoute) {
+        router.replace("/");
+      }
+      return;
+    }
+
+    // ✅ exceção canônica do GAP: permite ficar em /checkout (sem loop) enquanto NÃO é assinante
     if (pathname.startsWith("/checkout")) {
       // se já está READY, não faz sentido ficar em checkout
       if (String(status.onboardingStage || "").toUpperCase().trim() === "READY") {
@@ -41,6 +57,7 @@ export function OnboardingRouteGuard({ children }: { children: React.ReactNode }
       return;
     }
 
+    // ⚠️ tutorialPopupsPending só vale para não-assinantes
     if (status.tutorialPopupsPending && pathname !== "/tutorial") {
       router.replace("/tutorial");
       return;

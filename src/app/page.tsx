@@ -74,6 +74,72 @@ function clampTextForTrial(input: string) {
   return t.slice(0, TRIAL_MAX);
 }
 
+function getFocusableWithin(container: HTMLElement | null): HTMLElement[] {
+  if (!container) return [];
+  const nodes = Array.from(
+    container.querySelectorAll<HTMLElement>(
+      `a[href],button,input,textarea,select,[tabindex]:not([tabindex="-1"])`
+    )
+  );
+
+  const isVisible = (el: HTMLElement) => {
+    const style = window.getComputedStyle(el);
+    if (style.display === "none" || style.visibility === "hidden") return false;
+    if ((el as any).disabled) return false;
+    const r = el.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return false;
+    return true;
+  };
+
+  const isFocusable = (el: HTMLElement) => {
+    const tag = el.tagName;
+    if (
+      tag === "BUTTON" ||
+      tag === "A" ||
+      tag === "INPUT" ||
+      tag === "TEXTAREA" ||
+      tag === "SELECT"
+    )
+      return true;
+
+    const ti = el.getAttribute("tabindex");
+    if (ti != null) {
+      const n = Number(ti);
+      return Number.isFinite(n) && n >= 0;
+    }
+    return false;
+  };
+
+  const list = nodes.filter((x) => isFocusable(x) && isVisible(x));
+  return Array.from(new Set(list));
+}
+
+function focusTrapKeydown(e: React.KeyboardEvent, container: HTMLElement | null) {
+  if (e.key !== "Tab") return;
+
+  const focusables = getFocusableWithin(container);
+  if (focusables.length === 0) {
+    e.preventDefault();
+    return;
+  }
+
+  const active = document.activeElement as HTMLElement | null;
+  const idx = active ? focusables.indexOf(active) : -1;
+
+  e.preventDefault();
+
+  const nextIdx = (() => {
+    if (e.shiftKey) {
+      if (idx <= 0) return focusables.length - 1;
+      return idx - 1;
+    }
+    if (idx < 0 || idx >= focusables.length - 1) return 0;
+    return idx + 1;
+  })();
+
+  focusables[nextIdx]?.focus?.();
+}
+
 export default function HomePage() {
   const [mode, setMode] = useState<Mode>("AVULSA");
 
@@ -105,6 +171,11 @@ export default function HomePage() {
 
   // foco do popup final
   const finishBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  // ✅ foco do popup inicial + refs dos modais
+  const startBtnRef = useRef<HTMLButtonElement | null>(null);
+  const startModalRef = useRef<HTMLDivElement | null>(null);
+  const endModalRef = useRef<HTMLDivElement | null>(null);
 
   const inConversaMode = mode === "CONVERSA";
   const hasConversaSelected = !!conversaId;
@@ -175,7 +246,6 @@ export default function HomePage() {
   // inicia o guided após OK do popup inicial
   async function ackTrialStart() {
     try {
-      // ✅ rota correta do FRONT (proxy) — não chama /api/v1 direto
       await fetch("/api/onboarding/trial/start/ack", {
         method: "POST",
       }).catch(() => null);
@@ -188,7 +258,6 @@ export default function HomePage() {
 
   async function finishTrial() {
     try {
-      // ✅ rota correta do FRONT (proxy) — não chama /api/v1 direto
       await fetch("/api/onboarding/trial/complete/ack", {
         method: "POST",
       }).catch(() => null);
@@ -196,15 +265,52 @@ export default function HomePage() {
       setShowTrialEnd(false);
       setStepId(null);
       refreshOnboarding();
-      // redirect canônico pós-trial
       window.location.href = "/billing/plan";
     }
   }
 
-  // ✅ garante foco no popup final
+  // ✅ foco inicial no popup START (e puxar foco de volta se escapar)
+  useEffect(() => {
+    if (!isTrialGuided) return;
+    if (!showTrialStart) return;
+
+    const prev = document.activeElement as HTMLElement | null;
+
+    const t = window.setTimeout(() => {
+      try {
+        startBtnRef.current?.focus();
+      } catch {}
+    }, 0);
+
+    const onFocusIn = (e: FocusEvent) => {
+      const modal = startModalRef.current;
+      if (!modal) return;
+      const target = e.target as Node | null;
+      if (target && modal.contains(target)) return;
+
+      // se foco foi parar fora, volta pro botão
+      try {
+        startBtnRef.current?.focus();
+      } catch {}
+    };
+
+    document.addEventListener("focusin", onFocusIn, true);
+
+    return () => {
+      window.clearTimeout(t);
+      document.removeEventListener("focusin", onFocusIn, true);
+      try {
+        prev?.focus?.();
+      } catch {}
+    };
+  }, [isTrialGuided, showTrialStart]);
+
+  // ✅ garante foco no popup final (já existia) + puxar foco de volta
   useEffect(() => {
     if (!isTrialGuided) return;
     if (!showTrialEnd) return;
+
+    const prev = document.activeElement as HTMLElement | null;
 
     const t = window.setTimeout(() => {
       try {
@@ -212,7 +318,26 @@ export default function HomePage() {
       } catch {}
     }, 0);
 
-    return () => window.clearTimeout(t);
+    const onFocusIn = (e: FocusEvent) => {
+      const modal = endModalRef.current;
+      if (!modal) return;
+      const target = e.target as Node | null;
+      if (target && modal.contains(target)) return;
+
+      try {
+        finishBtnRef.current?.focus();
+      } catch {}
+    };
+
+    document.addEventListener("focusin", onFocusIn, true);
+
+    return () => {
+      window.clearTimeout(t);
+      document.removeEventListener("focusin", onFocusIn, true);
+      try {
+        prev?.focus?.();
+      } catch {}
+    };
   }, [isTrialGuided, showTrialEnd]);
 
   async function onAnalyze() {
@@ -283,7 +408,6 @@ export default function HomePage() {
         }
 
         if (r.status === 409) {
-          // trial já usado etc → força refresh do status
           await refreshOnboarding();
         }
 
@@ -318,10 +442,10 @@ export default function HomePage() {
         messageCountApprox: data?.meta?.messageCountApprox ?? 1,
         score: typeof data?.score?.value === "number" ? data.score.value : null,
         containerId: inConversaMode ? conversaId : null,
-        creditsUsed: typeof data?.creditsUsed === "number" ? data.creditsUsed : null,
+        creditsUsed:
+          typeof data?.creditsUsed === "number" ? data.creditsUsed : null,
       });
 
-      // após sucesso, atualiza status (para flags do trial)
       await refreshOnboarding();
     } finally {
       setLoading(false);
@@ -334,16 +458,12 @@ export default function HomePage() {
   useEffect(() => {
     if (!isTrialGuided) return;
 
-    // se ainda não iniciou (aguardando popup), não setar step
     if (showTrialStart) return;
 
-    // força modo AVULSA no trial (evita caminhos fora do roteiro)
     if (mode !== "AVULSA") setMode("AVULSA");
 
-    // se step null, inicia
     if (!stepId) markStepIfNull("S1_SELECT_SUMMARY_MODE");
 
-    // avanços automáticos (não-frágil)
     const hasText = effectiveText.length >= TRIAL_MIN;
     const hasResult = !!result;
 
@@ -367,7 +487,6 @@ export default function HomePage() {
     }
 
     if (stepId === "S5_REVIEW_RESULT") {
-      // ✅ agora o avanço é pelo clique direto em "Opções de respostas" (sem S6)
       return;
     }
 
@@ -399,7 +518,6 @@ export default function HomePage() {
     if (!isTrialGuided || showTrialStart) return null;
     if (!stepId) return null;
 
-    // Parte A — RESUMO
     if (stepId === "S1_SELECT_SUMMARY_MODE") {
       return {
         id: stepId,
@@ -440,20 +558,21 @@ export default function HomePage() {
       };
     }
 
-    // ✅ S5: clique direto no botão “Opções de respostas”,
-    // mas destacando também score+análise.
     if (stepId === "S5_REVIEW_RESULT") {
       return {
         id: stepId,
         targetTourId: "quick-mode-reply",
-        highlightTourIds: ["quick-score-card", "quick-analysis-card", "quick-mode-reply"],
+        highlightTourIds: [
+          "quick-score-card",
+          "quick-analysis-card",
+          "quick-mode-reply",
+        ],
         title: "5/9 — Resultado",
         body: "Veja o Score e a análise. Para continuar, clique em “Opções de respostas”.",
         requireTargetClick: true,
       };
     }
 
-    // Parte B — RESPONDER
     if (stepId === "R1_EXPLAIN_REPLY_MODE") {
       return {
         id: stepId,
@@ -506,7 +625,6 @@ export default function HomePage() {
       return;
     }
 
-    // ✅ clique em "Opções de respostas" no S5 já troca modo e avança
     if (stepId === "S5_REVIEW_RESULT") {
       setQuickMode("RESPONDER");
       setResult(null);
@@ -538,7 +656,8 @@ export default function HomePage() {
     }
 
     if (
-      (stepId === "R1_EXPLAIN_REPLY_MODE" || stepId === "R2_CLICK_ANALYZE_REPLY") &&
+      (stepId === "R1_EXPLAIN_REPLY_MODE" ||
+        stepId === "R2_CLICK_ANALYZE_REPLY") &&
       result &&
       quickMode === "RESPONDER"
     ) {
@@ -566,7 +685,14 @@ export default function HomePage() {
       {/* POPUP INICIAL DO TRIAL */}
       {isTrialGuided && showTrialStart && (
         <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/60">
-          <div className="w-[min(520px,calc(100%-24px))] rounded-2xl border border-zinc-800 bg-zinc-950 p-5">
+          <div
+            ref={startModalRef}
+            role="dialog"
+            aria-modal="true"
+            tabIndex={-1}
+            onKeyDown={(e) => focusTrapKeydown(e, startModalRef.current)}
+            className="w-[min(520px,calc(100%-24px))] rounded-2xl border border-zinc-800 bg-zinc-950 p-5"
+          >
             <div className="text-lg font-semibold">
               Seja bem vindo a degustação do Hitch.Ai
             </div>
@@ -577,6 +703,7 @@ export default function HomePage() {
 
             <div className="mt-4 flex gap-2">
               <button
+                ref={startBtnRef}
                 className="btn btn-primary"
                 type="button"
                 onClick={ackTrialStart}
@@ -591,7 +718,14 @@ export default function HomePage() {
       {/* POPUP FINAL DO TRIAL */}
       {isTrialGuided && showTrialEnd && (
         <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/60">
-          <div className="w-[min(520px,calc(100%-24px))] rounded-2xl border border-zinc-800 bg-zinc-950 p-5">
+          <div
+            ref={endModalRef}
+            role="dialog"
+            aria-modal="true"
+            tabIndex={-1}
+            onKeyDown={(e) => focusTrapKeydown(e, endModalRef.current)}
+            className="w-[min(520px,calc(100%-24px))] rounded-2xl border border-zinc-800 bg-zinc-950 p-5"
+          >
             <div className="text-lg font-semibold">Degustação concluída</div>
             <div className="text-sm text-zinc-300 mt-2">
               Agora o próximo passo é escolher um plano para continuar usando.
@@ -614,15 +748,23 @@ export default function HomePage() {
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-xl font-semibold">Decoder</h1>
-          <p className="text-sm text-zinc-400">Análise Avulsa / Dentro de Conversa</p>
+          <p className="text-sm text-zinc-400">
+            Análise Avulsa / Dentro de Conversa
+          </p>
           {creditsBalance != null && (
-            <p className="text-xs text-zinc-500">Saldo: {creditsBalance} créditos</p>
+            <p className="text-xs text-zinc-500">
+              Saldo: {creditsBalance} créditos
+            </p>
           )}
         </div>
 
         <div className="flex items-center gap-2">
-          <Link className="btn" href="/conversas">Conversas</Link>
-          <Link className="btn" href="/account/subscription">Assinatura</Link>
+          <Link className="btn" href="/conversas">
+            Conversas
+          </Link>
+          <Link className="btn" href="/account/subscription">
+            Assinatura
+          </Link>
         </div>
       </div>
 
@@ -699,7 +841,6 @@ export default function HomePage() {
             className={`btn ${quickMode === "RESPONDER" ? "btn-primary" : ""}`}
             onClick={() => {
               if (isTrialGuided) {
-                // ✅ agora libera no S5 (clique direto no botão)
                 if (stepId !== "S5_REVIEW_RESULT") return;
               }
               setQuickMode("RESPONDER");
@@ -714,11 +855,16 @@ export default function HomePage() {
         </div>
 
         <div className="text-xs text-zinc-500">Tipo de relação</div>
-        <div className="flex flex-wrap gap-2" data-tour-id="quick-relationship-option">
+        <div
+          className="flex flex-wrap gap-2"
+          data-tour-id="quick-relationship-option"
+        >
           {relationshipOptions.map((opt) => (
             <button
               key={opt.value}
-              className={`btn ${relationshipType === opt.value ? "btn-primary" : ""}`}
+              className={`btn ${
+                relationshipType === opt.value ? "btn-primary" : ""
+              }`}
               onClick={() => {
                 setRelationshipType(opt.value);
                 if (isTrialGuided && stepId === "S3_SELECT_RELATIONSHIP")
@@ -737,12 +883,13 @@ export default function HomePage() {
           className="btn btn-primary"
           onClick={() => {
             if (isTrialGuided) {
-              // RESUMO: só no passo certo
               if (quickMode === "RESUMO" && stepId !== "S4_CLICK_ANALYZE") return;
-              // RESPONDER: só no passo certo
               if (
                 quickMode === "RESPONDER" &&
-                !(stepId === "R1_EXPLAIN_REPLY_MODE" || stepId === "R2_CLICK_ANALYZE_REPLY")
+                !(
+                  stepId === "R1_EXPLAIN_REPLY_MODE" ||
+                  stepId === "R2_CLICK_ANALYZE_REPLY"
+                )
               )
                 return;
             }
@@ -758,7 +905,9 @@ export default function HomePage() {
           <div className="rounded-xl border p-3 text-sm">
             <div className="font-medium">{banner.title}</div>
             <div className="text-muted-foreground">{banner.reason}</div>
-            {banner.fix && <div className="text-muted-foreground">{banner.fix}</div>}
+            {banner.fix && (
+              <div className="text-muted-foreground">{banner.fix}</div>
+            )}
           </div>
         )}
       </div>
@@ -771,7 +920,8 @@ export default function HomePage() {
       {/* helper trial: no step S5, orienta o clique */}
       {isTrialGuided && stepId === "S5_REVIEW_RESULT" && (
         <div className="text-xs text-zinc-500">
-          Continue clicando em <span className="text-zinc-200">Opções de respostas</span>.
+          Continue clicando em{" "}
+          <span className="text-zinc-200">Opções de respostas</span>.
         </div>
       )}
     </div>
