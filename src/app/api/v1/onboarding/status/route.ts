@@ -27,21 +27,17 @@ export async function GET() {
     cache: "no-store",
   });
 
-  const contentType = res.headers.get("content-type") ?? "";
-  const body = contentType.includes("application/json")
-    ? await res.json()
-    : await res.text();
+  const text = await res.text();
+  let data: any = null;
 
-  if (!res.ok) {
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
     return NextResponse.json(
-      {
-        message: "Falha ao buscar onboarding status no backend.",
-        backendStatus: res.status,
-        backendBody: body,
-      },
-      { status: 200 }, // mantém o front vivo; o client decide fluxo
+      { message: "Resposta inválida do backend (não-JSON)." },
+      { status: 502 },
     );
   }
 
-  return NextResponse.json(body, { status: 200 });
+  return NextResponse.json(data, { status: res.status });
 }

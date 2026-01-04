@@ -22,7 +22,6 @@ const NavLink = ({ href, label }: { href: string; label: string }) => {
 
 export function TopNav() {
   const { status, loading } = useOnboardingStatus();
-
   const isReady = !loading && status?.onboardingStage === "READY";
 
   return (
@@ -35,15 +34,14 @@ export function TopNav() {
           <span className="text-sm font-semibold tracking-wide">HINT</span>
         </Link>
 
-        {/* 🔒 Durante onboarding, navegação mínima */}
         {!isReady && <div className="text-xs text-zinc-400">Configurando sua conta…</div>}
 
-        {/* ✅ Pós-onboarding */}
         {isReady && (
           <nav className="flex items-center gap-5">
             <NavLink href="/" label="Home" />
             <NavLink href="/conversas" label="Conversas" />
             <NavLink href="/account" label="Conta" />
+            <NavLink href="/admin/credit-v2" label="Admin" />
           </nav>
         )}
       </div>

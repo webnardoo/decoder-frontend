@@ -1,45 +1,54 @@
 import { NextResponse } from "next/server";
 
-const BACKEND_URL = "http://localhost:4100";
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:4100";
 
 export async function POST(req: Request) {
+  let body: any = null;
   try {
-    const body = await req.json();
-
-    const upstream = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      cache: "no-store",
-    });
-
-    const text = await upstream.text().catch(() => "");
-    let data: any = null;
-    try {
-      data = text ? JSON.parse(text) : null;
-    } catch {
-      data = null;
-    }
-
-    const accessToken = String(data?.accessToken ?? "").trim();
-
-    if (!upstream.ok || !accessToken) {
-      return NextResponse.json(
-        { message: "Login não retornou token (accessToken/token)." },
-        { status: 401 },
-      );
-    }
-
-    const res = NextResponse.json(data, { status: 200 });
-    res.cookies.set("decoder_auth", accessToken, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      secure: process.env.NODE_ENV === "production",
-    });
-
-    return res;
+    body = await req.json();
   } catch {
-    return NextResponse.json({ message: "LOGIN_PROXY_FAILED" }, { status: 500 });
+    body = null;
   }
+
+  const res = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify(body ?? {}),
+  });
+
+  const text = await res.text();
+  let data: any = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = { message: "Resposta inválida do backend (não-JSON)." };
+  }
+
+  // repassa erro sem setar cookie
+  if (!res.ok) {
+    return NextResponse.json(data ?? { message: "Falha no login." }, { status: res.status });
+  }
+
+  const token = data?.accessToken ?? null;
+  if (!token || typeof token !== "string") {
+    return NextResponse.json({ message: "Login OK, mas backend não retornou accessToken." }, { status: 502 });
+  }
+
+  const response = NextResponse.json(
+    { ok: true, user: data?.user ?? null },
+    { status: 200 },
+  );
+
+  // cookie HTTPOnly pra SSR/Route Handlers conseguirem ler com cookies()
+  response.cookies.set({
+    name: "accessToken",
+    value: token,
+    httpOnly: true,
+    sameSite: "lax",
+    secure: false, // dev/local
+    path: "/",
+  });
+
+  return response;
 }

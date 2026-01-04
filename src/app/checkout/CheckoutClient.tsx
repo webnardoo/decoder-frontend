@@ -3,36 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-type StartResponse = {
-  checkoutId: string;
-  status: string;
-  plan?: { planId: string; name: string };
-  billingCycle?: string;
-  notice?: string;
-  payment?: {
-    mode: string;
-    provider: string;
-    providerSessionId: string;
-    returnUrls?: { success: string; failure: string; cancel: string };
-  };
-};
+type CheckoutSessionResponse =
+  | { url: string }
+  | { message?: string };
 
-type ConfirmResponse =
-  | {
-      checkoutId: string;
-      status: "payment_confirmed" | "subscription_activated" | string;
-      subscriptionActivated?: boolean;
-      creditsBalance?: number;
-      onboardingStage?: string;
-    }
-  | {
-      checkoutId: string;
-      status: "payment_failed" | string;
-      subscriptionActivated?: boolean;
-      error?: { code: string; message: string };
-    };
-
-type OnboardingStatus = { onboardingStage: string };
+type BillingCycle = "monthly" | "annual";
 
 function routeFromStage(stage: string) {
   const s = String(stage || "").toUpperCase().trim();
@@ -46,12 +21,14 @@ function routeFromStage(stage: string) {
   return "/start";
 }
 
+type OnboardingStatus = { onboardingStage: string };
+
 export default function CheckoutClient() {
   const router = useRouter();
   const sp = useSearchParams();
 
-  const planId = String(sp.get("planId") || "").trim();
-  const billingCycle = String(sp.get("billingCycle") || "").trim(); // "monthly" | "annual"
+  const planId = String(sp.get("planId") || "").trim(); // Plan.id (FK)
+  const billingCycle = String(sp.get("billingCycle") || "").trim() as BillingCycle; // monthly|annual
 
   const planLabel = useMemo(() => {
     const p = planId.toLowerCase();
@@ -62,22 +39,27 @@ export default function CheckoutClient() {
   }, [planId]);
 
   const cycleLabel = useMemo(() => {
-    const c = billingCycle.toLowerCase();
+    const c = (billingCycle || "").toLowerCase();
     if (c === "annual" || c === "yearly") return "anual";
     return "mensal";
   }, [billingCycle]);
 
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<string>("starting");
-  const [checkoutId, setCheckoutId] = useState<string>("");
   const [error, setError] = useState<string>("");
 
-  const [confirming, setConfirming] = useState(false);
-
-  // ✅ evita double-call do useEffect no Next/React dev (Strict Mode)
+  // evita double-call no Strict Mode
   const startedRef = useRef(false);
 
-  async function startCheckout() {
+  async function fetchOnboardingAndRedirect() {
+    const res = await fetch("/api/onboarding/status", { method: "GET" });
+    const data = (await res.json().catch(() => null)) as OnboardingStatus | null;
+
+    const stage = data?.onboardingStage || "START";
+    router.push(routeFromStage(stage));
+  }
+
+  async function startStripeCheckout() {
     setLoading(true);
     setError("");
     setStatus("starting");
@@ -90,24 +72,37 @@ export default function CheckoutClient() {
         return;
       }
 
+      // ✅ Mantém compatibilidade com o fluxo atual: usamos o proxy existente
+      // e só trocamos o backend target nele.
       const res = await fetch("/api/checkout/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId, billingCycle }),
+        cache: "no-store",
       });
 
-      const data = (await res.json().catch(() => null)) as StartResponse | null;
+      const data = (await res.json().catch(() => null)) as CheckoutSessionResponse | null;
 
-      if (!res.ok || !data?.checkoutId) {
+      if (!res.ok) {
         setStatus("start_failed");
-        setError(`Request failed (${res.status})`);
+        setError((data as any)?.message || `Request failed (${res.status})`);
         setLoading(false);
         return;
       }
 
-      setCheckoutId(data.checkoutId);
-      setStatus(data.status || "checkout_started");
+      const url = (data as any)?.url;
+      if (!url || typeof url !== "string") {
+        setStatus("start_failed");
+        setError("Backend não retornou a URL do checkout.");
+        setLoading(false);
+        return;
+      }
+
+      setStatus("redirecting");
       setLoading(false);
+
+      // ✅ Redireciona para o Stripe Checkout
+      window.location.href = url;
     } catch (e: any) {
       setStatus("start_failed");
       setError(e?.message || "Erro ao iniciar checkout.");
@@ -115,63 +110,19 @@ export default function CheckoutClient() {
     }
   }
 
-  async function fetchOnboardingAndRedirect() {
-    const res = await fetch("/api/onboarding/status", { method: "GET" });
-    const data = (await res.json().catch(() => null)) as OnboardingStatus | null;
-
-    const stage = data?.onboardingStage || "START";
-    router.push(routeFromStage(stage));
-  }
-
-  async function confirmPayment() {
-    if (!checkoutId) return;
-
-    setConfirming(true);
-    setError("");
-
-    try {
-      const res = await fetch(`/api/checkout/${checkoutId}/confirm`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ providerResultRef: "any" }),
-      });
-
-      const data = (await res.json().catch(() => null)) as ConfirmResponse | null;
-
-      if (!res.ok) {
-        setError(
-          data && "error" in data && data.error?.message
-            ? data.error.message
-            : `Request failed (${res.status})`,
-        );
-        setStatus("payment_failed");
-        setConfirming(false);
-        return;
-      }
-
-      if (data && "status" in data) setStatus(String(data.status));
-
-      // confirmado → obedece onboardingStage do backend via /onboarding/status
-      if ((data as any)?.subscriptionActivated || String((data as any)?.status).includes("confirm")) {
-        await fetchOnboardingAndRedirect();
-        return;
-      }
-
-      // pending/falha
-      if ((data as any)?.error?.message) setError((data as any).error.message);
-      setConfirming(false);
-    } catch (e: any) {
-      setError(e?.message || "Erro ao confirmar pagamento.");
-      setStatus("payment_failed");
-      setConfirming(false);
-    }
-  }
-
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
 
-    void startCheckout();
+    // Se o usuário já voltou do Stripe para /checkout por algum motivo,
+    // tentamos apenas obedecer onboarding (read-only) e sair da tela.
+    const returned = sp.get("returned");
+    if (returned) {
+      void fetchOnboardingAndRedirect();
+      return;
+    }
+
+    void startStripeCheckout();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -179,7 +130,9 @@ export default function CheckoutClient() {
     <div className="space-y-6">
       <div>
         <h1 className="text-lg font-semibold">Checkout</h1>
-        <p className="text-sm text-zinc-400">Seu acesso será ativado após a confirmação do pagamento.</p>
+        <p className="text-sm text-zinc-400">
+          Você será redirecionado para o checkout seguro do Stripe.
+        </p>
       </div>
 
       <div className="card p-5 space-y-4">
@@ -189,39 +142,35 @@ export default function CheckoutClient() {
           <div className="text-zinc-500 text-xs">Ciclo: {cycleLabel}</div>
         </div>
 
-        {loading && <div className="text-sm text-zinc-400">Preparando checkout...</div>}
+        {loading && <div className="text-sm text-zinc-400">Preparando checkout…</div>}
 
         {!loading && (
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 space-y-2">
-            <div className="text-sm font-medium">Pagamento (simulado)</div>
+            <div className="text-sm font-medium">Pagamento (Stripe)</div>
 
             <div className="text-xs text-zinc-500">
               Status: <span className="text-zinc-200">{status}</span>
             </div>
-
-            {!!checkoutId && (
-              <div className="text-xs text-zinc-500">
-                CheckoutId: <span className="text-zinc-200">{checkoutId}</span>
-              </div>
-            )}
 
             {!!error && <div className="text-sm text-red-400">{error}</div>}
 
             <div className="flex gap-3 pt-2">
               <button
                 className="btn btn-primary w-fit"
-                disabled={confirming || !checkoutId}
-                onClick={() => void confirmPayment()}
+                disabled={status === "redirecting"}
+                onClick={() => void startStripeCheckout()}
                 type="button"
               >
-                {confirming ? "Confirmando..." : "Confirmar pagamento"}
+                {status === "redirecting" ? "Redirecionando…" : "Tentar novamente"}
               </button>
 
-              {!!error && (
-                <button className="btn w-fit" disabled={confirming} onClick={() => void startCheckout()} type="button">
-                  Reiniciar checkout
-                </button>
-              )}
+              <button
+                className="btn w-fit"
+                onClick={() => router.push("/billing/plan")}
+                type="button"
+              >
+                Voltar para planos
+              </button>
             </div>
           </div>
         )}

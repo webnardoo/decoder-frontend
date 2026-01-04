@@ -24,7 +24,8 @@ export async function POST(req: Request) {
     const cookieStore = await cookies();
     const decoderAuth = cookieStore.get("decoder_auth")?.value;
 
-    const res = await fetch(`${BACKEND_URL}/api/v1/checkout/start`, {
+    // ✅ NOVO alvo do MVP (Stripe Checkout Session)
+    const res = await fetch(`${BACKEND_URL}/api/v1/billing/stripe/checkout-session`, {
       method: "POST",
       headers: buildAuthHeaders(req, decoderAuth),
       body: JSON.stringify(body),
@@ -35,11 +36,12 @@ export async function POST(req: Request) {
 
     if (!res.ok) {
       return NextResponse.json(
-        data ?? { message: "Falha ao iniciar checkout." },
+        data ?? { message: "Falha ao iniciar checkout no Stripe." },
         { status: res.status }
       );
     }
 
+    // esperado: { url: "https://checkout.stripe.com/..." }
     return NextResponse.json(data, { status: 201 });
   } catch (e: any) {
     return NextResponse.json(

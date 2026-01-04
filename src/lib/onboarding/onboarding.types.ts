@@ -27,6 +27,9 @@ export type OnboardingStatus = {
 
   onboardingStage: OnboardingStage;
   creditsBalance: number;
+
+  // opcional (quando backend expuser)
+  isAdmin?: boolean;
 };
 
 /**

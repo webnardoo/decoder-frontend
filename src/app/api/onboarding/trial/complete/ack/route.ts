@@ -9,15 +9,17 @@ function pickTokenFromCookieStore(store: Awaited<ReturnType<typeof cookies>>) {
     store.get("accessToken")?.value ||
     store.get("token")?.value ||
     store.get("decoder_access_token")?.value ||
+    store.get("decoder_auth")?.value || // ✅ compat com teu guard/cookie
     ""
   );
 }
 
 export async function POST() {
-  const store = await cookies(); // ✅ FIX: cookies() é async no Next 16
+  const store = await cookies();
   const token = pickTokenFromCookieStore(store);
 
-  const res = await fetch(`${BACKEND_URL}/api/v1/onboarding/trial/complete/ack`, {
+  // ✅ BACK correto: /trial/complete (não existe /ack no backend)
+  const res = await fetch(`${BACKEND_URL}/api/v1/onboarding/trial/complete`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -34,5 +36,11 @@ export async function POST() {
     );
   }
 
-  return NextResponse.json({ ok: true });
+  // ✅ devolve payload do backend (útil pro front avançar etapa)
+  try {
+    const data = text ? JSON.parse(text) : { ok: true };
+    return NextResponse.json(data);
+  } catch {
+    return NextResponse.json({ ok: true });
+  }
 }
