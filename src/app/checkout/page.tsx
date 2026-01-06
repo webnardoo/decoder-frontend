@@ -11,7 +11,7 @@ function getApiBaseUrl() {
   const base =
     process.env.NEXT_PUBLIC_API_BASE_URL ||
     process.env.BACKEND_URL ||
-    "http://localhost:4100/api/v1";
+    "http://localhost:4100";
   return base.replace(/\/+$/, "");
 }
 
@@ -51,6 +51,15 @@ function extractCheckoutUrl(payload: any): string | null {
   return typeof u === "string" && u.trim().length > 0 ? u.trim() : null;
 }
 
+function buildCheckoutSessionEndpoint(base: string) {
+  // Aceita ambos cenários:
+  // - base = https://.../api/v1   -> adiciona /billing/...
+  // - base = https://...         -> adiciona /api/v1/billing/...
+  return base.endsWith("/api/v1")
+    ? `${base}/billing/stripe/checkout-session`
+    : `${base}/api/v1/billing/stripe/checkout-session`;
+}
+
 export default async function CheckoutPage({
   searchParams,
 }: {
@@ -70,9 +79,9 @@ export default async function CheckoutPage({
   }
 
   const base = getApiBaseUrl();
+  const endpoint = buildCheckoutSessionEndpoint(base);
 
-  // ✅ CONTRATO REAL DO BACKEND
-  const res = await fetch(`${base}/billing/stripe/checkout-session`, {
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -92,6 +101,7 @@ export default async function CheckoutPage({
       typeof payload === "string"
         ? payload
         : payload?.message || payload?.error || JSON.stringify(payload);
+
     redirect(
       `/checkout/result?ok=0&msg=${encodeURIComponent(
         String(msg).slice(0, 180),
