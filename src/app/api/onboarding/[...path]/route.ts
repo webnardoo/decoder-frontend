@@ -1,10 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
+function normalizeBaseUrl(raw: string) {
+  return String(raw || "").trim().replace(/\/+$/, "");
+}
+
 function getBackendBaseUrl() {
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-  if (!base) throw new Error("NEXT_PUBLIC_API_BASE_URL não definido");
-  return base.replace(/\/+$/, "");
+  const base =
+    process.env.DECODER_BACKEND_BASE_URL ||
+    process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL ||
+    process.env.BACKEND_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    "";
+
+  const normalized = normalizeBaseUrl(base);
+
+  if (!normalized) return null;
+  return normalized;
+}
+
+function ensureApiV1(base: string) {
+  // Se já vier com /api/v1 no final, mantém.
+  if (base.endsWith("/api/v1")) return base;
+  // Se vier com /api/v1/ em algum ponto final, normaliza.
+  if (base.endsWith("/api/v1/")) return base.replace(/\/+$/, "");
+  // Caso padrão: adiciona /api/v1
+  return `${base}/api/v1`;
 }
 
 function withPath(base: string, path: string) {
@@ -13,7 +34,19 @@ function withPath(base: string, path: string) {
 }
 
 async function proxy(req: NextRequest, methodOverride?: string) {
-  const base = getBackendBaseUrl();
+  const baseRaw = getBackendBaseUrl();
+  if (!baseRaw) {
+    return NextResponse.json(
+      {
+        message: "Configuração inválida: backend base URL não definida no Vercel.",
+        hint:
+          "Defina uma destas variáveis no Vercel (Production): DECODER_BACKEND_BASE_URL ou BACKEND_URL (fallback).",
+      },
+      { status: 500 },
+    );
+  }
+
+  const apiBase = ensureApiV1(baseRaw);
 
   // /api/onboarding/<...path>
   const segments = req.nextUrl.pathname.split("/").filter(Boolean);
@@ -32,8 +65,7 @@ async function proxy(req: NextRequest, methodOverride?: string) {
   }
 
   // BACK CANÔNICO: /api/v1/onboarding/<tail>
-  // Seu env já é http://localhost:4100/api/v1
-  const url = withPath(base, `onboarding/${tail}`);
+  const url = withPath(apiBase, `onboarding/${tail}`);
 
   // Regra crítica: o BACK usa PATCH para dialogue-nickname
   let backendMethod = (methodOverride || req.method).toUpperCase();
@@ -43,12 +75,14 @@ async function proxy(req: NextRequest, methodOverride?: string) {
 
   const headers = new Headers();
   headers.set("Content-Type", "application/json");
-  headers.set("Cookie", `decoder_auth=${decoderAuth}`);
   headers.set("Accept", "application/json");
+
+  // Compatibilidade máxima: manda cookie E bearer
+  headers.set("Cookie", `decoder_auth=${decoderAuth}`);
+  headers.set("Authorization", `Bearer ${decoderAuth}`);
 
   let body: string | undefined = undefined;
   if (backendMethod !== "GET" && backendMethod !== "HEAD") {
-    // Evita explodir em body vazio
     const text = await req.text();
     body = text && text.length > 0 ? text : "{}";
   }

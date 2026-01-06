@@ -1,13 +1,25 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
+function normalizeBaseUrl(raw: string) {
+  return String(raw || "").trim().replace(/\/+$/, "");
+}
+
 function getBackendBaseUrl() {
-  return (
+  const base =
     process.env.DECODER_BACKEND_BASE_URL ||
     process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL ||
-    process.env.BACKEND_URL || // fallback legado (local)
-    "http://localhost:4100"
-  );
+    process.env.BACKEND_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    "http://localhost:4100";
+
+  return normalizeBaseUrl(base);
+}
+
+function ensureApiV1(base: string) {
+  if (base.endsWith("/api/v1")) return base;
+  if (base.endsWith("/api/v1/")) return base.replace(/\/+$/, "");
+  return `${base}/api/v1`;
 }
 
 async function getAuthTokenFromCookies(): Promise<string | null> {
@@ -20,7 +32,7 @@ async function getAuthTokenFromCookies(): Promise<string | null> {
     jar.get("decoder_auth")?.value ||
     null;
 
-  return token;
+  return token ? String(token).trim() : null;
 }
 
 export async function POST(req: Request) {
@@ -28,7 +40,6 @@ export async function POST(req: Request) {
     const token = await getAuthTokenFromCookies();
     const payload = await req.json().catch(() => ({}));
 
-    // ✅ aceita ambos formatos: { nickname } (UI) ou { dialogueNickname } (contrato)
     const raw =
       typeof (payload as any)?.dialogueNickname === "string"
         ? (payload as any).dialogueNickname
@@ -38,39 +49,33 @@ export async function POST(req: Request) {
 
     const dialogueNickname = String(raw).trim();
 
-    const backendBaseUrl = getBackendBaseUrl();
+    const backendBaseUrl = ensureApiV1(getBackendBaseUrl());
 
-    const res = await fetch(`${backendBaseUrl}/api/v1/onboarding/dialogue-nickname`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    const res = await fetch(
+      `${backendBaseUrl}/onboarding/dialogue-nickname`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ dialogueNickname }),
+        cache: "no-store",
       },
-      body: JSON.stringify({ dialogueNickname }),
-    });
+    );
 
     const contentType = res.headers.get("content-type") ?? "";
     const body = contentType.includes("application/json")
       ? await res.json()
       : await res.text();
 
-    if (!res.ok) {
-      return NextResponse.json(
-        {
-          message: "Falha ao salvar nickname no backend.",
-          backendStatus: res.status,
-          backendBody: body,
-        },
-        { status: res.status },
-      );
-    }
-
-    return NextResponse.json(body, { status: 200 });
-  } catch (err: any) {
+    return NextResponse.json(body, { status: res.status });
+  } catch {
     return NextResponse.json(
       {
         message: "Falha ao salvar nickname (proxy).",
-        hint: "Verifique DECODER_BACKEND_BASE_URL / NEXT_PUBLIC_DECODER_BACKEND_BASE_URL no Vercel.",
+        hint:
+          "Verifique variáveis no Vercel: DECODER_BACKEND_BASE_URL (recomendado) ou BACKEND_URL.",
       },
       { status: 502 },
     );
