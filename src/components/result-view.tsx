@@ -8,7 +8,11 @@ import { QuickResultCard } from "@/components/quick-analysis/QuickResultCard";
 
 export type QuickModeUI = "RESUMO" | "RESPONDER";
 
-export type ReplyIntent = "apaziguar" | "explicar" | "neutro" | "afirmar_limite";
+export type ReplyIntent =
+  | "apaziguar"
+  | "explicar"
+  | "neutro"
+  | "afirmar_limite";
 
 export type ReplySuggestionObject = {
   intent: ReplyIntent;
@@ -33,13 +37,12 @@ export type QuickAnalysisResponseV11 = {
   analysis?: string;
 
   insights?: string[];
-
   redFlags?: string[];
 
   replySuggestions?: ReplySuggestionsPayload;
 
-  creditsUsed?: number;
-  creditsBalanceAfter?: number;
+  creditsUsed?: number | null;
+  creditsBalanceAfter?: number | null;
 
   quickId?: string;
 
@@ -80,7 +83,12 @@ function normalizeIntent(raw: unknown): ReplyIntent {
   if (s === "apaziguar") return "apaziguar";
   if (s === "explicar") return "explicar";
   if (s === "neutro" || s === "neutral") return "neutro";
-  if (s === "afirmar_limite" || s === "afirmar") return "afirmar_limite";
+  if (
+    s === "afirmar_limite" ||
+    s === "afirmar" ||
+    s === "afirmar_limte"
+  )
+    return "afirmar_limite";
 
   return "neutro";
 }
@@ -114,16 +122,18 @@ function normalizeReplySuggestions(
       "neutro",
       "afirmar_limite",
     ];
+
     const out: ReplySuggestionObject[] = [];
 
     for (const intent of intents) {
       const bucket =
         intent === "afirmar_limite"
-          ? (obj["afirmar_limite"] ?? obj["afirmar-limite"])
+          ? (obj["afirmar_limite"] ??
+              obj["afirmar-limite"] ??
+              obj["afirmarLimite"])
           : obj[intent];
 
       const lines = coerceStringArray(bucket);
-
       for (const text of lines) {
         if (text) out.push({ intent, text });
       }
@@ -177,11 +187,6 @@ export function ResultView({
     ? data.labelExplanation.trim()
     : "";
 
-  const canRenderQuickCard =
-    scoreLabel.length > 0 &&
-    scoreExplanation.length > 0 &&
-    labelExplanation.length > 0;
-
   const analysis = isNonEmptyString(data?.analysis) ? data.analysis.trim() : "";
 
   const insights = Array.isArray(data?.insights) ? data.insights : [];
@@ -192,15 +197,25 @@ export function ResultView({
   const isResumo = quickMode === "RESUMO";
   const isResponder = quickMode === "RESPONDER";
 
-  const shouldRenderResultBlock = isResumo && (canRenderQuickCard || analysis.length > 0);
+  /**
+   * MVP RULE (HARD):
+   * - Score aparece em RESUMO e RESPONDER
+   * - Análise NÃO aparece se houver replySuggestions (kill-switch)
+   * - Análise aparece APENAS em RESUMO
+   */
+  const canRenderScoreCard = scoreLabel.length > 0;
+
+  const hasReplies = replySuggestions.length > 0;
+  const canRenderAnalysisCard = !hasReplies && isResumo && analysis.length > 0;
+
+  const shouldRenderResultBlock = canRenderScoreCard || canRenderAnalysisCard;
 
   return (
     <div className="space-y-4">
-      {/* ✅ BLOCO ÚNICO PARA O OVERLAY (Score + Análise) */}
+      {/* Score (RESUMO e RESPONDER) + Análise (apenas RESUMO e nunca junto com replies) */}
       {shouldRenderResultBlock && (
         <div data-tour-id="quick-result-block" className="space-y-4">
-          {/* CARD RESULTADO */}
-          {canRenderQuickCard && (
+          {canRenderScoreCard && (
             <div data-tour-id="quick-score-card">
               <QuickResultCard
                 scoreValue={scoreValue}
@@ -211,8 +226,7 @@ export function ResultView({
             </div>
           )}
 
-          {/* CARD ANÁLISE */}
-          {analysis.length > 0 && (
+          {canRenderAnalysisCard && (
             <div
               className="rounded-2xl border p-4 space-y-2"
               data-tour-id="quick-analysis-card"
@@ -226,7 +240,7 @@ export function ResultView({
         </div>
       )}
 
-      {/* RED FLAGS (somente RESUMO) */}
+      {/* RESUMO: redFlags */}
       {isResumo && redFlags.length > 0 && (
         <div className="rounded-2xl border p-4 space-y-2">
           <div className="text-sm font-medium">Red flags</div>
@@ -238,7 +252,7 @@ export function ResultView({
         </div>
       )}
 
-      {/* RESPONDER: Insights antes das sugestões */}
+      {/* RESPONDER: insights */}
       {isResponder && insights.length > 0 && (
         <div className="rounded-2xl border p-4 space-y-2">
           <div className="text-sm font-medium">Insights</div>
@@ -250,6 +264,7 @@ export function ResultView({
         </div>
       )}
 
+      {/* RESPONDER: replySuggestions */}
       {isResponder && replySuggestions.length > 0 && (
         <div
           className="rounded-2xl border p-4 space-y-3"
@@ -274,15 +289,16 @@ export function ResultView({
         data?.creditsBalanceAfter !== undefined ||
         data?.quickId) && (
         <div className="text-xs text-muted-foreground">
-          {data?.creditsUsed !== undefined && (
+          {data?.creditsUsed !== undefined && data?.creditsUsed !== null && (
             <span>Créditos usados: {data.creditsUsed}</span>
           )}
-          {data?.creditsBalanceAfter !== undefined && (
-            <>
-              {" · "}
-              <span>Saldo: {data.creditsBalanceAfter}</span>
-            </>
-          )}
+          {data?.creditsBalanceAfter !== undefined &&
+            data?.creditsBalanceAfter !== null && (
+              <>
+                {" · "}
+                <span>Saldo: {data.creditsBalanceAfter}</span>
+              </>
+            )}
           {data?.quickId && (
             <>
               {" · "}

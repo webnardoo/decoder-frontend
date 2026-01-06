@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-const BACKEND_URL = "http://localhost:4100";
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:4100/api/v1";
 
 export async function POST(req: Request) {
   try {
@@ -14,25 +15,33 @@ export async function POST(req: Request) {
 
     const body = await req.text();
 
-    const upstream = await fetch(`${BACKEND_URL}/api/v1/checkout/start`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body,
-      cache: "no-store",
-    });
+    const upstream = await fetch(
+      `${BACKEND_URL}/billing/stripe/checkout-session`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body,
+        cache: "no-store",
+      }
+    );
 
-    const text = await upstream.text().catch(() => "");
+    const text = await upstream.text();
 
-    return new NextResponse(text || "", {
+    return new NextResponse(text, {
       status: upstream.status,
       headers: {
-        "Content-Type": upstream.headers.get("content-type") || "application/json; charset=utf-8",
+        "Content-Type":
+          upstream.headers.get("content-type") ||
+          "application/json; charset=utf-8",
       },
     });
   } catch {
-    return NextResponse.json({ message: "CHECKOUT_START_PROXY_FAILED" }, { status: 500 });
+    return NextResponse.json(
+      { message: "CHECKOUT_PROXY_FAILED" },
+      { status: 500 }
+    );
   }
 }

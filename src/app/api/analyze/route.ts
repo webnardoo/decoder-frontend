@@ -40,6 +40,27 @@ function extractJwtFromCookieValue(v: string) {
   return raw;
 }
 
+/**
+ * MVP RULE (HARD):
+ * - QUICK REPLY (responder) NÃO pode devolver "analysis" para o front.
+ * Isso garante que nenhum componente consiga renderizar Análise no modo responder,
+ * mesmo que a IA/backend ainda enviem esse campo.
+ */
+function stripAnalysisForResponder(payload: unknown, quickMode: "resumo" | "responder") {
+  if (quickMode !== "responder") return payload;
+
+  if (!payload || typeof payload !== "object") return payload;
+
+  // mantém a referência segura (clona raso)
+  const obj = Array.isArray(payload) ? payload : { ...(payload as Record<string, unknown>) };
+
+  if (!Array.isArray(obj)) {
+    delete (obj as any).analysis;
+  }
+
+  return obj;
+}
+
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as AnalyzeRequestBody;
@@ -95,7 +116,10 @@ export async function POST(req: Request) {
     const isJson = contentType.includes("application/json");
     const data = isJson ? await upstream.json() : await upstream.text();
 
-    return NextResponse.json(data, { status: upstream.status });
+    // MVP: remove analysis no modo responder antes de retornar ao front
+    const patched = isJson ? stripAnalysisForResponder(data, quickMode) : data;
+
+    return NextResponse.json(patched, { status: upstream.status });
   } catch {
     return NextResponse.json(
       { error: "Falha ao processar requisição." },

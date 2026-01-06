@@ -3,20 +3,38 @@ import { cookies } from "next/headers";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4100";
 
-type Body = { nickname?: string };
+// Aceita ambos para compatibilidade, mas CANÔNICO é dialogueNickname
+type Body = { dialogueNickname?: string; nickname?: string };
 
-async function getTokenFromCookies(): Promise<string | null> {
+async function getAuthFromCookies(): Promise<{
+  bearerToken: string | null;
+  decoderAuth: string | null;
+}> {
   const store = await cookies();
-  const a = store.get("accessToken")?.value;
-  const b = store.get("token")?.value;
-  return (a || b || "").trim() || null;
+
+  // Alguns fluxos guardam token em cookies client-side
+  const accessToken = store.get("accessToken")?.value;
+  const token = store.get("token")?.value;
+
+  // Auth canônico do backend (HttpOnly)
+  const decoderAuth = store.get("decoder_auth")?.value;
+
+  const bearerToken = (accessToken || token || "").trim() || null;
+  return { bearerToken, decoderAuth: (decoderAuth || "").trim() || null };
 }
 
-async function forwardToBackend(
-  token: string,
-  nickname: string,
-): Promise<{ ok: boolean; status: number; text: string; tried: string[] }> {
-  // ✅ lista curta e prática (evita inferência única)
+function extractDialogueNickname(body: Body): string {
+  const v = (body?.dialogueNickname ?? body?.nickname ?? "").toString().trim();
+  return v;
+}
+
+async function forwardToBackend(params: {
+  bearerToken: string | null;
+  decoderAuth: string | null;
+  dialogueNickname: string;
+}): Promise<{ ok: boolean; status: number; text: string; tried: string[] }> {
+  const { bearerToken, decoderAuth, dialogueNickname } = params;
+
   const candidates: Array<{ method: "POST" | "PATCH" | "PUT"; path: string }> = [
     // Onboarding
     { method: "POST", path: "/api/v1/onboarding/dialogue-nickname" },
@@ -37,29 +55,35 @@ async function forwardToBackend(
   const tried: string[] = [];
 
   for (const c of candidates) {
-    const url = `${BACKEND_URL}${c.path}`;
     tried.push(`${c.method} ${c.path}`);
+    const url = `${BACKEND_URL}${c.path}`;
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+
+    // Preferir Cookie HttpOnly (decoder_auth) quando existir
+    if (decoderAuth) {
+      headers.Cookie = `decoder_auth=${decoderAuth}`;
+    } else if (bearerToken) {
+      headers.Authorization = `Bearer ${bearerToken}`;
+    }
 
     const res = await fetch(url, {
       method: c.method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ nickname }),
+      headers,
+      body: JSON.stringify({ dialogueNickname }),
     });
 
     const text = await res.text().catch(() => "");
 
-    // ✅ sucesso
     if (res.ok) return { ok: true, status: res.status, text, tried };
 
-    // ✅ se não for 404/405, é erro real (ex.: 400/401/500) -> parar e devolver
+    // Erro real (400/401/500) -> devolve já
     if (res.status !== 404 && res.status !== 405) {
       return { ok: false, status: res.status, text, tried };
     }
-
-    // 404/405 -> tenta o próximo
   }
 
   return {
@@ -72,20 +96,26 @@ async function forwardToBackend(
 
 async function handler(req: Request) {
   try {
-    const token = await getTokenFromCookies();
-    if (!token) return NextResponse.json({ message: "Sem token." }, { status: 401 });
+    const { bearerToken, decoderAuth } = await getAuthFromCookies();
+    if (!decoderAuth && !bearerToken) {
+      return NextResponse.json({ message: "Sem token." }, { status: 401 });
+    }
 
     const body = (await req.json().catch(() => ({}))) as Body;
-    const nickname = String(body?.nickname ?? "").trim();
-    if (!nickname) return NextResponse.json({ message: "nickname é obrigatório." }, { status: 400 });
+    const dialogueNickname = extractDialogueNickname(body);
+    if (!dialogueNickname) {
+      return NextResponse.json(
+        { message: "dialogueNickname é obrigatório." },
+        { status: 400 },
+      );
+    }
 
-    const result = await forwardToBackend(token, nickname);
+    const result = await forwardToBackend({ bearerToken, decoderAuth, dialogueNickname });
 
     if (!result.ok) {
-      // devolve info mínima (sem vazar token) para debug rápido
       return NextResponse.json(
         {
-          message: "Falha ao salvar nickname no backend.",
+          message: "Falha ao salvar dialogueNickname no backend.",
           backendStatus: result.status,
           backendBody: result.text?.slice(0, 800) || "",
           tried: result.tried,
@@ -94,7 +124,6 @@ async function handler(req: Request) {
       );
     }
 
-    // backend respondeu ok: tenta devolver JSON, senão ok padrão
     try {
       const json = JSON.parse(result.text);
       return NextResponse.json(json, { status: 200 });
@@ -111,5 +140,9 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
+  return handler(req);
+}
+
+export async function PATCH(req: Request) {
   return handler(req);
 }

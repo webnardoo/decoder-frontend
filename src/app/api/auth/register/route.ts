@@ -1,42 +1,32 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: Request) {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!baseUrl || typeof baseUrl !== "string") {
-      return NextResponse.json({ message: "MISSING_API_BASE" }, { status: 500 });
-    }
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:4100";
 
-    const base = baseUrl.trim().replace(/\/$/, "");
-    if (!base) {
-      return NextResponse.json({ message: "INVALID_API_BASE" }, { status: 500 });
-    }
+export async function POST(req: NextRequest) {
+  const url = `${BACKEND_URL}/api/v1/auth/register`;
 
-    const upstreamUrl = `${base}/auth/register`;
+  const upstream = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": req.headers.get("content-type") ?? "application/json",
+      Accept: "application/json",
+    },
+    body: await req.text(),
+    cache: "no-store",
+  });
 
-    // ✅ Blindagem contra quoting/escape do terminal:
-    // parseia como JSON e re-serializa.
-    let payload: any;
-    try {
-      payload = await req.json();
-    } catch {
-      return NextResponse.json({ message: "INVALID_JSON_BODY" }, { status: 400 });
-    }
+  const contentType = upstream.headers.get("content-type") ?? "";
+  const payload: any = contentType.includes("application/json")
+    ? await upstream.json().catch(() => null)
+    : await upstream.text().catch(() => "");
 
-    const upstream = await fetch(upstreamUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      cache: "no-store",
-    });
-
-    const text = await upstream.text().catch(() => "");
-
-    return new NextResponse(text || "", {
-      status: upstream.status,
-      headers: { "Content-Type": upstream.headers.get("content-type") || "application/json" },
-    });
-  } catch {
-    return NextResponse.json({ message: "REGISTER_PROXY_FAILED" }, { status: 500 });
+  // Register não seta cookie aqui; a tela faz login depois.
+  if (!upstream.ok) {
+    return NextResponse.json(
+      typeof payload === "string" ? { message: payload } : payload ?? { message: "Register falhou" },
+      { status: upstream.status },
+    );
   }
+
+  return NextResponse.json(payload, { status: upstream.status });
 }

@@ -1,4 +1,8 @@
-import type { OnboardingStatus, OnboardingStatusResponse, PaymentStatus } from "./onboarding.types";
+import type {
+  OnboardingStatus,
+  OnboardingStatusResponse,
+  PaymentStatus,
+} from "./onboarding.types";
 
 function isPaymentStatus(v: any): v is PaymentStatus {
   return v === "pending" || v === "confirmed" || v === "failed";
@@ -26,7 +30,11 @@ export async function getOnboardingStatus(): Promise<OnboardingStatus> {
   const ct = res.headers.get("content-type") ?? "";
   if (!ct.includes("application/json")) {
     const text = await res.text();
-    throw { status: res.status, message: "Resposta não-JSON do /api/onboarding/status", body: text };
+    throw {
+      status: res.status,
+      message: "Resposta não-JSON do /api/onboarding/status",
+      body: text,
+    };
   }
 
   const data = (await res.json()) as OnboardingStatusResponse;
@@ -38,12 +46,19 @@ export async function getOnboardingStatus(): Promise<OnboardingStatus> {
   return normalizeStatus(data);
 }
 
+/**
+ * BACK CANÔNICO espera: { dialogueNickname: string }
+ * Mantive assinatura com "nickname" para não quebrar os callsites,
+ * mas o payload agora segue o contrato certo.
+ */
 export async function updateDialogueNickname(nickname: string) {
+  const dialogueNickname = String(nickname ?? "").trim();
+
   const res = await fetch("/api/onboarding/dialogue-nickname", {
-    method: "POST",
+    method: "POST", // proxy converte para PATCH
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
-    body: JSON.stringify({ nickname }),
+    body: JSON.stringify({ dialogueNickname }),
   });
 
   const ct = res.headers.get("content-type") ?? "";
