@@ -25,29 +25,27 @@ function extractJwtFromCookieValue(v: string) {
 
 export async function POST(req: Request) {
   try {
-    const backendBaseUrl = getBackendBaseUrl();
-
-    // lê o body original (planId, billingCycle, etc.)
-    const body = await req.json().catch(() => ({}));
-
-    // tenta repassar auth (se o backend exigir)
     const cookieStore = await cookies();
+
     const token =
       extractJwtFromCookieValue(cookieStore.get("decoder_auth")?.value || "") ||
       extractJwtFromCookieValue(cookieStore.get("token")?.value || "") ||
       extractJwtFromCookieValue(cookieStore.get("accessToken")?.value || "") ||
       extractJwtFromCookieValue(cookieStore.get("jwt")?.value || "");
 
-    // IMPORTANTE:
-    // O backend do Decoder usa prefixo global /api/v1 (padrão do projeto).
-    // Então a rota correta em PRD deve ser /api/v1/billing/stripe/checkout-session.
-    const upstreamUrl = `${backendBaseUrl}/api/v1/billing/stripe/checkout-session`;
+    if (!token) {
+      return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    }
 
-    const upstream = await fetch(upstreamUrl, {
+    const body = await req.json().catch(() => ({}));
+    const backendBaseUrl = getBackendBaseUrl();
+
+    // Backend REAL (Railway): /billing/stripe/checkout-session
+    const upstream = await fetch(`${backendBaseUrl}/billing/stripe/checkout-session`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(body),
     });
@@ -56,14 +54,10 @@ export async function POST(req: Request) {
     const isJson = contentType.includes("application/json");
     const data = isJson ? await upstream.json() : await upstream.text();
 
-    // Repassa status + payload
+    return NextResponse.json(data, { status: upstream.status });
+  } catch {
     return NextResponse.json(
-      isJson ? data : { ok: false, raw: data },
-      { status: upstream.status }
-    );
-  } catch (e) {
-    return NextResponse.json(
-      { error: "Falha ao criar checkout session." },
+      { error: "Falha ao processar requisição." },
       { status: 500 }
     );
   }
