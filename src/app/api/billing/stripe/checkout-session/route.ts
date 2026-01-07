@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     const backendBaseUrl = getBackendBaseUrl();
 
     // Backend REAL (Railway): /billing/stripe/checkout-session
-    const upstream = await fetch(`${backendBaseUrl}/billing/stripe/checkout-session`, {
+    const upstream = await fetch(`${backendBaseUrl}/api/v1/billing/stripe/checkout-session`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
