@@ -1,0 +1,130 @@
+/* src/app/exp-site-v12/site.css */
+
+:root {
+  /* Base */
+  --bg: #000000; /* preto oficial */
+  --text: rgba(255, 255, 255, 0.9);
+  --brand: rgba(255, 255, 255, 0.6);
+
+  --muted-1: rgba(154, 160, 181, 0.65); /* #9AA0B5 65% */
+  --muted-2: rgba(176, 179, 192, 0.7);  /* #B0B3C0 70% */
+
+  /* Accent (travar) */
+  --accent: #5a46ff;         /* roxo fechado correto */
+  --accent-hover: #4b39ff;
+  --accent-pressed: #3e2fff;
+
+  /* Glass / cards */
+  --stroke: rgba(255, 255, 255, 0.12);
+  --stroke-soft: rgba(255, 255, 255, 0.08);
+  --glass: rgba(255, 255, 255, 0.04);
+  --glass-2: rgba(255, 255, 255, 0.06);
+
+  /* Radius */
+  --r-xl: 24px;
+  --r-lg: 20px;
+  --r-md: 16px;
+
+  /* Layout */
+  --container: 1120px;
+  --gutter: 28px;
+
+  /* Typography (TRAVAR conforme config enviada) */
+  --t-title-size: 32px;
+  --t-title-lh: 1.25em;
+  --t-title-weight: 400;
+
+  --t-eyebrow-size: 14px;
+  --t-eyebrow-lh: 1.15em;
+  --t-eyebrow-letter: 0.18em;
+
+  --t-body-size: 16px;
+  --t-body-lh: 1.4em;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-inter, Inter), system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+
+.container {
+  width: min(var(--container), calc(100% - (var(--gutter) * 2)));
+  margin: 0 auto;
+}
+
+/* Buttons (TRAVAR) */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.9);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+.btn:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.18);
+}
+.btn:active { transform: translateY(1px); }
+
+.btnPrimary {
+  border: 1px solid rgba(90, 70, 255, 0.42);
+  background: var(--accent);
+  box-shadow:
+    0 12px 28px rgba(90, 70, 255, 0.22),
+    inset 0 1px 0 rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.95);
+}
+.btnPrimary:hover { background: var(--accent-hover); }
+.btnPrimary:active { background: var(--accent-pressed); }
+
+/* Text helpers */
+.eyebrow {
+  font-size: var(--t-eyebrow-size);
+  line-height: var(--t-eyebrow-lh);
+  letter-spacing: var(--t-eyebrow-letter);
+  text-transform: uppercase;
+  color: var(--muted-1);
+  font-weight: 400;
+}
+
+.bodyText {
+  font-size: var(--t-body-size);
+  line-height: var(--t-body-lh);
+  color: var(--muted-2);
+  font-weight: 400;
+}
+
+.h1Hero,
+.h2 {
+  font-size: var(--t-title-size);
+  line-height: var(--t-title-lh);
+  font-weight: var(--t-title-weight);
+  letter-spacing: 0;
+  color: rgba(255,255,255,0.9);
+  margin: 14px 0 14px;
+}
+
+.kicker {
+  font-size: var(--t-eyebrow-size);
+  line-height: var(--t-eyebrow-lh);
+  letter-spacing: var(--t-eyebrow-letter);
+  text-transform: uppercase;
+  color: var(--muted-1);
+  margin-bottom: 10px;
+}
