@@ -1,0 +1,31 @@
+:root {
+  /* Tokens do tema Hitch (app inteiro) */
+  --h-bg: #000000; /* preto absoluto */
+  --h-text: rgba(255, 255, 255, 0.9);
+  --h-muted: rgba(176, 179, 192, 0.7);
+
+  /* card / borda */
+  --h-card: rgba(255, 255, 255, 0.03);
+  --h-border: rgba(255, 255, 255, 0.08);
+
+  /* roxo (mantém o tom; ajuste de transparência é aqui) */
+  --h-purple: rgba(124, 58, 237, 0.92);
+  --h-purple-glow-1: rgba(124, 58, 237, 0.10); /* <= aqui você aumenta/diminui transparência */
+  --h-purple-glow-2: rgba(124, 58, 237, 0.06); /* <= e aqui também */
+
+  /* background do app */
+  --h-app-bg: radial-gradient(
+      circle at 50% 50%,
+      var(--h-purple-glow-1) 0%,
+      var(--h-purple-glow-2) 22%,
+      rgba(0, 0, 0, 1) 62%,
+      rgba(0, 0, 0, 1) 100%
+    );
+}
+
+/* Aplica no app inteiro */
+html,
+body {
+  background: var(--h-bg);
+  color: var(--h-text);
+}
