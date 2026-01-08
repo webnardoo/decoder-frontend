@@ -1,7 +1,7 @@
 // FRONT — src/app/register/page.tsx
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type RegisterStep = "FORM" | "CODE" | "DONE";
@@ -23,7 +23,30 @@ function extractMessage(data: any): string | null {
   );
 }
 
+/**
+ * ✅ Wrapper com Suspense
+ * Motivo: Next 16 exige que useSearchParams() esteja dentro de uma Suspense boundary
+ * quando a página é pré-renderizada.
+ */
 export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-10">
+          <div className="w-full max-w-md">
+            <div className="card p-6 md:p-7">
+              <div className="text-sm text-zinc-300/80">Carregando…</div>
+            </div>
+          </div>
+        </main>
+      }
+    >
+      <RegisterPageInner />
+    </Suspense>
+  );
+}
+
+function RegisterPageInner() {
   const router = useRouter();
   const sp = useSearchParams();
 
@@ -49,9 +72,12 @@ export default function RegisterPage() {
     // Se veio do login, tenta recuperar senha pra auto-login após validar OTP
     if (verifyMode) {
       try {
-        const pendingEmail = sessionStorage.getItem("decoder_pending_verify_email") || "";
-        const pendingPass = sessionStorage.getItem("decoder_pending_verify_password") || "";
-        const pendingNext = sessionStorage.getItem("decoder_pending_verify_next") || "";
+        const pendingEmail =
+          sessionStorage.getItem("decoder_pending_verify_email") || "";
+        const pendingPass =
+          sessionStorage.getItem("decoder_pending_verify_password") || "";
+        const pendingNext =
+          sessionStorage.getItem("decoder_pending_verify_next") || "";
 
         if (!email && pendingEmail) setEmail(pendingEmail);
         if (!password && pendingPass) setPassword(pendingPass);
@@ -71,7 +97,8 @@ export default function RegisterPage() {
 
     const eMail = (email || "").trim();
     if (!eMail) return setError("Informe seu e-mail.");
-    if (!password || password.length < 6) return setError("A senha precisa ter pelo menos 6 caracteres.");
+    if (!password || password.length < 6)
+      return setError("A senha precisa ter pelo menos 6 caracteres.");
     if (password !== password2) return setError("As senhas não coincidem.");
 
     setLoading(true);
@@ -85,7 +112,9 @@ export default function RegisterPage() {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const msg = extractMessage(data) || "Não foi possível criar sua conta. Tente novamente.";
+        const msg =
+          extractMessage(data) ||
+          "Não foi possível criar sua conta. Tente novamente.";
         setError(msg);
         return;
       }
@@ -142,12 +171,18 @@ export default function RegisterPage() {
 
         const loginData = await loginRes.json().catch(() => ({}));
         if (!loginRes.ok) {
-          const msg = extractMessage(loginData) || "E-mail verificado, mas falha ao entrar. Faça login.";
+          const msg =
+            extractMessage(loginData) ||
+            "E-mail verificado, mas falha ao entrar. Faça login.";
           // guarda erro pra tela de login exibir
           try {
             sessionStorage.setItem("decoder_login_error", msg);
           } catch {}
-          router.replace(`/login?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(redirectNext)}`);
+          router.replace(
+            `/login?email=${encodeURIComponent(
+              eMail,
+            )}&next=${encodeURIComponent(redirectNext)}`,
+          );
           return;
         }
 
@@ -164,7 +199,11 @@ export default function RegisterPage() {
       }
 
       // sem senha -> manda pro login
-      router.replace(`/login?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(redirectNext)}`);
+      router.replace(
+        `/login?email=${encodeURIComponent(
+          eMail,
+        )}&next=${encodeURIComponent(redirectNext)}`,
+      );
     } catch {
       setError("Falha de conexão. Tente novamente.");
     } finally {
