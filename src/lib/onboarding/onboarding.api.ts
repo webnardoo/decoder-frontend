@@ -1,3 +1,4 @@
+// src/lib/onboarding/onboarding.api.ts
 import type {
   OnboardingStatus,
   OnboardingStatusResponse,
@@ -20,7 +21,6 @@ function normalizeStatus(raw: OnboardingStatusResponse): OnboardingStatus {
 }
 
 export async function getOnboardingStatus(): Promise<OnboardingStatus> {
-  // ✅ chama o Next route handler (ele lê cookie HttpOnly e proxy pro backend)
   const res = await fetch("/api/onboarding/status", {
     method: "GET",
     headers: { "Content-Type": "application/json" },
@@ -46,11 +46,6 @@ export async function getOnboardingStatus(): Promise<OnboardingStatus> {
   return normalizeStatus(data);
 }
 
-/**
- * BACK CANÔNICO espera: { dialogueNickname: string }
- * Mantive assinatura com "nickname" para não quebrar os callsites,
- * mas o payload agora segue o contrato certo.
- */
 export async function updateDialogueNickname(nickname: string) {
   const dialogueNickname = String(nickname ?? "").trim();
 
@@ -67,8 +62,12 @@ export async function updateDialogueNickname(nickname: string) {
   return body;
 }
 
+/**
+ * ✅ FIX: a rota existente no projeto é /api/onboarding/trial/start/ack
+ * (e não /api/onboarding/trial/ack)
+ */
 export async function ackTrialStart() {
-  const res = await fetch("/api/onboarding/trial/ack", {
+  const res = await fetch("/api/onboarding/trial/start/ack", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     cache: "no-store",

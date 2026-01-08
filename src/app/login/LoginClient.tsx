@@ -3,14 +3,22 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-type LoginOk = {
-  user?: { id: string; email: string };
-};
-
 function extractMessage(data: any): string | null {
   return (
     (typeof data?.message === "string" ? data.message : null) ??
     (typeof data?.error?.message === "string" ? data.error.message : null)
+  );
+}
+
+function isEmailNotVerified(msg: string | null): boolean {
+  if (!msg) return false;
+  const m = msg.toLowerCase();
+  return (
+    m.includes("email not verified") ||
+    m.includes("e-mail não verificado") ||
+    m.includes("email não verificado") ||
+    m.includes("email_not_verified") ||
+    m.includes("not verified")
   );
 }
 
@@ -31,6 +39,10 @@ export default function LoginClient() {
   }, [sp]);
 
   useEffect(() => {
+    // prefill opcional
+    const prefillEmail = sp.get("email");
+    if (prefillEmail && typeof prefillEmail === "string") setEmail(prefillEmail);
+
     // Limpa erro antigo persistido
     try {
       const last = sessionStorage.getItem("decoder_login_error");
@@ -50,6 +62,7 @@ export default function LoginClient() {
         setRegisterExists(false);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function onSubmit(e: React.FormEvent) {
@@ -57,11 +70,13 @@ export default function LoginClient() {
     setErrorMsg(null);
     setLoading(true);
 
+    const safeEmail = (email || "").trim();
+
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: safeEmail, password }),
         cache: "no-store",
       });
 
@@ -71,6 +86,20 @@ export default function LoginClient() {
       if (res.ok) {
         // ✅ Cookie HttpOnly já foi setado pela API Route
         router.replace(redirectTo);
+        return;
+      }
+
+      // 🔒 Caso novo: email não verificado -> manda pro fluxo OTP
+      if (isEmailNotVerified(backendMsg)) {
+        try {
+          sessionStorage.setItem("decoder_pending_verify_email", safeEmail);
+          sessionStorage.setItem("decoder_pending_verify_password", password);
+          sessionStorage.setItem("decoder_pending_verify_next", redirectTo);
+        } catch {}
+
+        const nextQ = encodeURIComponent(redirectTo);
+        const emailQ = encodeURIComponent(safeEmail);
+        router.replace(`/register?verify=1&email=${emailQ}&next=${nextQ}`);
         return;
       }
 
