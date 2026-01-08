@@ -222,21 +222,21 @@ export default function ConversaDetailPage() {
   return (
     <div className="space-y-6">
       {/* HEADER DA CONVERSA */}
-      <div className="flex justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:gap-6">
         <div className="min-w-0">
-          <h1 className="text-lg font-semibold truncate">{conversaName}</h1>
-          <p className="text-sm text-zinc-400">{meta}</p>
-          <p className="text-xs text-zinc-500 mt-1">
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight truncate">{conversaName}</h1>
+          <p className="text-sm text-zinc-300/80">{meta}</p>
+          <p className="text-xs text-zinc-400/70 mt-2">
             Créditos consumidos nesta conversa:{" "}
-            <span className="text-zinc-300">
+            <span className="text-zinc-200/90 font-medium">
               {creditsTotal == null ? "—" : creditsTotal}
             </span>
           </p>
         </div>
 
-        <div className="text-right shrink-0">
-          <div className="text-lg font-semibold">{trend.arrow}</div>
-          <div className="text-xs text-zinc-500">
+        <div className="sm:text-right shrink-0 flex items-center justify-between sm:block">
+          <div className="text-lg font-semibold leading-none">{trend.arrow}</div>
+          <div className="text-xs text-zinc-400/70 mt-0 sm:mt-1">
             {trend.note}
             {trendPercentLabel}
           </div>
@@ -249,15 +249,15 @@ export default function ConversaDetailPage() {
           - mostra todas as análises
           - se >5, scroll interno
       ========================================================= */}
-      <div className="card p-5 space-y-4">
-        <div className="flex flex-wrap gap-2">
-          <Link className="btn btn-primary" href={`/conversas/${id}/analisar`}>
+      <div className="card p-6 md:p-7 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
+          <Link className="btn btn-primary w-full sm:w-auto" href={`/conversas/${id}/analisar`}>
             Fazer análise
           </Link>
 
           {canDeepByMin ? (
             <button
-              className="btn btn-primary"
+              className="btn btn-primary w-full sm:w-auto"
               type="button"
               onClick={runDeep}
               disabled={deepLoading}
@@ -266,7 +266,7 @@ export default function ConversaDetailPage() {
             </button>
           ) : (
             <button
-              className="btn opacity-50 cursor-not-allowed"
+              className="btn w-full sm:w-auto opacity-50 cursor-not-allowed"
               disabled
               title={`Disponível após ${MIN_ANALYSES_FOR_DEEP} análises`}
             >
@@ -274,7 +274,7 @@ export default function ConversaDetailPage() {
             </button>
           )}
 
-          <Link className="btn" href="/conversas">
+          <Link className="btn w-full sm:w-auto" href="/conversas">
             Voltar
           </Link>
         </div>
@@ -282,36 +282,36 @@ export default function ConversaDetailPage() {
         <div
           className={
             hasMoreThan5
-              ? "max-h-[260px] overflow-y-auto rounded-xl border border-zinc-800"
-              : "rounded-xl border border-zinc-800"
+              ? "max-h-[260px] overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-950/30"
+              : "rounded-xl border border-zinc-800 bg-zinc-950/30"
           }
         >
           <table className="w-full text-sm">
-            <thead className="bg-zinc-900 text-zinc-400 sticky top-0">
+            <thead className="bg-zinc-950/60 text-zinc-400 sticky top-0">
               <tr>
-                <th className="px-3 py-2 text-left">Data</th>
-                <th className="px-3 py-2 text-left">Msgs</th>
-                <th className="px-3 py-2 text-left">Score</th>
-                <th className="px-3 py-2 text-left">Label</th>
-                <th className="px-3 py-2 text-left">Créditos</th>
+                <th className="px-3 py-2 text-left font-medium">Data</th>
+                <th className="px-3 py-2 text-left font-medium">Msgs</th>
+                <th className="px-3 py-2 text-left font-medium">Score</th>
+                <th className="px-3 py-2 text-left font-medium">Label</th>
+                <th className="px-3 py-2 text-left font-medium">Créditos</th>
               </tr>
             </thead>
             <tbody>
               {visibleAnalyses.map((a) => (
                 <tr key={a.id} className="border-t border-zinc-800">
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2 text-zinc-200/90">
                     {new Date(a.createdAt).toLocaleString()}
                   </td>
-                  <td className="px-3 py-2">{a.messageCountApprox}</td>
-                  <td className="px-3 py-2">{a.score ?? "—"}</td>
-                  <td className="px-3 py-2">{a.label ?? "—"}</td>
-                  <td className="px-3 py-2">{a.creditsUsed ?? "—"}</td>
+                  <td className="px-3 py-2 text-zinc-200/90">{a.messageCountApprox}</td>
+                  <td className="px-3 py-2 text-zinc-200/90">{a.score ?? "—"}</td>
+                  <td className="px-3 py-2 text-zinc-200/90">{a.label ?? "—"}</td>
+                  <td className="px-3 py-2 text-zinc-200/90">{a.creditsUsed ?? "—"}</td>
                 </tr>
               ))}
 
               {analyses.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-3 py-3 text-zinc-500">
+                  <td colSpan={5} className="px-3 py-3 text-zinc-400/70">
                     Nenhuma análise ainda.
                   </td>
                 </tr>
@@ -326,13 +326,13 @@ export default function ConversaDetailPage() {
       ========================================================= */}
 
       {deepState === "IDLE" && (
-        <div className="card p-5 space-y-2">
-          <div className="text-sm text-zinc-400">
+        <div className="card p-6 md:p-7 space-y-2">
+          <div className="text-sm text-zinc-300/80">
             Nenhuma análise profunda ainda.
           </div>
           <div className="flex flex-wrap gap-2">
             <button
-              className="btn btn-primary"
+              className="btn btn-primary w-full sm:w-auto"
               type="button"
               onClick={runDeep}
               disabled={deepLoading || !canDeepByMin}
@@ -349,21 +349,21 @@ export default function ConversaDetailPage() {
       )}
 
       {deepState === "LOADING_DEEP" && (
-        <div className="card p-5">
-          <div className="text-sm text-zinc-400">
+        <div className="card p-6 md:p-7">
+          <div className="text-sm text-zinc-300/80">
             Gerando análise profunda…
           </div>
         </div>
       )}
 
       {deepState === "BLOCKED_INSUFFICIENT" && (
-        <div className="card p-5 space-y-2">
+        <div className="card p-6 md:p-7 space-y-2">
           <div className="text-sm font-semibold">Créditos insuficientes</div>
-          <div className="text-sm text-zinc-400">
+          <div className="text-sm text-zinc-300/80">
             Você não tem saldo para concluir a análise profunda agora.
           </div>
           <div className="flex gap-2">
-            <Link className="btn btn-primary" href="/account/credits">
+            <Link className="btn btn-primary w-full sm:w-auto" href="/account/credits">
               Ver créditos
             </Link>
           </div>
@@ -371,18 +371,18 @@ export default function ConversaDetailPage() {
       )}
 
       {deepState === "BLOCKED_DEEP_LIMIT" && (
-        <div className="card p-5 space-y-2">
+        <div className="card p-6 md:p-7 space-y-2">
           <div className="text-sm font-semibold">Limite mensal atingido</div>
-          <div className="text-sm text-zinc-400">
+          <div className="text-sm text-zinc-300/80">
             Você atingiu o limite mensal de análises profundas.
           </div>
           {deepLimitPayload?.cycleRef && (
-            <div className="text-xs text-zinc-500">
+            <div className="text-xs text-zinc-400/70">
               Ciclo: {deepLimitPayload.cycleRef}
             </div>
           )}
           <div className="flex gap-2">
-            <Link className="btn btn-primary" href="/account/subscription">
+            <Link className="btn btn-primary w-full sm:w-auto" href="/account/subscription">
               Ver plano
             </Link>
           </div>
@@ -390,14 +390,14 @@ export default function ConversaDetailPage() {
       )}
 
       {deepState === "ERROR" && (
-        <div className="card p-5 space-y-2">
+        <div className="card p-6 md:p-7 space-y-2">
           <div className="text-sm font-semibold">Falha ao gerar análise</div>
-          <div className="text-sm text-zinc-400">
+          <div className="text-sm text-zinc-300/80">
             {deepError ?? "Erro inesperado."}
           </div>
           <div className="flex gap-2">
             <button
-              className="btn btn-primary"
+              className="btn btn-primary w-full sm:w-auto"
               type="button"
               onClick={runDeep}
               disabled={deepLoading}
@@ -410,23 +410,23 @@ export default function ConversaDetailPage() {
 
       {deepState === "SUCCESS_DEEP" && deep && (
         <div className="space-y-6">
-          <div className="card p-5 space-y-2">
-            <div className="flex items-start justify-between gap-4">
+          <div className="card p-6 md:p-7 space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="space-y-1">
-                <div className="text-xs text-zinc-500">Leitura Profunda</div>
-                <div className="text-sm text-zinc-400">
+                <div className="text-xs text-zinc-400/70">Leitura Profunda</div>
+                <div className="text-sm text-zinc-300/80">
                   Conversa:{" "}
                   <span className="text-zinc-200 font-medium">{id}</span>
                 </div>
                 {deep?.source && (
-                  <div className="text-xs text-zinc-500">
+                  <div className="text-xs text-zinc-400/70">
                     Fonte: <span className="text-zinc-200">{deep.source}</span>
                   </div>
                 )}
               </div>
 
-              <div className="text-right space-y-1">
-                <div className="text-xs text-zinc-500">Confiança</div>
+              <div className="sm:text-right space-y-1">
+                <div className="text-xs text-zinc-400/70">Confiança</div>
                 <div className="text-sm font-semibold text-zinc-200">
                   {confidence}/100
                 </div>
@@ -435,7 +435,7 @@ export default function ConversaDetailPage() {
 
             <div className="mt-3 flex flex-wrap gap-2">
               <button
-                className="btn btn-primary"
+                className="btn btn-primary w-full sm:w-auto"
                 type="button"
                 onClick={runDeep}
                 disabled={deepLoading}
@@ -445,21 +445,21 @@ export default function ConversaDetailPage() {
             </div>
 
             {deepPayload && (
-              <div className="mt-3 text-sm text-zinc-300">
+              <div className="mt-3 text-sm text-zinc-300/80">
                 {isUnlimited ? (
                   <>Plano ilimitado: créditos não são consumidos.</>
                 ) : (
                   <>
                     Consumiu{" "}
-                    <span className="font-semibold text-zinc-50">
+                    <span className="font-semibold text-zinc-200">
                       {deepPayload.creditsUsed}
                     </span>{" "}
                     crédito(s). Saldo após:{" "}
-                    <span className="font-semibold text-zinc-50">
+                    <span className="font-semibold text-zinc-200">
                       {deepPayload.creditsBalanceAfter}
                     </span>
                     .{" "}
-                    <span className="text-zinc-400">
+                    <span className="text-zinc-400/70">
                       (DEEP mensal: {deepPayload.deepMonthly.used}/
                       {deepPayload.deepMonthly.limit} • restante{" "}
                       {deepPayload.deepMonthly.remaining} • ciclo{" "}
@@ -471,11 +471,11 @@ export default function ConversaDetailPage() {
             )}
           </div>
 
-          <div className="card p-5 space-y-3">
+          <div className="card p-6 md:p-7 space-y-3">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1">
                 <div className="text-sm font-semibold">Evolução do objetivo</div>
-                <div className="text-xs text-zinc-500">
+                <div className="text-xs text-zinc-400/70">
                   Comparação: anterior vs atual
                 </div>
               </div>
@@ -489,30 +489,30 @@ export default function ConversaDetailPage() {
 
             <div className="grid gap-3 md:grid-cols-3">
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
-                <div className="text-xs text-zinc-500">Anterior</div>
+                <div className="text-xs text-zinc-400/70">Anterior</div>
                 <div className="text-lg font-semibold text-zinc-200">
                   {scorePrev}
                 </div>
               </div>
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
-                <div className="text-xs text-zinc-500">Atual</div>
+                <div className="text-xs text-zinc-400/70">Atual</div>
                 <div className="text-lg font-semibold text-zinc-200">
                   {scoreCur}
                 </div>
               </div>
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
-                <div className="text-xs text-zinc-500">Status</div>
+                <div className="text-xs text-zinc-400/70">Status</div>
                 <div className="text-sm font-semibold text-zinc-200 mt-1">
                   {deep.summary.statusLabel}
                 </div>
-                <div className="text-xs text-zinc-500 mt-1">
+                <div className="text-xs text-zinc-400/70 mt-1">
                   {deep.summary.headline}
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="card p-5 space-y-3">
+          <div className="card p-6 md:p-7 space-y-3">
             <div className="text-sm font-semibold">Eventos & impactos</div>
 
             <div className="space-y-2">
@@ -529,7 +529,7 @@ export default function ConversaDetailPage() {
                         <div className="text-sm font-medium text-zinc-200 truncate">
                           {it.eventLabel}
                         </div>
-                        <div className="text-xs text-zinc-500 mt-1">
+                        <div className="text-xs text-zinc-400/70 mt-1">
                           {it.rationale}
                         </div>
                       </div>
@@ -539,7 +539,7 @@ export default function ConversaDetailPage() {
                           {sign}
                           {d}
                         </div>
-                        <div className="text-xs text-zinc-500">
+                        <div className="text-xs text-zinc-400/70">
                           {it.direction}
                         </div>
                       </div>
@@ -549,14 +549,14 @@ export default function ConversaDetailPage() {
               })}
 
               {deep.messageImpacts.length === 0 && (
-                <div className="text-sm text-zinc-400">
+                <div className="text-sm text-zinc-300/80">
                   Ainda não há eventos suficientes para detalhar impacto.
                 </div>
               )}
             </div>
           </div>
 
-          <div className="card p-5 space-y-3">
+          <div className="card p-6 md:p-7 space-y-3">
             <div className="text-sm font-semibold">Padrões detectados</div>
 
             <div className="space-y-2">
@@ -569,7 +569,7 @@ export default function ConversaDetailPage() {
                     {p.type === "POSITIVE" ? "✅ " : "⚠️ "}
                     {p.title}
                   </div>
-                  <div className="text-xs text-zinc-500 mt-1">
+                  <div className="text-xs text-zinc-400/70 mt-1">
                     {p.description}
                   </div>
                 </div>
@@ -577,7 +577,7 @@ export default function ConversaDetailPage() {
             </div>
           </div>
 
-          <div className="card p-5 space-y-3">
+          <div className="card p-6 md:p-7 space-y-3">
             <div className="text-sm font-semibold">Riscos & alertas</div>
 
             <div className="space-y-2">
@@ -593,7 +593,7 @@ export default function ConversaDetailPage() {
                         ? "🟠 Médio"
                         : "🟡 Baixo"}
                   </div>
-                  <div className="text-xs text-zinc-500 mt-1">
+                  <div className="text-xs text-zinc-400/70 mt-1">
                     {r.description}
                   </div>
                 </div>
@@ -601,7 +601,7 @@ export default function ConversaDetailPage() {
             </div>
           </div>
 
-          <div className="card p-5 space-y-3">
+          <div className="card p-6 md:p-7 space-y-3">
             <div className="text-sm font-semibold">Próximos passos</div>
 
             <div className="grid gap-2 md:grid-cols-2">
@@ -613,7 +613,7 @@ export default function ConversaDetailPage() {
                     key={`${rec.priority}-${i}`}
                     className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4"
                   >
-                    <div className="text-xs text-zinc-500">
+                    <div className="text-xs text-zinc-400/70">
                       Prioridade {rec.priority}
                     </div>
                     <div className="text-sm text-zinc-200 mt-1">{rec.text}</div>
@@ -622,9 +622,9 @@ export default function ConversaDetailPage() {
             </div>
           </div>
 
-          <div className="card p-5 flex flex-wrap gap-2">
+          <div className="card p-6 md:p-7 flex flex-col sm:flex-row flex-wrap gap-2">
             <button
-              className="btn btn-primary"
+              className="btn btn-primary w-full sm:w-auto"
               type="button"
               onClick={runDeep}
               disabled={deepLoading}

@@ -1,3 +1,4 @@
+// FRONT — src/app/start/page.tsx
 "use client";
 
 import { useEffect } from "react";
@@ -55,15 +56,26 @@ export default function StartPage() {
   }, [loading, status, router]);
 
   return (
-    <main className="min-h-[60vh] flex items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/5 p-6 shadow-sm">
-        <h1 className="text-lg font-semibold">Configurando sua conta…</h1>
-        <p className="mt-2 text-sm text-white/70">
+    <main className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-md card p-6 md:p-7">
+        <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Configurando sua conta…</h1>
+        <p className="mt-1 text-sm text-zinc-300/80">
           Aguarde enquanto validamos seu progresso.
         </p>
 
-        <div className="mt-4 text-xs text-white/60">
+        <div className="mt-4 text-xs text-zinc-400/70">
           {loading ? "Carregando status…" : "Redirecionando…"}
+        </div>
+
+        <div className="mt-6">
+          <button
+            className="btn w-full"
+            type="button"
+            onClick={() => void refreshStatus()}
+            disabled={loading}
+          >
+            {loading ? "Atualizando…" : "Atualizar status"}
+          </button>
         </div>
       </div>
     </main>
