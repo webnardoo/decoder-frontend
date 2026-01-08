@@ -48,9 +48,21 @@ function ensurePulseStyleTag() {
   style.id = STYLE_TAG_ID;
   style.textContent = `
 @keyframes guidedOverlayPulseOutline {
-  0%   { outline-color: rgba(34, 197, 94, 0.95); outline-offset: 4px; filter: drop-shadow(0 0 0 rgba(34,197,94,0)); }
-  50%  { outline-color: rgba(34, 197, 94, 0.20); outline-offset: 10px; filter: drop-shadow(0 0 14px rgba(34,197,94,0.45)); }
-  100% { outline-color: rgba(34, 197, 94, 0.95); outline-offset: 4px; filter: drop-shadow(0 0 0 rgba(34,197,94,0)); }
+  0%   { 
+  outline-color: rgba(168, 85, 247, 0.95); 
+  outline-offset: 4px; 
+  filter: drop-shadow(0 0 0 rgba(168, 85, 247, 0)); 
+}
+50%  { 
+  outline-color: rgba(168, 85, 247, 0.20); 
+  outline-offset: 10px; 
+  filter: drop-shadow(0 0 14px rgba(168, 85, 247, 0.55)); 
+}
+100% { 
+  outline-color: rgba(168, 85, 247, 0.95); 
+  outline-offset: 4px; 
+  filter: drop-shadow(0 0 0 rgba(168, 85, 247, 0)); 
+}
 }
 .guidedOverlayPulse {
   animation: guidedOverlayPulseOutline 1.05s ease-in-out infinite;
@@ -209,7 +221,7 @@ export default function GuidedOverlay({
         el.style.position = "relative";
       }
       el.style.zIndex = "10000";
-      el.style.outline = "2px solid rgba(34, 197, 94, 0.95)";
+      el.style.outline = "2px solid rgba(168, 85, 247, 0.95)";
       el.style.outlineOffset = "4px";
       if (!el.style.borderRadius) el.style.borderRadius = "14px";
 
