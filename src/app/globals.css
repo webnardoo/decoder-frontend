@@ -1,29 +1,86 @@
 @import "tailwindcss";
+@import "../styles/hitch-theme.css";
 
-:root { color-scheme: dark; }
+/* Base global do app (não mexe em layout do site exp-site-v12) */
+:root {
+  color-scheme: dark;
+}
 
-* { -webkit-tap-highlight-color: transparent; }
+html,
+body {
+  height: 100%;
+}
 
-::selection { background: rgba(250, 204, 21, 0.2); }
+* {
+  -webkit-tap-highlight-color: transparent;
+}
 
-a { text-decoration: none; }
+::selection {
+  background: rgba(124, 58, 237, 0.25);
+}
 
+a {
+  text-decoration: none;
+}
+
+/* Componentes padrão do app (classes reutilizáveis) */
 @layer components {
   .card {
-    @apply rounded-2xl border border-zinc-800 bg-zinc-900/40 shadow-sm;
+    @apply rounded-2xl border;
+    background: var(--h-card);
+    border-color: var(--h-border);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   }
+
   .btn {
-    @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium
-    border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 transition;
+    @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition;
+    border: 1px solid var(--h-border);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--h-text);
   }
+  .btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
   .btn-primary {
-    @apply border-zinc-700 bg-zinc-100 text-zinc-950 hover:bg-zinc-200;
+    @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition;
+    border: 1px solid rgba(124, 58, 237, 0.35);
+    background: rgba(124, 58, 237, 0.92);
+    color: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 14px 40px rgba(124, 58, 237, 0.18);
   }
+  .btn-primary:hover {
+    background: rgba(124, 58, 237, 0.98);
+  }
+  .btn-primary:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
   .input {
-    @apply w-full rounded-xl border border-zinc-800 bg-zinc-950/40 px-3 py-2 text-sm
-    outline-none focus:ring-2 focus:ring-yellow-400/30 focus:border-yellow-400/40;
+    @apply w-full rounded-xl px-3 py-2 text-sm outline-none transition;
+    border: 1px solid var(--h-border);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--h-text);
   }
+  .input::placeholder {
+    color: rgba(176, 179, 192, 0.55);
+  }
+  .input:focus {
+    border-color: rgba(124, 58, 237, 0.45);
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
+  }
+
   .label {
-    @apply text-xs text-zinc-400;
+    @apply text-xs;
+    color: rgba(154, 160, 181, 0.65);
+  }
+
+  .muted {
+    color: rgba(176, 179, 192, 0.7);
+  }
+
+  .title {
+    color: rgba(255, 255, 255, 0.9);
   }
 }

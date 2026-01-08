@@ -42,9 +42,9 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto max-w-md">
-      <div className="rounded-2xl border border-zinc-900 bg-zinc-950/40 p-6">
-        <h1 className="text-lg font-semibold">Entrar</h1>
-        <p className="mt-1 text-sm text-zinc-400">Use seu e-mail e senha para acessar.</p>
+      <div className="card p-6">
+        <h1 className="title text-lg font-semibold">Entrar</h1>
+        <p className="muted mt-1 text-sm">Use seu e-mail e senha para acessar.</p>
 
         {error && (
           <div className="mt-4 rounded-xl border border-red-900/60 bg-red-950/40 px-4 py-3 text-sm text-red-200">
@@ -54,14 +54,14 @@ export default function LoginPage() {
 
         <form className="mt-5 space-y-3" onSubmit={onSubmit}>
           <input
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-zinc-700"
+            className="input"
             placeholder="E-mail"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
           />
           <input
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-zinc-700"
+            className="input"
             placeholder="Senha"
             type="password"
             value={password}
@@ -69,12 +69,7 @@ export default function LoginPage() {
             autoComplete="current-password"
           />
 
-          <button
-            disabled={loading}
-            className={`w-full rounded-xl px-4 py-2 text-sm font-semibold ${
-              loading ? "bg-zinc-800 text-zinc-400" : "bg-white text-black hover:bg-zinc-100"
-            }`}
-          >
+          <button disabled={loading} className={loading ? "btn w-full opacity-60" : "btn-primary w-full"}>
             {loading ? "Entrando…" : "Entrar"}
           </button>
         </form>
