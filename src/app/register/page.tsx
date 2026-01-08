@@ -1,144 +1,187 @@
+// FRONT — src/app/register/page.tsx
 "use client";
 
+import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 
-type LoginResponse = {
-  accessToken?: string;
-  token?: string;
-};
+type RegisterStep = "FORM" | "DONE";
 
-function persistToken(raw: string) {
-  const token = String(raw || "").trim();
-  if (!token) return;
-
-  try {
-    localStorage.setItem("accessToken", token);
-    localStorage.setItem("token", token);
-    localStorage.setItem("decoder_access_token", token);
-  } catch {}
-
-  try {
-    document.cookie = `accessToken=${encodeURIComponent(token)}; path=/; max-age=${60 * 60 * 24 * 7}`;
-    document.cookie = `token=${encodeURIComponent(token)}; path=/; max-age=${60 * 60 * 24 * 7}`;
-  } catch {}
+function getBackendBaseUrl() {
+  // Prioridade: env público (client-side)
+  return (
+    process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL ||
+    process.env.NEXT_PUBLIC_HITCH_BACKEND_BASE_URL ||
+    "http://localhost:4100"
+  );
 }
 
 export default function RegisterPage() {
   const router = useRouter();
 
+  const backendBaseUrl = useMemo(() => getBackendBaseUrl(), []);
+
+  const [step, setStep] = useState<RegisterStep>("FORM");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string>("");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
+    setError("");
+
+    const eMail = email.trim();
+    if (!eMail) return setError("Informe seu e-mail.");
+    if (!password || password.length < 6)
+      return setError("A senha precisa ter pelo menos 6 caracteres.");
+    if (password !== password2) return setError("As senhas não coincidem.");
+
     setLoading(true);
-
     try {
-      const emailTrim = email.trim();
-      const passTrim = password.trim();
+      const res = await fetch(`${backendBaseUrl}/api/v1/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // compatível com formatos comuns de backend
+        body: JSON.stringify({ email: eMail, password }),
+      });
 
-      if (!emailTrim || !passTrim) {
-        setError("Preencha email e senha.");
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const msg =
+          data?.message ||
+          data?.error ||
+          "Não foi possível criar sua conta. Tente novamente.";
+        setError(typeof msg === "string" ? msg : "Erro ao criar conta.");
         return;
       }
 
-      // 1) REGISTER via proxy Next
-      const regRes = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: emailTrim, password: passTrim }),
-      });
-
-      const regText = await regRes.text().catch(() => "");
-      if (!regRes.ok) throw new Error(regText || "Falha ao criar conta.");
-
-      // 2) LOGIN via proxy Next
-      const loginRes = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: emailTrim, password: passTrim }),
-      });
-
-      const loginText = await loginRes.text().catch(() => "");
-      if (!loginRes.ok) {
-        throw new Error(loginText || "Conta criada, mas falha ao entrar. Faça login.");
-      }
-
-      let loginJson: LoginResponse;
-      try {
-        loginJson = JSON.parse(loginText) as LoginResponse;
-      } catch {
-        throw new Error("Login não retornou JSON válido.");
-      }
-
-      const token = loginJson.accessToken || loginJson.token;
-      if (!token) throw new Error("Login não retornou token (accessToken/token).");
-
-      persistToken(token);
-
-      // ✅ 3) Roteador canônico da jornada (decide Nickname → Trial → Planos/Tutorial)
-      router.replace("/start");
-    } catch (err: any) {
-      setError(err?.message || "Erro inesperado.");
+      setStep("DONE");
+      // Fluxo típico: após registro, ir para start/onboarding (verificação/degustação)
+      router.push("/start");
+    } catch {
+      setError("Falha de conexão. Verifique o backend e tente novamente.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-lg font-semibold">Criar conta</h1>
-        <p className="text-sm text-zinc-400">
-          Cadastre-se para iniciar a jornada do cliente.
+    <main className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-md">
+        <div className="card p-6 md:p-7">
+          <div className="mb-6">
+            <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
+              Criar conta
+            </h1>
+            <p className="mt-1 text-sm text-zinc-300/80">
+              Comece sua jornada no Hitch com seu e-mail e senha.
+            </p>
+          </div>
+
+          {step === "FORM" && (
+            <form onSubmit={onSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label className="label" htmlFor="email">
+                  E-mail
+                </label>
+                <input
+                  id="email"
+                  className="input w-full"
+                  type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  placeholder="seuemail@exemplo.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="label" htmlFor="password">
+                  Senha
+                </label>
+                <input
+                  id="password"
+                  className="input w-full"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="label" htmlFor="password2">
+                  Confirmar senha
+                </label>
+                <input
+                  id="password2"
+                  className="input w-full"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="••••••••"
+                  value={password2}
+                  onChange={(e) => setPassword2(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+
+              {error && (
+                <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="btn btn-primary w-full"
+                disabled={loading}
+              >
+                {loading ? "Criando..." : "Criar conta"}
+              </button>
+
+              <div className="pt-2 text-center">
+                <button
+                  type="button"
+                  className="btn w-full"
+                  onClick={() => router.push("/login")}
+                  disabled={loading}
+                >
+                  Já tenho conta
+                </button>
+              </div>
+            </form>
+          )}
+
+          {step === "DONE" && (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+                Conta criada. Vamos continuar.
+              </div>
+              <button
+                className="btn btn-primary w-full"
+                onClick={() => router.push("/start")}
+              >
+                Ir para início
+              </button>
+            </div>
+          )}
+        </div>
+
+        <p className="mt-4 text-xs text-zinc-400/70 text-center">
+          Dica: se der erro 404/500, confirme se o backend está em{" "}
+          <span className="font-medium text-zinc-200/80">
+            {backendBaseUrl}
+          </span>
+          .
         </p>
       </div>
-
-      <form onSubmit={onSubmit} className="card p-5 space-y-4">
-        <div className="space-y-2">
-          <label className="text-sm text-zinc-300">Email</label>
-          <input
-            className="w-full rounded-xl bg-zinc-900/70 border border-zinc-800 px-3 py-2 text-sm outline-none focus:border-zinc-600"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="seu@email.com"
-            autoComplete="email"
-            disabled={loading}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm text-zinc-300">Senha</label>
-          <input
-            className="w-full rounded-xl bg-zinc-900/70 border border-zinc-800 px-3 py-2 text-sm outline-none focus:border-zinc-600"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            type="password"
-            autoComplete="new-password"
-            disabled={loading}
-          />
-        </div>
-
-        {error && (
-          <div className="rounded-xl border border-red-900/50 bg-red-950/40 p-3 text-sm text-red-200">
-            {error}
-          </div>
-        )}
-
-        <button className="btn btn-primary w-full" disabled={loading} type="submit">
-          {loading ? "Criando..." : "Criar conta"}
-        </button>
-
-        <div className="text-xs text-zinc-500">
-          Ao criar conta, você seguirá para concluir a jornada.
-        </div>
-      </form>
-    </div>
+    </main>
   );
 }

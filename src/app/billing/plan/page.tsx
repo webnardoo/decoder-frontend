@@ -1,3 +1,4 @@
+// FRONT — src/app/billing/plan/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -18,8 +19,9 @@ type PublicPlan = {
 export default function BillingPlanPage() {
   const router = useRouter();
 
-  const [loading, setLoading] = useState(false);
   const [loadingPlans, setLoadingPlans] = useState(true);
+  const [choosingPlanId, setChoosingPlanId] = useState<string | null>(null);
+
   const [err, setErr] = useState<string | null>(null);
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
   const [plans, setPlans] = useState<PublicPlan[]>([]);
@@ -28,6 +30,8 @@ export default function BillingPlanPage() {
     () => (cycle === "monthly" ? "Mensal" : "Anual"),
     [cycle],
   );
+
+  const isBusy = loadingPlans || choosingPlanId != null;
 
   useEffect(() => {
     let cancelled = false;
@@ -57,14 +61,14 @@ export default function BillingPlanPage() {
       }
     }
 
-    load();
+    void load();
     return () => {
       cancelled = true;
     };
   }, []);
 
   function onChoose(planId: string) {
-    setLoading(true);
+    setChoosingPlanId(planId);
     setErr(null);
 
     const qs = new URLSearchParams({
@@ -73,7 +77,7 @@ export default function BillingPlanPage() {
     });
 
     router.push(`/checkout?${qs.toString()}`);
-    setLoading(false);
+    // não dar setChoosingPlanId(null) aqui: navegação acontece
   }
 
   return (
@@ -86,12 +90,16 @@ export default function BillingPlanPage() {
       </div>
 
       <div className="card p-5 space-y-4">
-        {err && <div className="text-sm text-red-400">{err}</div>}
+        {err && (
+          <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+            {err}
+          </div>
+        )}
 
         <div className="flex gap-2">
           <button
             className={cycle === "monthly" ? "btn btn-primary" : "btn"}
-            disabled={loading || loadingPlans}
+            disabled={isBusy}
             onClick={() => setCycle("monthly")}
             type="button"
           >
@@ -99,7 +107,7 @@ export default function BillingPlanPage() {
           </button>
           <button
             className={cycle === "annual" ? "btn btn-primary" : "btn"}
-            disabled={loading || loadingPlans}
+            disabled={isBusy}
             onClick={() => setCycle("annual")}
             type="button"
           >
@@ -109,31 +117,76 @@ export default function BillingPlanPage() {
 
         {loadingPlans ? (
           <div className="text-sm text-zinc-400">Carregando planos…</div>
+        ) : plans.length === 0 ? (
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
+            <div className="text-sm font-medium text-zinc-200">
+              Nenhum plano disponível
+            </div>
+            <div className="mt-1 text-sm text-zinc-400">
+              Tente novamente em instantes.
+            </div>
+          </div>
         ) : (
           <div className="grid grid-cols-1 gap-3">
-            {plans.map((p) => (
-              <div
-                key={p.planId}
-                className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 space-y-2"
-              >
-                <div className="font-medium">{p.name}</div>
-                <div className="text-xs text-zinc-500">{p.description || "—"}</div>
+            {plans.map((p) => {
+              const canUseCycle = p.billingCycles?.includes(cycle);
+              const isChoosingThis = choosingPlanId === p.planId;
 
-                <div className="text-xs text-zinc-500">
-                  Modalidade:{" "}
-                  <span className="text-zinc-300">{cycleLabel}</span>
+              return (
+                <div key={p.planId} className="card p-5 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-zinc-100 truncate">
+                        {p.name}
+                      </div>
+                      <div className="mt-1 text-sm text-zinc-400">
+                        {p.description || "—"}
+                      </div>
+                    </div>
+
+                    {p.isUnlimited ? (
+                      <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 px-3 py-1 text-xs text-zinc-300">
+                        Ilimitado
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 px-3 py-1 text-xs text-zinc-300">
+                        {p.monthlyCredits} créditos/mês
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="text-xs text-zinc-500">
+                    Modalidade:{" "}
+                    <span className="text-zinc-300">{cycleLabel}</span>
+                    {!canUseCycle && (
+                      <span className="ml-2 text-red-300">
+                        • indisponível neste ciclo
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                      className="btn btn-primary w-full sm:w-fit"
+                      disabled={isBusy || !canUseCycle}
+                      onClick={() => onChoose(p.planId)}
+                      type="button"
+                    >
+                      {isChoosingThis ? "Abrindo…" : "Escolher"}
+                    </button>
+
+                    <button
+                      className="btn w-full sm:w-fit"
+                      disabled={isBusy}
+                      type="button"
+                      onClick={() => void window.location.reload()}
+                    >
+                      Recarregar
+                    </button>
+                  </div>
                 </div>
-
-                <button
-                  className="btn btn-primary w-fit"
-                  disabled={loading}
-                  onClick={() => onChoose(p.planId)}
-                  type="button"
-                >
-                  {loading ? "Abrindo…" : "Escolher"}
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

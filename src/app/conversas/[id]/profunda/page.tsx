@@ -185,10 +185,10 @@ export default function ProfundaPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="space-y-1">
-          <h1 className="text-xl font-semibold">Decoder</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Decoder</h1>
           <p className="text-sm text-zinc-400">
             Análise Avulsa / Dentro de Conversa
           </p>
@@ -221,9 +221,9 @@ export default function ProfundaPage() {
         </button>
       </div>
 
-      <div className="card p-4 space-y-3">
+      <div className="card p-5 space-y-3">
         <div className="text-xs text-zinc-500">Modo de análise</div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2">
           <button
             className={`btn ${quickMode === "RESPONDER" ? "btn-primary" : ""}`}
             onClick={() => setQuickMode("RESPONDER")}
@@ -241,13 +241,16 @@ export default function ProfundaPage() {
         </div>
       </div>
 
-      {/* RESTO DO ARQUIVO SEGUE INALTERADO */}
-      {/* (textarea, relationship, botão analisar, banners, loader e ResultView já estão abaixo) */}
+      {/* TODO(FRONT): você disse que existem textarea/selects/botão/banners "abaixo",
+          mas eles não estão no arquivo colado. Se essa página precisa mesmo deles,
+          cole a versão completa anterior ou confirme que agora é intencionalmente minimal. */}
 
       {loading && <LoaderCard />}
 
       {/* ✅ BUG 2 FIX: ResultView exige quickMode */}
-      {result && <ResultView data={result} quickMode={quickMode as QuickModeUI} />}
+      {result && (
+        <ResultView data={result} quickMode={quickMode as QuickModeUI} />
+      )}
     </div>
   );
 }
