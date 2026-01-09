@@ -1,3 +1,4 @@
+/* FRONT — src/app/globals.css */
 @import "tailwindcss";
 @import "../styles/hitch-theme.css";
 
@@ -45,9 +46,6 @@ a {
 
   /* =========================
      Background do app (POSIÇÃO FIXA)
-     - NÃO mexer: 50% 72%
-     - Sem camada linear (removida para acabar “manchado”)
-     - 2 radiais: base + foco (mais visível sem sujeira)
      ========================= */
   --h-app-bg:
     radial-gradient(
@@ -79,6 +77,29 @@ body {
   background: var(--h-app-bg);
 }
 
+/* =========================================================
+   FIX GLOBAL DO CHROME AUTOFILL (padroniza /login e /register)
+   ========================================================= */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--h-text) !important;
+
+  /* força o "fundo" do autofill a ficar igual ao input */
+  box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.035) inset !important;
+
+  /* evita o flash de cor do Chrome */
+  transition: background-color 9999s ease-out 0s;
+
+  caret-color: var(--h-text);
+}
+
 /* =========================
    COMPONENTES (classes do app)
    ========================= */
@@ -90,7 +111,6 @@ body {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   }
 
-  /* Card premium: camada + elevação (SEM halo pra não “manchar”) */
   .card-premium {
     position: relative;
     background: linear-gradient(
@@ -105,12 +125,10 @@ body {
       0 0 0 1px rgba(255, 255, 255, 0.02) inset;
   }
 
-  /* DESLIGADO propositalmente (era fonte de “manchado”) */
   .card-premium::before {
     content: none;
   }
 
-  /* ===== Buttons base ===== */
   .btn {
     @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition;
     border: 1px solid var(--h-border);
@@ -118,7 +136,6 @@ body {
     color: var(--h-text);
   }
 
-  /* HOVER: roxo bem FECHADO (quase azul-marinho) */
   .btn:hover {
     background: linear-gradient(180deg, var(--h-hover-deep) 0%, var(--h-hover-deep-2) 100%);
     border-color: var(--h-hover-border);
@@ -133,7 +150,6 @@ body {
     outline-offset: 3px;
   }
 
-  /* CTA (mantém seu efeito aprovado) */
   .btn-cta {
     @apply inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition;
     border: 1px solid rgba(34, 13, 84, 0.75);
@@ -167,16 +183,25 @@ body {
     box-shadow: none;
   }
 
-  /* ===== Inputs ===== */
   .input {
     @apply w-full rounded-2xl px-3 py-3 text-sm outline-none transition;
+    background: rgba(255, 255, 255, 0.035); /* mesma cor do preenchido */
     border: 1px solid rgba(255, 255, 255, 0.10);
-    background: rgba(255, 255, 255, 0.035);
     color: var(--h-text);
   }
 
+  /* reforço do autofill apenas para inputs com classe .input */
+  .input:-webkit-autofill,
+  .input:-webkit-autofill:hover,
+  .input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--h-text) !important;
+    box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.035) inset !important;
+    transition: background-color 9999s ease-out 0s;
+    caret-color: var(--h-text);
+  }
+
   .input::placeholder {
-    color: rgba(176, 179, 192, 0.55);
+    color: rgba(255, 255, 255, 0.40);
   }
 
   .input:focus {
@@ -184,13 +209,11 @@ body {
     box-shadow: 0 0 0 4px rgba(34, 13, 84, 0.14);
   }
 
-  /* ===== Labels / text rhythm ===== */
   .label {
     @apply text-xs font-medium tracking-wide;
     color: rgba(154, 160, 181, 0.70);
   }
 
-  /* ===== Segmented (Modo) ===== */
   .segmented {
     @apply inline-flex rounded-2xl p-1;
     border: 1px solid rgba(255, 255, 255, 0.10);
@@ -223,7 +246,6 @@ body {
       0 0 0 1px rgba(255, 255, 255, 0.02) inset;
   }
 
-  /* ===== Chips (Tipo de relação) ===== */
   .chip {
     @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition;
     border: 1px solid rgba(255, 255, 255, 0.10);
@@ -246,4 +268,19 @@ body {
     color: rgba(255, 255, 255, 0.92);
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
   }
+}
+
+/* =========================================================
+   FIX DE LAYOUT: ÁREA ÚTIL DO APP (entre TopNav e Footer)
+   ========================================================= */
+:root {
+  /* Ajuste fino aqui se precisar (mas deve bater com sua UI atual) */
+  --h-topnav-h: 56px;
+  --h-footer-h: 66px;
+}
+
+.app-main {
+  min-height: calc(100dvh - var(--h-topnav-h) - var(--h-footer-h));
+  display: flex;
+  flex-direction: column;
 }

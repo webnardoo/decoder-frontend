@@ -1,3 +1,4 @@
+// FRONT — src/app/login/LoginClient.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -35,15 +36,13 @@ export default function LoginClient() {
 
   const redirectTo = useMemo(() => {
     const next = sp.get("next");
-    return typeof next === "string" && next.trim() ? next : "/conversas";
+    return typeof next === "string" && next.trim() ? next : "/";
   }, [sp]);
 
   useEffect(() => {
-    // prefill opcional
     const prefillEmail = sp.get("email");
     if (prefillEmail && typeof prefillEmail === "string") setEmail(prefillEmail);
 
-    // Limpa erro antigo persistido
     try {
       const last = sessionStorage.getItem("decoder_login_error");
       if (last) {
@@ -52,7 +51,6 @@ export default function LoginClient() {
       }
     } catch {}
 
-    // Probe de registro
     (async () => {
       try {
         const res = await fetch("/api/auth/register/exists", { cache: "no-store" });
@@ -84,12 +82,10 @@ export default function LoginClient() {
       const backendMsg = extractMessage(data);
 
       if (res.ok) {
-        // ✅ Cookie HttpOnly já foi setado pela API Route
         router.replace(redirectTo);
         return;
       }
 
-      // 🔒 Caso novo: email não verificado -> manda pro fluxo OTP
       if (isEmailNotVerified(backendMsg)) {
         try {
           sessionStorage.setItem("decoder_pending_verify_email", safeEmail);
@@ -130,55 +126,79 @@ export default function LoginClient() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/5 p-6 shadow-sm">
-        <h1 className="text-xl font-semibold">Entrar</h1>
-        <p className="mt-1 text-sm text-white/70">Use seu e-mail e senha para acessar.</p>
+    <>
+      <div className="flex-1 flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md card card-premium p-6 md:p-7">
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Entrar</h1>
+          <p className="mt-1 text-sm text-zinc-300/80">
+            Use seu e-mail e senha para acessar.
+          </p>
 
-        {errorMsg && (
-          <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm">
-            {errorMsg}
-          </div>
-        )}
-
-        <form onSubmit={onSubmit} className="mt-5 space-y-3">
-          <input
-            className="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2"
-            type="email"
-            placeholder="E-mail"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={loading}
-            required
-          />
-
-          <input
-            className="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2"
-            type="password"
-            placeholder="Senha"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={loading}
-            required
-          />
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-xl bg-white px-4 py-2 text-black disabled:opacity-60"
-          >
-            {loading ? "Entrando..." : "Entrar"}
-          </button>
-
-          {registerExists && (
-            <div className="pt-2 text-center text-sm text-white/70">
-              <a href="/register" className="underline">
-                Criar conta
-              </a>
+          {errorMsg && (
+            <div className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-sm">
+              {errorMsg}
             </div>
           )}
-        </form>
+
+          <form onSubmit={onSubmit} className="mt-5 space-y-3">
+            <input
+              className="input"
+              type="email"
+              placeholder="E-mail"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+              required
+              autoComplete="email"
+            />
+
+            <input
+              className="input"
+              type="password"
+              placeholder="Senha"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+              required
+              autoComplete="current-password"
+            />
+
+            <button type="submit" disabled={loading} className="btn-cta w-full">
+              {loading ? "Entrando..." : "Entrar"}
+            </button>
+
+            {registerExists && (
+              <div className="pt-2 text-center text-sm text-zinc-300/80">
+                <a href="/register" className="underline hover:text-zinc-200 transition">
+                  Criar conta
+                </a>
+              </div>
+            )}
+          </form>
+        </div>
       </div>
-    </main>
+
+      {/* Fix visual do autofill (Chrome) para manter o padrão escuro do .input */}
+      <style jsx global>{`
+        input.input:-webkit-autofill,
+        input.input:-webkit-autofill:hover,
+        input.input:-webkit-autofill:focus,
+        textarea.input:-webkit-autofill,
+        textarea.input:-webkit-autofill:hover,
+        textarea.input:-webkit-autofill:focus,
+        select.input:-webkit-autofill,
+        select.input:-webkit-autofill:hover,
+        select.input:-webkit-autofill:focus {
+          -webkit-text-fill-color: rgba(255, 255, 255, 0.92) !important;
+          caret-color: rgba(255, 255, 255, 0.92) !important;
+
+          /* força fundo escuro (mesma pegada do register) */
+          box-shadow: 0 0 0px 1000px rgba(8, 10, 18, 0.92) inset !important;
+
+          /* evita “flash” claro */
+          transition: background-color 99999s ease-in-out 0s !important;
+        }
+      `}</style>
+    </>
   );
 }

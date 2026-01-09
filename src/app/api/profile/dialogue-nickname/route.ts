@@ -6,6 +6,12 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4100";
 // Aceita ambos para compatibilidade, mas CANÔNICO é dialogueNickname
 type Body = { dialogueNickname?: string; nickname?: string };
 
+function stripBearer(raw?: string | null): string | null {
+  const v = (raw || "").trim();
+  if (!v) return null;
+  return v.toLowerCase().startsWith("bearer ") ? v.slice(7).trim() : v;
+}
+
 async function getAuthFromCookies(): Promise<{
   bearerToken: string | null;
   decoderAuth: string | null;
@@ -19,13 +25,14 @@ async function getAuthFromCookies(): Promise<{
   // Auth canônico do backend (HttpOnly)
   const decoderAuth = store.get("decoder_auth")?.value;
 
-  const bearerToken = (accessToken || token || "").trim() || null;
-  return { bearerToken, decoderAuth: (decoderAuth || "").trim() || null };
+  const bearerToken = stripBearer((accessToken || token || "").trim() || null);
+  const decoderAuthNorm = stripBearer((decoderAuth || "").trim() || null);
+
+  return { bearerToken, decoderAuth: decoderAuthNorm };
 }
 
 function extractDialogueNickname(body: Body): string {
-  const v = (body?.dialogueNickname ?? body?.nickname ?? "").toString().trim();
-  return v;
+  return (body?.dialogueNickname ?? body?.nickname ?? "").toString().trim();
 }
 
 async function forwardToBackend(params: {
@@ -54,6 +61,9 @@ async function forwardToBackend(params: {
 
   const tried: string[] = [];
 
+  // Preferência: decoder_auth (normalizado). Fallback: bearerToken.
+  const authToken = decoderAuth || bearerToken;
+
   for (const c of candidates) {
     tried.push(`${c.method} ${c.path}`);
     const url = `${BACKEND_URL}${c.path}`;
@@ -61,19 +71,14 @@ async function forwardToBackend(params: {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       Accept: "application/json",
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
     };
-
-    // Preferir Cookie HttpOnly (decoder_auth) quando existir
-    if (decoderAuth) {
-      headers.Cookie = `decoder_auth=${decoderAuth}`;
-    } else if (bearerToken) {
-      headers.Authorization = `Bearer ${bearerToken}`;
-    }
 
     const res = await fetch(url, {
       method: c.method,
       headers,
       body: JSON.stringify({ dialogueNickname }),
+      cache: "no-store",
     });
 
     const text = await res.text().catch(() => "");
@@ -103,6 +108,7 @@ async function handler(req: Request) {
 
     const body = (await req.json().catch(() => ({}))) as Body;
     const dialogueNickname = extractDialogueNickname(body);
+
     if (!dialogueNickname) {
       return NextResponse.json(
         { message: "dialogueNickname é obrigatório." },
@@ -110,7 +116,11 @@ async function handler(req: Request) {
       );
     }
 
-    const result = await forwardToBackend({ bearerToken, decoderAuth, dialogueNickname });
+    const result = await forwardToBackend({
+      bearerToken,
+      decoderAuth,
+      dialogueNickname,
+    });
 
     if (!result.ok) {
       return NextResponse.json(

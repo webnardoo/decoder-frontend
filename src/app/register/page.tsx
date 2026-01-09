@@ -32,9 +32,9 @@ export default function RegisterPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-10">
+        <main className="flex-1 flex items-center justify-center px-4 py-10">
           <div className="w-full max-w-md">
-            <div className="card p-6 md:p-7">
+            <div className="card card-premium p-6 md:p-7">
               <div className="text-sm text-zinc-300/80">Carregando…</div>
             </div>
           </div>
@@ -76,15 +76,9 @@ function RegisterPageInner() {
           sessionStorage.getItem("decoder_pending_verify_email") || "";
         const pendingPass =
           sessionStorage.getItem("decoder_pending_verify_password") || "";
-        const pendingNext =
-          sessionStorage.getItem("decoder_pending_verify_next") || "";
 
         if (!email && pendingEmail) setEmail(pendingEmail);
         if (!password && pendingPass) setPassword(pendingPass);
-
-        if (pendingNext && pendingNext.trim()) {
-          // se o next do query não veio, mantém o do storage (não sobrescreve query)
-        }
       } catch {}
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -174,14 +168,13 @@ function RegisterPageInner() {
           const msg =
             extractMessage(loginData) ||
             "E-mail verificado, mas falha ao entrar. Faça login.";
-          // guarda erro pra tela de login exibir
           try {
             sessionStorage.setItem("decoder_login_error", msg);
           } catch {}
           router.replace(
             `/login?email=${encodeURIComponent(
-              eMail,
-            )}&next=${encodeURIComponent(redirectNext)}`,
+              eMail
+            )}&next=${encodeURIComponent(redirectNext)}`
           );
           return;
         }
@@ -201,8 +194,8 @@ function RegisterPageInner() {
       // sem senha -> manda pro login
       router.replace(
         `/login?email=${encodeURIComponent(
-          eMail,
-        )}&next=${encodeURIComponent(redirectNext)}`,
+          eMail
+        )}&next=${encodeURIComponent(redirectNext)}`
       );
     } catch {
       setError("Falha de conexão. Tente novamente.");
@@ -229,7 +222,8 @@ function RegisterPageInner() {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const msg = extractMessage(data) || "Não foi possível reenviar. Tente novamente.";
+        const msg =
+          extractMessage(data) || "Não foi possível reenviar. Tente novamente.";
         setError(msg);
         return;
       }
@@ -243,9 +237,9 @@ function RegisterPageInner() {
   }
 
   return (
-    <main className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-10">
+    <main className="flex-1 flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
-        <div className="card p-6 md:p-7">
+        <div className="card card-premium p-6 md:p-7">
           <div className="mb-6">
             <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
               {step === "CODE" ? "Verificar e-mail" : "Criar conta"}
@@ -258,13 +252,13 @@ function RegisterPageInner() {
           </div>
 
           {info && (
-            <div className="mb-4 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+            <div className="mb-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
               {info}
             </div>
           )}
 
           {error && (
-            <div className="mb-4 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+            <div className="mb-4 rounded-2xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-200">
               {error}
             </div>
           )}
@@ -277,7 +271,7 @@ function RegisterPageInner() {
                 </label>
                 <input
                   id="email"
-                  className="input w-full"
+                  className="input"
                   type="email"
                   autoComplete="email"
                   inputMode="email"
@@ -294,7 +288,7 @@ function RegisterPageInner() {
                 </label>
                 <input
                   id="password"
-                  className="input w-full"
+                  className="input"
                   type="password"
                   autoComplete="new-password"
                   placeholder="••••••••"
@@ -310,7 +304,7 @@ function RegisterPageInner() {
                 </label>
                 <input
                   id="password2"
-                  className="input w-full"
+                  className="input"
                   type="password"
                   autoComplete="new-password"
                   placeholder="••••••••"
@@ -320,20 +314,22 @@ function RegisterPageInner() {
                 />
               </div>
 
-              <button type="submit" className="btn btn-primary w-full" disabled={loading}>
+              <button
+                type="submit"
+                className="btn-cta w-full"
+                disabled={loading}
+              >
                 {loading ? "Criando..." : "Criar conta"}
               </button>
 
-              <div className="pt-2 text-center">
-                <button
-                  type="button"
-                  className="btn w-full"
-                  onClick={() => router.push("/login")}
-                  disabled={loading}
-                >
-                  Já tenho conta
-                </button>
-              </div>
+              <button
+                type="button"
+                className="btn w-full"
+                onClick={() => router.push("/login")}
+                disabled={loading}
+              >
+                Já tenho conta
+              </button>
             </form>
           )}
 
@@ -345,7 +341,7 @@ function RegisterPageInner() {
                 </label>
                 <input
                   id="email2"
-                  className="input w-full"
+                  className="input"
                   type="email"
                   placeholder="seuemail@exemplo.com"
                   value={email}
@@ -360,7 +356,7 @@ function RegisterPageInner() {
                 </label>
                 <input
                   id="code"
-                  className="input w-full"
+                  className="input"
                   inputMode="numeric"
                   placeholder="Digite o código"
                   value={code}
@@ -369,43 +365,50 @@ function RegisterPageInner() {
                 />
               </div>
 
-              <button type="submit" className="btn btn-primary w-full" disabled={loading}>
+              <button
+                type="submit"
+                className="btn-cta w-full"
+                disabled={loading}
+              >
                 {loading ? "Validando..." : "Validar código"}
               </button>
 
-              <button type="button" className="btn w-full" disabled={loading} onClick={resendCode}>
+              <button
+                type="button"
+                className="btn w-full"
+                disabled={loading}
+                onClick={resendCode}
+              >
                 {loading ? "Reenviando..." : "Reenviar código"}
               </button>
 
-              <div className="pt-2 text-center">
-                <button
-                  type="button"
-                  className="btn w-full"
-                  onClick={() => router.push(`/login?email=${encodeURIComponent(email || "")}`)}
-                  disabled={loading}
-                >
-                  Voltar para login
-                </button>
-              </div>
+              <button
+                type="button"
+                className="btn w-full"
+                onClick={() =>
+                  router.push(`/login?email=${encodeURIComponent(email || "")}`)
+                }
+                disabled={loading}
+              >
+                Voltar para login
+              </button>
             </form>
           )}
 
           {step === "DONE" && (
             <div className="space-y-3">
-              <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+              <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
                 Conta confirmada. Vamos continuar.
               </div>
-              <button className="btn btn-primary w-full" onClick={() => router.replace(redirectNext)}>
+              <button
+                className="btn-cta w-full"
+                onClick={() => router.replace(redirectNext)}
+              >
                 Continuar
               </button>
             </div>
           )}
         </div>
-
-        <p className="mt-4 text-xs text-zinc-400/70 text-center">
-          Backend atual:{" "}
-          <span className="font-medium text-zinc-200/80">{backendBaseUrl}</span>
-        </p>
       </div>
     </main>
   );

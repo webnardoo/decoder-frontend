@@ -7,14 +7,14 @@ import { useOnboardingStatus } from "@/lib/onboarding/OnboardingStore";
 function routeForStage(stage: string): string {
   const s = String(stage || "").toUpperCase().trim();
 
-  if (s === "READY") return "/conversas";
-  if (s === "PAYMENT_REQUIRED") return "/billing/plan";
-  if (s === "PLAN_SELECTION_REQUIRED") return "/billing/plan";
-  if (s === "PAYMENT_PENDING") return "/billing/pending";
-  if (s === "PAYMENT_FAILED") return "/billing/failed";
-  if (s === "NICKNAME_REQUIRED") return "/onboarding/identity";
-  if (s === "IDENTITY_REQUIRED") return "/onboarding/identity";
-  if (s === "TUTORIAL_REQUIRED") return "/tutorial";
+if (s === "READY") return "/";
+if (s === "PAYMENT_REQUIRED") return "/billing/plan";
+if (s === "PLAN_SELECTION_REQUIRED") return "/billing/plan";
+if (s === "PAYMENT_PENDING") return "/billing/pending";
+if (s === "PAYMENT_FAILED") return "/billing/failed";
+if (s === "NICKNAME_REQUIRED") return "/onboarding/identity";
+if (s === "IDENTITY_REQUIRED") return "/onboarding/identity";
+if (s === "TUTORIAL_REQUIRED") return "/tutorial";
 
   return "/start";
 }
@@ -76,7 +76,7 @@ export function OnboardingRouteGuard({ children }: { children: React.ReactNode }
     // ✅ exceção canônica do GAP: permite ficar em /checkout (sem loop) enquanto NÃO é assinante
     if (pathname.startsWith("/checkout")) {
       if (String(status.onboardingStage || "").toUpperCase().trim() === "READY") {
-        router.replace("/conversas");
+        router.replace("/");
       }
       return;
     }

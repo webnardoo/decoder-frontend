@@ -5,11 +5,11 @@ export default function Page() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen flex items-center justify-center px-4">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/5 p-6 shadow-sm">
-            <div className="text-sm text-white/70">Carregando…</div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-full max-w-md card card-premium p-6 md:p-7">
+            <div className="text-sm text-zinc-300/80">Carregando…</div>
           </div>
-        </main>
+        </div>
       }
     >
       <LoginClient />

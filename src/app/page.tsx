@@ -34,6 +34,10 @@ type OnboardingStatus = {
   trialReplyUsed?: boolean;
   trialStartPopupPending?: boolean;
   trialCompleted?: boolean;
+
+  // >>> adicionados para UI (sem quebrar contrato: se não vier, fica undefined)
+  dialogueNickname?: string;
+  creditsBalance?: number;
 };
 
 const MIN_CHARS_NORMAL = 60;
@@ -189,6 +193,13 @@ export default function HomePage() {
       if (!res.ok) return;
       const data = (await res.json()) as OnboardingStatus;
       setOnboarding(data);
+
+      // se backend já retornar saldo, usa como baseline
+      if (typeof data?.creditsBalance === "number") {
+        setCreditsBalance((cur) =>
+          typeof cur === "number" ? cur : data.creditsBalance!
+        );
+      }
 
       const isTrialActive =
         data?.onboardingStage === "TRIAL_ACTIVE" && data?.trialGuided === true;
@@ -601,7 +612,11 @@ export default function HomePage() {
       return;
     }
 
-    if (stepId === "R2_CLICK_ANALYZE_REPLY" && result && quickMode === "RESPONDER") {
+    if (
+      stepId === "R2_CLICK_ANALYZE_REPLY" &&
+      result &&
+      quickMode === "RESPONDER"
+    ) {
       setStepId("R3_REVIEW_REPLY_SUGGESTIONS");
       setShowTrialEnd(true);
       return;
@@ -609,6 +624,16 @@ export default function HomePage() {
   }, [isTrialGuided, stepId, result, quickMode]);
 
   const overlayEnabled = isTrialGuided && !showTrialStart && !showTrialEnd;
+
+  const nicknameLabel =
+    (onboarding?.dialogueNickname ?? "").toString().trim() || "—";
+
+  const balanceLabel =
+    typeof creditsBalance === "number"
+      ? `${creditsBalance} créditos`
+      : typeof onboarding?.creditsBalance === "number"
+        ? `${onboarding.creditsBalance} créditos`
+        : "—";
 
   return (
     <div className="p-6 space-y-8">
@@ -690,14 +715,11 @@ export default function HomePage() {
           <p className="text-sm text-zinc-300/80 leading-relaxed">
             Cole o diálogo e receba uma leitura clara do contexto.
           </p>
-          {creditsBalance != null && (
-            <p className="text-xs text-zinc-500">Saldo: {creditsBalance} créditos</p>
-          )}
         </div>
 
-        {/* Conversas removido conforme solicitado */}
         <div className="flex items-center gap-2">
-          <Link className="btn" href="/account/subscription">
+          {/* agora vai pra /conta */}
+          <Link className="btn" href="/conta">
             Conta
           </Link>
         </div>
@@ -705,6 +727,42 @@ export default function HomePage() {
 
       {/* CARD QUICK */}
       <div className="card card-premium p-6 space-y-4">
+        {/* Identificação */}
+        <div className="flex items-center justify-between gap-4 rounded-2xl border border-[rgba(255,255,255,0.10)] bg-white/[0.02] px-4 py-3">
+          {/* esquerda */}
+          <div className="flex items-center gap-2 text-xs text-zinc-200/80 min-w-0">
+            <span className="shrink-0">Você será identificado nos diálogos como</span>
+
+            <div className="relative group shrink-0">
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-[11px] font-semibold text-zinc-200/80 cursor-default">
+                i
+              </span>
+
+              <div className="pointer-events-none absolute left-0 top-7 z-20 hidden w-[320px] rounded-2xl border border-white/10 bg-black/90 p-3 text-xs text-zinc-200/90 shadow-[0_18px_55px_rgba(0,0,0,0.65)] group-hover:block">
+                <div className="font-semibold mb-1 text-zinc-100">
+                  Por que isso é obrigatório?
+                </div>
+                <p className="text-zinc-200/80 leading-relaxed">
+                  O sistema usa esse nome para separar você da outra pessoa no diálogo.
+                  <br />
+                  Se o nome não corresponder ao que aparece na conversa, a interpretação do contexto fica incorreta e a qualidade da análise e, principalmente, das respostas sugeridas será comprometida.
+                </p>
+              </div>
+            </div>
+
+            {/* nickname alinhado logo após o i */}
+            <span className="inline-flex items-center rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] font-semibold text-zinc-100/90">
+              {nicknameLabel}
+            </span>
+          </div>
+
+          {/* direita */}
+          <div className="text-xs text-zinc-300/80 whitespace-nowrap">
+            Seu saldo atual de créditos é de:    {" "}
+            <span className="text-zinc-100 font-semibold">{balanceLabel}</span>
+          </div>
+        </div>
+
         <div className="flex items-center justify-between">
           <div className="label">Texto</div>
           <div className={`text-xs font-medium ${charsClass}`}>

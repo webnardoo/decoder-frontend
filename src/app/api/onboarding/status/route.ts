@@ -10,6 +10,12 @@ function getBackendBaseUrl() {
   );
 }
 
+function normalizeToken(raw: string | null | undefined) {
+  const v = (raw || "").trim();
+  if (!v) return "";
+  return v.toLowerCase().startsWith("bearer ") ? v.slice(7).trim() : v;
+}
+
 async function getAuthTokenFromCookies(): Promise<string | null> {
   const jar = await cookies();
 
@@ -20,24 +26,34 @@ async function getAuthTokenFromCookies(): Promise<string | null> {
     jar.get("decoder_auth")?.value ||
     null;
 
-  return token;
+  const normalized = normalizeToken(token);
+  return normalized || null;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const token = await getAuthTokenFromCookies();
     const backendBaseUrl = getBackendBaseUrl();
+    const token = await getAuthTokenFromCookies();
 
-    const res = await fetch(`${backendBaseUrl}/api/v1/onboarding/status`, {
+    if (!token) {
+      return NextResponse.json({ message: "Não autenticado." }, { status: 401 });
+    }
+
+    // ✅ Encaminha nos DOIS formatos:
+    // - Authorization Bearer (padrão)
+    // - Cookie decoder_auth (alguns guards/stacks leem daqui)
+    const upstream = await fetch(`${backendBaseUrl}/api/v1/onboarding/status`, {
       method: "GET",
       headers: {
+        Accept: "application/json",
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        Authorization: `Bearer ${token}`,
+        Cookie: `decoder_auth=${token}`,
       },
       cache: "no-store",
     });
 
-    const text = await res.text();
+    const text = await upstream.text().catch(() => "");
     let data: any = null;
 
     try {
@@ -49,12 +65,12 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json(data, { status: res.status });
+    return NextResponse.json(data, { status: upstream.status });
   } catch {
     return NextResponse.json(
       {
         message: "Falha ao consultar onboarding status (proxy).",
-        hint: "Verifique DECODER_BACKEND_BASE_URL / NEXT_PUBLIC_DECODER_BACKEND_BASE_URL no Vercel.",
+        hint: "Verifique DECODER_BACKEND_BASE_URL / NEXT_PUBLIC_DECODER_BACKEND_BASE_URL.",
       },
       { status: 502 },
     );

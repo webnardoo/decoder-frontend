@@ -10,7 +10,7 @@ function routeFromStage(stage: string) {
   if (s === "NICKNAME_REQUIRED") return "/onboarding/identity";
   if (s === "IDENTITY_REQUIRED") return "/onboarding/identity";
   if (s === "TUTORIAL_REQUIRED") return "/tutorial";
-  if (s === "READY") return "/conversas";
+  if (s === "READY") return "/";
   if (s === "PAYMENT_FAILED") return "/billing/failed";
   if (s === "PAYMENT_PENDING") return "/billing/pending";
   if (s === "PAYMENT_REQUIRED") return "/billing/plan";

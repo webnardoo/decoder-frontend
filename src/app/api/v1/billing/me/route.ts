@@ -19,8 +19,6 @@ function stripBearer(raw?: string | null): string | null {
 export async function GET() {
   try {
     const BACKEND_URL = getBackendUrl();
-
-    // Next (versões recentes) tipa cookies() como Promise em alguns contexts
     const cookieStore = await cookies();
 
     const raw =
@@ -31,16 +29,13 @@ export async function GET() {
       null;
 
     const token = stripBearer(raw);
-
     if (!token) {
       return NextResponse.json({ message: "UNAUTHENTICATED" }, { status: 401 });
     }
 
-    const upstream = await fetch(`${BACKEND_URL}/api/v1/billing/plans`, {
+    const upstream = await fetch(`${BACKEND_URL}/api/v1/billing/me`, {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
 
@@ -56,7 +51,7 @@ export async function GET() {
     });
   } catch {
     return NextResponse.json(
-      { message: "BILLING_PLANS_PROXY_FAILED" },
+      { message: "BILLING_ME_PROXY_FAILED" },
       { status: 500 },
     );
   }

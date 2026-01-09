@@ -62,7 +62,7 @@ export default function TutorialPage() {
 
       // atualiza status e segue fluxo normal
       await refreshStatus();
-      router.replace("/conversas");
+      router.replace("/");
     } catch (e: any) {
       setBanner(
         e?.message ||

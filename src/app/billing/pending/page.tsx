@@ -15,7 +15,7 @@ function routeFromStage(stage: string) {
   if (s === "PAYMENT_REQUIRED") return "/billing/plan";
   if (s === "IDENTITY_REQUIRED") return "/onboarding/identity";
   if (s === "TUTORIAL_REQUIRED") return "/tutorial";
-  if (s === "READY") return "/conversas";
+  if (s === "READY") return "/";
   return "/start";
 }
 

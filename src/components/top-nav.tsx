@@ -30,18 +30,17 @@ export function TopNav() {
         <Link href="/" className="flex items-center gap-2">
           <span
             className="flex h-8 w-8 items-center justify-center rounded-xl text-white font-black shadow-sm"
-            style={{ backgroundColor: "rgb(31, 14, 55)" }} // roxo bem fechado
+            style={{ backgroundColor: "rgb(31, 14, 55)" }}
           >
             H
           </span>
           <span className="text-sm font-semibold tracking-wide">Hitch.ai</span>
         </Link>
 
-        {/* some o “Configurando sua conta…” daqui */}
         {isReady && (
           <nav className="flex items-center gap-5">
             <NavLink href="/" label="Home" />
-            <NavLink href="/account" label="Conta" />
+            <NavLink href="/conta" label="Conta" />
             <NavLink href="/admin/credit-v2" label="Admin" />
           </nav>
         )}
