@@ -13,7 +13,9 @@ import { saveHistoryItem } from "@/lib/history";
 import { listConversas } from "@/lib/conversas";
 import { validateConversationText } from "@/lib/validation/conversation";
 import { getConversationValidationMessage } from "@/lib/validation/conversationMessages";
-import GuidedOverlay, { type GuidedOverlayStep } from "@/components/onboarding/GuidedOverlay";
+import GuidedOverlay, {
+  type GuidedOverlayStep,
+} from "@/components/onboarding/GuidedOverlay";
 
 type Mode = "AVULSA" | "CONVERSA";
 type QuickMode = "RESUMO" | "RESPONDER";
@@ -143,7 +145,6 @@ function focusTrapKeydown(e: React.KeyboardEvent, container: HTMLElement | null)
 export default function HomePage() {
   const [mode, setMode] = useState<Mode>("AVULSA");
 
-  // UI do app: "Receber análise" = RESUMO, "Opções de respostas" = RESPONDER
   const [quickMode, setQuickMode] = useState<QuickMode>("RESUMO");
 
   const [conversaId, setConversaId] = useState<string>("");
@@ -165,14 +166,11 @@ export default function HomePage() {
   const [showTrialStart, setShowTrialStart] = useState(false);
   const [showTrialEnd, setShowTrialEnd] = useState(false);
 
-  // step-machine local (UI)
   const [stepId, setStepId] = useState<string | null>(null);
   const blockedClicksRef = useRef(0);
 
-  // foco do popup final
   const finishBtnRef = useRef<HTMLButtonElement | null>(null);
 
-  // ✅ foco do popup inicial + refs dos modais
   const startBtnRef = useRef<HTMLButtonElement | null>(null);
   const startModalRef = useRef<HTMLDivElement | null>(null);
   const endModalRef = useRef<HTMLDivElement | null>(null);
@@ -219,7 +217,6 @@ export default function HomePage() {
     onboarding?.trialActive === true &&
     onboarding?.trialCompleted !== true;
 
-  // regra editorial no trial: 60–200 chars
   const effectiveText = isTrialGuided
     ? clampTextForTrial(conversation)
     : conversation;
@@ -231,19 +228,10 @@ export default function HomePage() {
 
   const canClickAnalyze = useMemo(() => !loading, [loading]);
 
-  function changeMode(next: Mode) {
-    if (loading || next === mode) return;
-    setMode(next);
-    setResult(null);
-    setBanner(null);
-    if (next === "CONVERSA") setConversaId("");
-  }
-
   function markStepIfNull(next: string) {
     setStepId((cur) => cur ?? next);
   }
 
-  // inicia o guided após OK do popup inicial
   async function ackTrialStart() {
     try {
       await fetch("/api/onboarding/trial/start/ack", {
@@ -269,7 +257,6 @@ export default function HomePage() {
     }
   }
 
-  // ✅ foco inicial no popup START (e puxar foco de volta se escapar)
   useEffect(() => {
     if (!isTrialGuided) return;
     if (!showTrialStart) return;
@@ -288,7 +275,6 @@ export default function HomePage() {
       const target = e.target as Node | null;
       if (target && modal.contains(target)) return;
 
-      // se foco foi parar fora, volta pro botão
       try {
         startBtnRef.current?.focus();
       } catch {}
@@ -305,7 +291,6 @@ export default function HomePage() {
     };
   }, [isTrialGuided, showTrialStart]);
 
-  // ✅ garante foco no popup final (já existia) + puxar foco de volta
   useEffect(() => {
     if (!isTrialGuided) return;
     if (!showTrialEnd) return;
@@ -356,7 +341,6 @@ export default function HomePage() {
       return;
     }
 
-    // validação canônica do texto (já existe)
     const validation = validateConversationText(effectiveText);
     if (!validation.ok) {
       const ux = getConversationValidationMessage(
@@ -367,7 +351,6 @@ export default function HomePage() {
       return;
     }
 
-    // regra trial (60–200) adicional defensiva
     if (isTrialGuided) {
       if (effectiveText.length < TRIAL_MIN || effectiveText.length > TRIAL_MAX) {
         setBanner({
@@ -452,12 +435,8 @@ export default function HomePage() {
     }
   }
 
-  // -----------------------------
-  // Guided steps (derivados)
-  // -----------------------------
   useEffect(() => {
     if (!isTrialGuided) return;
-
     if (showTrialStart) return;
 
     if (mode !== "AVULSA") setMode("AVULSA");
@@ -477,30 +456,14 @@ export default function HomePage() {
       return;
     }
 
-    if (stepId === "S3_SELECT_RELATIONSHIP") {
-      return;
-    }
-
     if (stepId === "S4_CLICK_ANALYZE") {
       if (hasResult && quickMode === "RESUMO") setStepId("S5_REVIEW_RESULT");
-      return;
-    }
-
-    if (stepId === "S5_REVIEW_RESULT") {
-      return;
-    }
-
-    if (stepId === "R1_EXPLAIN_REPLY_MODE") {
       return;
     }
 
     if (stepId === "R2_CLICK_ANALYZE_REPLY") {
       if (hasResult && quickMode === "RESPONDER")
         setStepId("R3_REVIEW_REPLY_SUGGESTIONS");
-      return;
-    }
-
-    if (stepId === "R3_REVIEW_REPLY_SUGGESTIONS") {
       return;
     }
   }, [
@@ -573,16 +536,6 @@ export default function HomePage() {
       };
     }
 
-    if (stepId === "R1_EXPLAIN_REPLY_MODE") {
-      return {
-        id: stepId,
-        targetTourId: "quick-analyze-button",
-        title: "6/9 — Gerar respostas",
-        body: "Agora vamos gerar sugestões. Clique em “Analisar”.",
-        requireTargetClick: true,
-      };
-    }
-
     if (stepId === "R2_CLICK_ANALYZE_REPLY") {
       return {
         id: stepId,
@@ -629,13 +582,6 @@ export default function HomePage() {
       setQuickMode("RESPONDER");
       setResult(null);
       setBanner(null);
-      setStepId("R1_EXPLAIN_REPLY_MODE");
-      return;
-    }
-
-    if (stepId === "R1_EXPLAIN_REPLY_MODE") {
-      setResult(null);
-      setBanner(null);
       setStepId("R2_CLICK_ANALYZE_REPLY");
       onAnalyze();
       return;
@@ -655,24 +601,17 @@ export default function HomePage() {
       return;
     }
 
-    if (
-      (stepId === "R1_EXPLAIN_REPLY_MODE" ||
-        stepId === "R2_CLICK_ANALYZE_REPLY") &&
-      result &&
-      quickMode === "RESPONDER"
-    ) {
+    if (stepId === "R2_CLICK_ANALYZE_REPLY" && result && quickMode === "RESPONDER") {
       setStepId("R3_REVIEW_REPLY_SUGGESTIONS");
       setShowTrialEnd(true);
       return;
     }
   }, [isTrialGuided, stepId, result, quickMode]);
 
-  // ✅ Overlay deve ficar DESLIGADO quando popup estiver aberto (senão disputa foco)
   const overlayEnabled = isTrialGuided && !showTrialStart && !showTrialEnd;
 
   return (
-    <div className="p-6 space-y-6">
-      {/* OVERLAY */}
+    <div className="p-6 space-y-8">
       <GuidedOverlay
         enabled={overlayEnabled}
         step={currentStep}
@@ -682,7 +621,6 @@ export default function HomePage() {
         }}
       />
 
-      {/* POPUP INICIAL DO TRIAL */}
       {isTrialGuided && showTrialStart && (
         <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/60">
           <div
@@ -704,7 +642,7 @@ export default function HomePage() {
             <div className="mt-4 flex gap-2">
               <button
                 ref={startBtnRef}
-                className="btn btn-primary"
+                className="btn btn-cta"
                 type="button"
                 onClick={ackTrialStart}
               >
@@ -715,7 +653,6 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* POPUP FINAL DO TRIAL */}
       {isTrialGuided && showTrialEnd && (
         <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/60">
           <div
@@ -733,7 +670,7 @@ export default function HomePage() {
             <div className="mt-4 flex gap-2">
               <button
                 ref={finishBtnRef}
-                className="btn btn-primary"
+                className="btn btn-cta"
                 type="button"
                 onClick={finishTrial}
               >
@@ -746,52 +683,30 @@ export default function HomePage() {
 
       {/* HEADER */}
       <div className="flex items-center justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-xl font-semibold">Decoder</h1>
-          <p className="text-sm text-zinc-400">
-            Análise Avulsa / Dentro de Conversa
+        <div className="space-y-2">
+          <h1 className="text-[28px] font-semibold tracking-[-0.02em]">
+            Hitch.ai
+          </h1>
+          <p className="text-sm text-zinc-300/80 leading-relaxed">
+            Cole o diálogo e receba uma leitura clara do contexto.
           </p>
           {creditsBalance != null && (
-            <p className="text-xs text-zinc-500">
-              Saldo: {creditsBalance} créditos
-            </p>
+            <p className="text-xs text-zinc-500">Saldo: {creditsBalance} créditos</p>
           )}
         </div>
 
+        {/* Conversas removido conforme solicitado */}
         <div className="flex items-center gap-2">
-          <Link className="btn" href="/conversas">
-            Conversas
-          </Link>
           <Link className="btn" href="/account/subscription">
-            Assinatura
+            Conta
           </Link>
         </div>
       </div>
 
-      {/* MODO (bloqueado no trial) */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          className={`btn ${mode === "AVULSA" ? "btn-primary" : ""}`}
-          onClick={() => !isTrialGuided && changeMode("AVULSA")}
-          disabled={loading || isTrialGuided}
-          type="button"
-        >
-          Avulsa
-        </button>
-        <button
-          className={`btn ${mode === "CONVERSA" ? "btn-primary" : ""}`}
-          onClick={() => !isTrialGuided && changeMode("CONVERSA")}
-          disabled={loading || isTrialGuided}
-          type="button"
-        >
-          Dentro de conversa
-        </button>
-      </div>
-
       {/* CARD QUICK */}
-      <div className="card p-4 space-y-3">
+      <div className="card card-premium p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <div className="text-xs text-zinc-500">Texto</div>
+          <div className="label">Texto</div>
           <div className={`text-xs font-medium ${charsClass}`}>
             {chars} caracteres
             {isTrialGuided ? ` (trial: ${TRIAL_MIN}–${TRIAL_MAX})` : ""}
@@ -800,7 +715,7 @@ export default function HomePage() {
 
         <textarea
           data-tour-id="quick-textarea"
-          className="w-full rounded-xl border p-3 min-h-45"
+          className="input min-h-52 resize-none"
           value={effectiveText}
           onChange={(e) => {
             const raw = e.target.value;
@@ -810,25 +725,14 @@ export default function HomePage() {
           disabled={loading}
         />
 
-        <div className="text-xs text-zinc-500">Modo</div>
-        <div className="flex gap-3">
+        <div className="label">Modo</div>
+
+        <div className="segmented w-fit gap-1">
           <button
             data-tour-id="quick-mode-summary"
-            className={`btn ${quickMode === "RESUMO" ? "btn-primary" : ""}`}
+            className={`btn-seg ${quickMode === "RESUMO" ? "btn-seg-active" : ""}`}
             onClick={() => {
-              if (
-                isTrialGuided &&
-                stepId &&
-                stepId !== "S1_SELECT_SUMMARY_MODE" &&
-                stepId !== "S2_PASTE_TEXT" &&
-                stepId !== "S3_SELECT_RELATIONSHIP" &&
-                stepId !== "S4_CLICK_ANALYZE" &&
-                stepId !== "S5_REVIEW_RESULT"
-              )
-                return;
               setQuickMode("RESUMO");
-              if (isTrialGuided && stepId === "S1_SELECT_SUMMARY_MODE")
-                setStepId("S2_PASTE_TEXT");
             }}
             disabled={loading}
             type="button"
@@ -838,11 +742,8 @@ export default function HomePage() {
 
           <button
             data-tour-id="quick-mode-reply"
-            className={`btn ${quickMode === "RESPONDER" ? "btn-primary" : ""}`}
+            className={`btn-seg ${quickMode === "RESPONDER" ? "btn-seg-active" : ""}`}
             onClick={() => {
-              if (isTrialGuided) {
-                if (stepId !== "S5_REVIEW_RESULT") return;
-              }
               setQuickMode("RESPONDER");
               setResult(null);
               setBanner(null);
@@ -854,22 +755,13 @@ export default function HomePage() {
           </button>
         </div>
 
-        <div className="text-xs text-zinc-500">Tipo de relação</div>
-        <div
-          className="flex flex-wrap gap-2"
-          data-tour-id="quick-relationship-option"
-        >
+        <div className="label pt-2">Tipo de relação</div>
+        <div className="flex flex-wrap gap-2" data-tour-id="quick-relationship-option">
           {relationshipOptions.map((opt) => (
             <button
               key={opt.value}
-              className={`btn ${
-                relationshipType === opt.value ? "btn-primary" : ""
-              }`}
-              onClick={() => {
-                setRelationshipType(opt.value);
-                if (isTrialGuided && stepId === "S3_SELECT_RELATIONSHIP")
-                  setStepId("S4_CLICK_ANALYZE");
-              }}
+              className={`chip ${relationshipType === opt.value ? "chip-active" : ""}`}
+              onClick={() => setRelationshipType(opt.value)}
               disabled={loading}
               type="button"
             >
@@ -880,21 +772,8 @@ export default function HomePage() {
 
         <button
           data-tour-id="quick-analyze-button"
-          className="btn btn-primary"
-          onClick={() => {
-            if (isTrialGuided) {
-              if (quickMode === "RESUMO" && stepId !== "S4_CLICK_ANALYZE") return;
-              if (
-                quickMode === "RESPONDER" &&
-                !(
-                  stepId === "R1_EXPLAIN_REPLY_MODE" ||
-                  stepId === "R2_CLICK_ANALYZE_REPLY"
-                )
-              )
-                return;
-            }
-            onAnalyze();
-          }}
+          className="btn-cta w-full mt-2"
+          onClick={onAnalyze}
           disabled={!canClickAnalyze}
           type="button"
         >
@@ -902,28 +781,17 @@ export default function HomePage() {
         </button>
 
         {banner && (
-          <div className="rounded-xl border p-3 text-sm">
+          <div className="rounded-2xl border border-zinc-800/70 bg-black/30 p-4 text-sm">
             <div className="font-medium">{banner.title}</div>
-            <div className="text-muted-foreground">{banner.reason}</div>
-            {banner.fix && (
-              <div className="text-muted-foreground">{banner.fix}</div>
-            )}
+            <div className="text-zinc-300/80">{banner.reason}</div>
+            {banner.fix && <div className="text-zinc-300/70">{banner.fix}</div>}
           </div>
         )}
       </div>
 
       {loading && <LoaderCard />}
 
-      {/* ResultView exige quickMode */}
       {result && <ResultView data={result} quickMode={quickMode} />}
-
-      {/* helper trial: no step S5, orienta o clique */}
-      {isTrialGuided && stepId === "S5_REVIEW_RESULT" && (
-        <div className="text-xs text-zinc-500">
-          Continue clicando em{" "}
-          <span className="text-zinc-200">Opções de respostas</span>.
-        </div>
-      )}
     </div>
   );
 }

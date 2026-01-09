@@ -16,14 +16,72 @@ body {
 }
 
 ::selection {
-  background: rgba(124, 58, 237, 0.25);
+  background: rgba(34, 13, 84, 0.18);
 }
 
 a {
   text-decoration: none;
 }
 
-/* Componentes padrão do app (classes reutilizáveis) */
+/* =========================
+   TOKENS (Hitch / App)
+   ========================= */
+:root {
+  --h-bg: #000000;
+  --h-text: rgba(255, 255, 255, 0.9);
+  --h-muted: rgba(176, 179, 192, 0.7);
+
+  --h-card: rgba(255, 255, 255, 0.035);
+  --h-border: rgba(255, 255, 255, 0.10);
+  --h-border-strong: rgba(255, 255, 255, 0.14);
+
+  /* Roxo fechado (premium) */
+  --h-purple: #220D54;
+
+  /* Hover "roxo quase azul-marinho fechado" (para TODOS os botões) */
+  --h-hover-deep: rgba(9, 7, 18, 0.94);
+  --h-hover-deep-2: rgba(18, 10, 40, 0.82);
+  --h-hover-border: rgba(34, 13, 84, 0.55);
+
+  /* =========================
+     Background do app (POSIÇÃO FIXA)
+     - NÃO mexer: 50% 72%
+     - Sem camada linear (removida para acabar “manchado”)
+     - 2 radiais: base + foco (mais visível sem sujeira)
+     ========================= */
+  --h-app-bg:
+    radial-gradient(
+      1600px 1100px at 50% 40%,
+      rgba(34, 13, 84, 0.20) 0%,
+      rgba(34, 13, 84, 0.12) 18%,
+      rgba(34, 13, 84, 0.07) 34%,
+      rgba(0, 0, 0, 0.90) 58%,
+      rgba(0, 0, 0, 1) 78%,
+      rgba(0, 0, 0, 1) 100%
+    ),
+    radial-gradient(
+      900px 620px at 50% 72%,
+      rgba(72, 28, 168, 0.10) 0%,
+      rgba(72, 28, 168, 0.05) 22%,
+      rgba(0, 0, 0, 0) 55%
+    );
+}
+
+/* Aplica no app inteiro */
+html,
+body {
+  background: var(--h-bg);
+  color: var(--h-text);
+}
+
+/* background do layout.tsx */
+.h-app-bg {
+  background: var(--h-app-bg);
+}
+
+/* =========================
+   COMPONENTES (classes do app)
+   ========================= */
 @layer components {
   .card {
     @apply rounded-2xl border;
@@ -32,55 +90,160 @@ a {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   }
 
+  /* Card premium: camada + elevação (SEM halo pra não “manchar”) */
+  .card-premium {
+    position: relative;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.045) 0%,
+      rgba(255, 255, 255, 0.028) 65%,
+      rgba(255, 255, 255, 0.022) 100%
+    );
+    border-color: var(--h-border-strong);
+    box-shadow:
+      0 18px 55px rgba(0, 0, 0, 0.55),
+      0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+  }
+
+  /* DESLIGADO propositalmente (era fonte de “manchado”) */
+  .card-premium::before {
+    content: none;
+  }
+
+  /* ===== Buttons base ===== */
   .btn {
     @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition;
     border: 1px solid var(--h-border);
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.035);
     color: var(--h-text);
   }
+
+  /* HOVER: roxo bem FECHADO (quase azul-marinho) */
   .btn:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: linear-gradient(180deg, var(--h-hover-deep) 0%, var(--h-hover-deep-2) 100%);
+    border-color: var(--h-hover-border);
+    box-shadow:
+      0 14px 30px rgba(0, 0, 0, 0.55),
+      0 0 0 1px rgba(255, 255, 255, 0.02) inset,
+      0 0 18px rgba(34, 13, 84, 0.18);
   }
 
-  .btn-primary {
-    @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition;
-    border: 1px solid rgba(124, 58, 237, 0.35);
-    background: rgba(124, 58, 237, 0.92);
+  .btn:focus-visible {
+    outline: 2px solid rgba(34, 13, 84, 0.55);
+    outline-offset: 3px;
+  }
+
+  /* CTA (mantém seu efeito aprovado) */
+  .btn-cta {
+    @apply inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition;
+    border: 1px solid rgba(34, 13, 84, 0.75);
     color: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 14px 40px rgba(124, 58, 237, 0.18);
+    background: linear-gradient(
+      90deg,
+      rgba(34, 13, 84, 0.92) 0%,
+      rgba(50, 18, 118, 0.92) 55%,
+      rgba(34, 13, 84, 0.92) 100%
+    );
+    box-shadow:
+      0 18px 46px rgba(0, 0, 0, 0.55),
+      0 0 0 1px rgba(255, 255, 255, 0.02) inset;
   }
-  .btn-primary:hover {
-    background: rgba(124, 58, 237, 0.98);
+
+  .btn-cta:hover {
+    background: linear-gradient(
+      90deg,
+      rgba(34, 13, 84, 0.98) 0%,
+      rgba(58, 20, 136, 0.98) 55%,
+      rgba(34, 13, 84, 0.98) 100%
+    );
+    box-shadow:
+      0 22px 56px rgba(0, 0, 0, 0.62),
+      0 0 26px rgba(34, 13, 84, 0.20);
   }
-  .btn-primary:disabled {
+
+  .btn-cta:disabled {
     opacity: 0.55;
     cursor: not-allowed;
+    box-shadow: none;
   }
 
+  /* ===== Inputs ===== */
   .input {
-    @apply w-full rounded-xl px-3 py-2 text-sm outline-none transition;
-    border: 1px solid var(--h-border);
-    background: rgba(255, 255, 255, 0.04);
+    @apply w-full rounded-2xl px-3 py-3 text-sm outline-none transition;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.035);
     color: var(--h-text);
   }
+
   .input::placeholder {
     color: rgba(176, 179, 192, 0.55);
   }
+
   .input:focus {
-    border-color: rgba(124, 58, 237, 0.45);
-    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
+    border-color: rgba(34, 13, 84, 0.55);
+    box-shadow: 0 0 0 4px rgba(34, 13, 84, 0.14);
   }
 
+  /* ===== Labels / text rhythm ===== */
   .label {
-    @apply text-xs;
-    color: rgba(154, 160, 181, 0.65);
+    @apply text-xs font-medium tracking-wide;
+    color: rgba(154, 160, 181, 0.70);
   }
 
-  .muted {
-    color: rgba(176, 179, 192, 0.7);
+  /* ===== Segmented (Modo) ===== */
+  .segmented {
+    @apply inline-flex rounded-2xl p-1;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.02);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   }
 
-  .title {
-    color: rgba(255, 255, 255, 0.9);
+  .btn-seg {
+    @apply rounded-xl px-4 py-2 text-sm font-semibold transition;
+    color: rgba(255, 255, 255, 0.78);
+    background: transparent;
+    border: 1px solid transparent;
+  }
+
+  .btn-seg:hover {
+    background: linear-gradient(180deg, var(--h-hover-deep) 0%, var(--h-hover-deep-2) 100%);
+    border-color: var(--h-hover-border);
+    color: rgba(255, 255, 255, 0.92);
+    box-shadow:
+      0 12px 26px rgba(0, 0, 0, 0.55),
+      0 0 14px rgba(34, 13, 84, 0.16);
+  }
+
+  .btn-seg-active {
+    background: rgba(34, 13, 84, 0.38);
+    border-color: rgba(34, 13, 84, 0.55);
+    color: rgba(255, 255, 255, 0.92);
+    box-shadow:
+      0 10px 24px rgba(0, 0, 0, 0.38),
+      0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+  }
+
+  /* ===== Chips (Tipo de relação) ===== */
+  .chip {
+    @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(255, 255, 255, 0.80);
+  }
+
+  .chip:hover {
+    background: linear-gradient(180deg, var(--h-hover-deep) 0%, var(--h-hover-deep-2) 100%);
+    border-color: var(--h-hover-border);
+    color: rgba(255, 255, 255, 0.92);
+    box-shadow:
+      0 12px 26px rgba(0, 0, 0, 0.55),
+      0 0 14px rgba(34, 13, 84, 0.14);
+  }
+
+  .chip-active {
+    background: rgba(34, 13, 84, 0.32);
+    border-color: rgba(34, 13, 84, 0.55);
+    color: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
   }
 }
