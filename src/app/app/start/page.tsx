@@ -17,27 +17,28 @@ export default function StartPage() {
   useEffect(() => {
     if (loading || !status) return;
 
+    // ✅ tudo do APP fica em /app/*
     if (status.nicknameDefined !== true || status.onboardingStage === "NICKNAME_REQUIRED") {
-      router.replace("/onboarding/identity");
+      router.replace("/app/onboarding/identity");
       return;
     }
 
     if (status.onboardingStage === "TRIAL_ACTIVE") {
-      router.replace("/");
+      router.replace("/app");
       return;
     }
 
     if (status.subscriptionActive !== true) {
-      router.replace("/billing/plan");
+      router.replace("/app/billing/plan");
       return;
     }
 
     if (status.tutorialCompleted !== true) {
-      router.replace("/tutorial");
+      router.replace("/app/tutorial");
       return;
     }
 
-    router.replace("/");
+    router.replace("/app");
   }, [loading, status, router]);
 
   return (
@@ -67,7 +68,7 @@ export default function StartPage() {
           </button>
 
           <Link
-            href="/account"
+            href="/app/account"
             className="text-center text-xs text-zinc-400 hover:text-zinc-200 transition"
           >
             Acessar conta

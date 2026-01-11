@@ -12,7 +12,7 @@ export default function CheckoutSuccessPage() {
           </h1>
 
           <div className="pt-1 w-full">
-            <Link className="btn btn-cta w-full" href="/">
+            <Link className="btn btn-cta w-full" href="/app">
               Ok
             </Link>
           </div>

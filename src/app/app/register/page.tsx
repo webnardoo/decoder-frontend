@@ -1,13 +1,12 @@
-// FRONT — src/app/register/page.tsx
 "use client";
 
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AppFooter } from "@/components/app-footer";
 
 type RegisterStep = "FORM" | "CODE" | "DONE";
 
 function getBackendBaseUrl() {
-  // Client-side
   return (
     process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL ||
     process.env.NEXT_PUBLIC_HITCH_BACKEND_BASE_URL ||
@@ -23,29 +22,25 @@ function extractMessage(data: any): string | null {
   );
 }
 
-/**
- * ✅ Wrapper com Suspense
- * Motivo: Next 16 exige que useSearchParams() esteja dentro de uma Suspense boundary
- * quando a página é pré-renderizada.
- */
 export default function RegisterPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex-1 flex items-center justify-center px-4 py-10">
+        <div className="flex flex-1 items-center justify-center px-4">
           <div className="w-full max-w-md">
             <div className="card card-premium p-6 md:p-7">
               <div className="text-sm text-zinc-300/80">Carregando…</div>
             </div>
           </div>
-        </main>
+        </div>
       }
     >
-      <RegisterPageInner />
+      <div className="flex flex-1 items-center justify-center px-4">
+        <RegisterPageInner />
+      </div>
     </Suspense>
   );
 }
-
 function RegisterPageInner() {
   const router = useRouter();
   const sp = useSearchParams();
@@ -55,7 +50,7 @@ function RegisterPageInner() {
   const verifyMode = sp.get("verify") === "1";
   const nextParam = sp.get("next");
   const redirectNext =
-    typeof nextParam === "string" && nextParam.trim() ? nextParam : "/start";
+  typeof nextParam === "string" && nextParam.trim() ? nextParam : "/app/start";
 
   const [step, setStep] = useState<RegisterStep>(verifyMode ? "CODE" : "FORM");
   const [email, setEmail] = useState(sp.get("email") ?? "");
@@ -69,7 +64,6 @@ function RegisterPageInner() {
   const [info, setInfo] = useState<string>("");
 
   useEffect(() => {
-    // Se veio do login, tenta recuperar senha pra auto-login após validar OTP
     if (verifyMode) {
       try {
         const pendingEmail =
@@ -82,7 +76,9 @@ function RegisterPageInner() {
       } catch {}
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, []);
+  <AppFooter />
 
   async function registerSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -149,12 +145,9 @@ function RegisterPageInner() {
         return;
       }
 
-      // ✅ Email verificado no BACK
       setInfo("E-mail verificado. Entrando…");
 
-      // tenta auto-login (se temos senha do fluxo atual OU recuperada do sessionStorage)
       const pass = password || "";
-
       if (pass && pass.length >= 6) {
         const loginRes = await fetch("/api/auth/login", {
           method: "POST",
@@ -171,15 +164,15 @@ function RegisterPageInner() {
           try {
             sessionStorage.setItem("decoder_login_error", msg);
           } catch {}
+
           router.replace(
-            `/login?email=${encodeURIComponent(
+            `/app/login?email=${encodeURIComponent(
               eMail
             )}&next=${encodeURIComponent(redirectNext)}`
           );
           return;
         }
 
-        // limpa pendências
         try {
           sessionStorage.removeItem("decoder_pending_verify_email");
           sessionStorage.removeItem("decoder_pending_verify_password");
@@ -191,9 +184,8 @@ function RegisterPageInner() {
         return;
       }
 
-      // sem senha -> manda pro login
       router.replace(
-        `/login?email=${encodeURIComponent(
+        `/app/login?email=${encodeURIComponent(
           eMail
         )}&next=${encodeURIComponent(redirectNext)}`
       );
@@ -314,18 +306,14 @@ function RegisterPageInner() {
                 />
               </div>
 
-              <button
-                type="submit"
-                className="btn-cta w-full"
-                disabled={loading}
-              >
+              <button type="submit" className="btn-cta w-full" disabled={loading}>
                 {loading ? "Criando..." : "Criar conta"}
               </button>
 
               <button
                 type="button"
                 className="btn w-full"
-                onClick={() => router.push("/login")}
+                onClick={() => router.push("/app/login")}
                 disabled={loading}
               >
                 Já tenho conta
@@ -365,29 +353,18 @@ function RegisterPageInner() {
                 />
               </div>
 
-              <button
-                type="submit"
-                className="btn-cta w-full"
-                disabled={loading}
-              >
+              <button type="submit" className="btn-cta w-full" disabled={loading}>
                 {loading ? "Validando..." : "Validar código"}
               </button>
 
-              <button
-                type="button"
-                className="btn w-full"
-                disabled={loading}
-                onClick={resendCode}
-              >
+              <button type="button" className="btn w-full" disabled={loading} onClick={resendCode}>
                 {loading ? "Reenviando..." : "Reenviar código"}
               </button>
 
               <button
                 type="button"
                 className="btn w-full"
-                onClick={() =>
-                  router.push(`/login?email=${encodeURIComponent(email || "")}`)
-                }
+                onClick={() => router.push(`/app/login?email=${encodeURIComponent(email || "")}`)}
                 disabled={loading}
               >
                 Voltar para login
@@ -400,10 +377,7 @@ function RegisterPageInner() {
               <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
                 Conta confirmada. Vamos continuar.
               </div>
-              <button
-                className="btn-cta w-full"
-                onClick={() => router.replace(redirectNext)}
-              >
+              <button className="btn-cta w-full" onClick={() => router.replace(redirectNext)}>
                 Continuar
               </button>
             </div>

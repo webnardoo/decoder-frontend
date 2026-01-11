@@ -23,7 +23,7 @@ export default function AccountPage() {
 
         <Link
           className="card p-4 hover:bg-zinc-900/60 transition"
-          href="/account/subscription"
+          href="/app/account/subscription"
         >
           <div className="text-sm font-medium">Assinatura</div>
           <div className="text-sm text-zinc-400 mt-1">
@@ -33,7 +33,7 @@ export default function AccountPage() {
 
         <Link
           className="card p-4 hover:bg-zinc-900/60 transition"
-          href="/account/history"
+          href="/app/account/history"
         >
           <div className="text-sm font-medium">Histórico</div>
           <div className="text-sm text-zinc-400 mt-1">

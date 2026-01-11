@@ -1,49 +1,33 @@
+/* FRONT — src/styles/hitch-theme.css */
 :root {
-  /* Tokens do tema Hitch (app inteiro) */
-  --h-bg: #000000; /* preto absoluto */
+  --h-bg: #000000;
   --h-text: rgba(255, 255, 255, 0.9);
   --h-muted: rgba(176, 179, 192, 0.7);
 
-  /* card / borda */
   --h-card: rgba(255, 255, 255, 0.035);
-  --h-border: rgba(255, 255, 255, 0.08);
+  --h-border: rgba(255, 255, 255, 0.10);
+  --h-border-strong: rgba(255, 255, 255, 0.14);
 
-  /* Roxo fechado (premium) */
   --h-purple: #220D54;
 
-  /* =========================================================
-     GLOW / BACKGROUND
-     - Mantive as 2 versões para alternar rápido.
-     - Troque comentando/descomentando o bloco do --h-app-bg.
-     ========================================================= */
+  --h-hover-deep: rgba(9, 7, 18, 0.94);
+  --h-hover-deep-2: rgba(18, 10, 40, 0.82);
+  --h-hover-border: rgba(34, 13, 84, 0.55);
 
-  /* VERSÃO A (ATUAL): glow global mais visível (canvas) */
-  --h-purple-glow-1: rgba(34, 13, 84, 0.18);
-  --h-purple-glow-2: rgba(34, 13, 84, 0.10);
-
-  /* VERSÃO B (MINHA PROPOSTA): mais central e mais fraco (canvas)
-     --h-purple-glow-1: rgba(34, 13, 84, 0.12);
-     --h-purple-glow-2: rgba(34, 13, 84, 0.06);
-  */
-
-  /* ----------- background global do app ----------- */
-
-  /* VERSÃO A (ATUAL): mais amplo */
-  --h-app-bg: radial-gradient(
-    circle at 50% 30%,
-    var(--h-purple-glow-1) 0%,
-    var(--h-purple-glow-2) 26%,
-    rgba(0, 0, 0, 1) 64%,
-    rgba(0, 0, 0, 1) 100%
-  );
-
-  /* VERSÃO B (MINHA PROPOSTA): mais central e curto (descomente e comente a de cima)
-  --h-app-bg: radial-gradient(
-    900px 520px at 50% 18%,
-    var(--h-purple-glow-1) 0%,
-    var(--h-purple-glow-2) 18%,
-    rgba(0, 0, 0, 1) 58%,
-    rgba(0, 0, 0, 1) 100%
-  );
-  */
+  --h-app-bg:
+    radial-gradient(
+      1600px 1100px at 50% 40%,
+      rgba(34, 13, 84, 0.20) 0%,
+      rgba(34, 13, 84, 0.12) 18%,
+      rgba(34, 13, 84, 0.07) 34%,
+      rgba(0, 0, 0, 0.90) 58%,
+      rgba(0, 0, 0, 1) 78%,
+      rgba(0, 0, 0, 1) 100%
+    ),
+    radial-gradient(
+      900px 620px at 50% 72%,
+      rgba(72, 28, 168, 0.10) 0%,
+      rgba(72, 28, 168, 0.05) 22%,
+      rgba(0, 0, 0, 0) 55%
+    );
 }

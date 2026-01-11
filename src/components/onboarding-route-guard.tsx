@@ -7,16 +7,24 @@ import { useOnboardingStatus } from "@/lib/onboarding/OnboardingStore";
 function routeForStage(stage: string): string {
   const s = String(stage || "").toUpperCase().trim();
 
-if (s === "READY") return "/";
-if (s === "PAYMENT_REQUIRED") return "/billing/plan";
-if (s === "PLAN_SELECTION_REQUIRED") return "/billing/plan";
-if (s === "PAYMENT_PENDING") return "/billing/pending";
-if (s === "PAYMENT_FAILED") return "/billing/failed";
-if (s === "NICKNAME_REQUIRED") return "/onboarding/identity";
-if (s === "IDENTITY_REQUIRED") return "/onboarding/identity";
-if (s === "TUTORIAL_REQUIRED") return "/tutorial";
+  // ✅ APP “home” nesta branch é /app
+  if (s === "READY") return "/app";
 
-  return "/start";
+  // Billing (rotas reais: /app/billing/*)
+  if (s === "PAYMENT_REQUIRED") return "/app/billing/plan";
+  if (s === "PLAN_SELECTION_REQUIRED") return "/app/billing/plan";
+  if (s === "PAYMENT_PENDING") return "/app/billing/pending";
+  if (s === "PAYMENT_FAILED") return "/app/billing/failed";
+
+  // Identity (rota real: src/app/app/onboarding/identity/page.tsx)
+  if (s === "NICKNAME_REQUIRED") return "/app/onboarding/identity";
+  if (s === "IDENTITY_REQUIRED") return "/app/onboarding/identity";
+
+  // Tutorial (rota real: src/app/app/tutorial/page.tsx)
+  if (s === "TUTORIAL_REQUIRED") return "/app/tutorial";
+
+  // Fallback seguro (rota real existe)
+  return "/app/start";
 }
 
 function getHttpStatusFromError(err: any): number | null {
@@ -42,57 +50,52 @@ export function OnboardingRouteGuard({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (loading) return;
 
-    // ✅ SE DER 401/403: NÃO É ONBOARDING. É LOGIN.
+    // ✅ 401/403 = sessão/login
     const http = getHttpStatusFromError(error);
     if (http === 401 || http === 403) {
-      // evita loop se já estiver no /login
-      if (pathname !== "/login") router.replace("/login");
+      // login real nesta branch: /app/login
+      if (pathname !== "/app/login") router.replace("/app/login");
       return;
     }
 
-    // outros erros: mantém tela de erro com "tentar novamente"
+    // outros erros: mantém UI de erro
     if (error) return;
 
+    // sem status: manda pro start real do app
     if (!status) {
-      router.replace("/start");
+      router.replace("/app/start");
       return;
     }
 
-    // ✅ REGRA CANÔNICA: assinante ativo NUNCA é obrigado a tutorial/onboarding/billing.
+    // ✅ assinante ativo nunca fica preso em jornada
     if (status.subscriptionActive === true) {
       const isJourneyRoute =
-        pathname === "/tutorial" ||
-        pathname === "/start" ||
-        pathname.startsWith("/onboarding") ||
-        pathname.startsWith("/billing") ||
-        pathname.startsWith("/checkout");
+        pathname === "/app/tutorial" ||
+        pathname === "/app/start" ||
+        pathname.startsWith("/app/onboarding") ||
+        pathname.startsWith("/app/billing") ||
+        pathname.startsWith("/app/checkout");
 
-      if (isJourneyRoute) {
-        router.replace("/");
-      }
+      if (isJourneyRoute) router.replace("/app");
       return;
     }
 
-    // ✅ exceção canônica do GAP: permite ficar em /checkout (sem loop) enquanto NÃO é assinante
-    if (pathname.startsWith("/checkout")) {
+    // ✅ permite permanecer em /app/checkout enquanto NÃO é assinante
+    if (pathname.startsWith("/app/checkout")) {
       if (String(status.onboardingStage || "").toUpperCase().trim() === "READY") {
-        router.replace("/");
+        router.replace("/app");
       }
       return;
     }
 
-    // ⚠️ tutorialPopupsPending só vale para não-assinantes
-    if (status.tutorialPopupsPending && pathname !== "/tutorial") {
-      router.replace("/tutorial");
+    // ✅ tutorialPopupsPending manda pro tutorial real
+    if (status.tutorialPopupsPending && pathname !== "/app/tutorial") {
+      router.replace("/app/tutorial");
       return;
     }
 
     const target = routeForStage(status.onboardingStage);
-
-    if (pathname !== target) {
-      router.replace(target);
-      return;
-    }
+    if (pathname !== target) router.replace(target);
   }, [loading, error, status, pathname, router]);
 
   if (loading) {
@@ -101,12 +104,11 @@ export function OnboardingRouteGuard({ children }: { children: React.ReactNode }
 
   const http = getHttpStatusFromError(error);
 
-  // ✅ em 401/403 não renderiza “Falha ao carregar status” (isso gera confusão)
   if (http === 401 || http === 403) {
     return (
       <div className="card p-5 space-y-2">
         <div className="text-sm font-medium">Sessão expirada. Faça login novamente.</div>
-        <button className="btn btn-primary" onClick={() => router.replace("/login")}>
+        <button className="btn btn-primary" onClick={() => router.replace("/app/login")}>
           Ir para login
         </button>
       </div>

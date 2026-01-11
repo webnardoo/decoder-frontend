@@ -1,3 +1,4 @@
+// FRONT — src/app/api/onboarding/status/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
@@ -30,7 +31,7 @@ async function getAuthTokenFromCookies(): Promise<string | null> {
   return normalized || null;
 }
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
     const backendBaseUrl = getBackendBaseUrl();
     const token = await getAuthTokenFromCookies();
@@ -39,9 +40,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "Não autenticado." }, { status: 401 });
     }
 
-    // ✅ Encaminha nos DOIS formatos:
-    // - Authorization Bearer (padrão)
-    // - Cookie decoder_auth (alguns guards/stacks leem daqui)
+    // ✅ FIX: endpoint correto no BACK é /api/v1/onboarding/status (sem /app)
     const upstream = await fetch(`${backendBaseUrl}/api/v1/onboarding/status`, {
       method: "GET",
       headers: {
@@ -60,8 +59,8 @@ export async function GET(req: Request) {
       data = text ? JSON.parse(text) : null;
     } catch {
       return NextResponse.json(
-        { message: "Resposta inválida do backend (não-JSON)." },
-        { status: 502 },
+        { message: "Resposta inválida do backend (não-JSON).", raw: text || null },
+        { status: 502 }
       );
     }
 
@@ -72,7 +71,7 @@ export async function GET(req: Request) {
         message: "Falha ao consultar onboarding status (proxy).",
         hint: "Verifique DECODER_BACKEND_BASE_URL / NEXT_PUBLIC_DECODER_BACKEND_BASE_URL.",
       },
-      { status: 502 },
+      { status: 502 }
     );
   }
 }

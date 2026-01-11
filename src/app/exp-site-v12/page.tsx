@@ -9,18 +9,47 @@ export default function ExpSiteV12Page() {
         <div className="container">
           <div className="navInner">
             <Link className="brand" href="#top">
-              <span className="brandDot" />
-              Hitch.ai
+              {/* Logo "H" (sem styled-jsx) */}
+              <span
+                aria-hidden
+                style={{
+                  display: "inline-flex",
+                  height: 32,
+                  width: 32,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 12,
+                  fontWeight: 900,
+                  color: "#fff",
+                  background: "rgb(31, 14, 55)",
+                  boxShadow: "0 1px 0 rgba(255,255,255,0.06)",
+                  flex: "0 0 auto",
+                }}
+              >
+                H
+              </span>
+
+              <span
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  letterSpacing: "0.02em",
+                }}
+              >
+                Hitch.ai
+              </span>
             </Link>
 
             <nav className="navRight" aria-label="Navegação principal">
-              <Link className="navLink" href="/exp-site-v12/planos">
+              <Link className="navLink" href="/app/billing/plan">
                 Assinar
               </Link>
-              <Link className="navLink" href="/exp-site-v12/login">
+              <Link className="navLink" href="/app/login">
                 Entrar
               </Link>
-              <Link className="btn btnPrimary" href="/exp-site-v12/register">
+
+              {/* FIX: estava sem "/" */}
+              <Link className="btn btnPrimary" href="/app/register">
                 Começar a degustação
               </Link>
             </nav>
@@ -39,10 +68,13 @@ export default function ExpSiteV12Page() {
                 INTELIGÊNCIA ARTIFICIAL PARA ANÁLISE DE CONVERSAS
               </div>
 
-              <h1 className="h1Hero">Entenda o que está por trás de cada conversa.</h1>
+              <h1 className="h1Hero">
+                Entenda o que está por trás de cada conversa.
+              </h1>
 
               <p className="bodyText heroSubtitle">
-                Análise clara de mensagens para interpretar intenções e responder com mais segurança.
+                Análise clara de mensagens para interpretar intenções e responder
+                com mais segurança.
               </p>
 
               <div className="heroCtaRow">
@@ -52,7 +84,10 @@ export default function ExpSiteV12Page() {
               </div>
             </div>
 
-            <div className="frame" aria-label="Frame de imagem do sistema (placeholder)" />
+            <div
+              className="frame"
+              aria-label="Frame de imagem do sistema (placeholder)"
+            />
           </div>
         </div>
       </section>
@@ -69,21 +104,30 @@ export default function ExpSiteV12Page() {
                 <div className="stepTop">01</div>
                 <p className="stepTitle">Cole a conversa</p>
                 <p className="stepBody">Qualquer mensagem ambígua ou delicada</p>
-                <div className="stepMedia" aria-label="Área para print (placeholder)" />
+                <div
+                  className="stepMedia"
+                  aria-label="Área para print (placeholder)"
+                />
               </div>
 
               <div className="stepCard" role="listitem">
                 <div className="stepTop">02</div>
                 <p className="stepTitle">O Hitch.ai analisa</p>
                 <p className="stepBody">Intenção, emoção e riscos invisíveis.</p>
-                <div className="stepMedia" aria-label="Área para print (placeholder)" />
+                <div
+                  className="stepMedia"
+                  aria-label="Área para print (placeholder)"
+                />
               </div>
 
               <div className="stepCard" role="listitem">
                 <div className="stepTop">03</div>
                 <p className="stepTitle">Você entende antes de responder</p>
                 <p className="stepBody">Clareza antes da ação.</p>
-                <div className="stepMedia" aria-label="Área para print (placeholder)" />
+                <div
+                  className="stepMedia"
+                  aria-label="Área para print (placeholder)"
+                />
               </div>
             </div>
           </div>
@@ -95,10 +139,13 @@ export default function ExpSiteV12Page() {
         <div className="container">
           <div className="blockText">
             <div className="kicker">COMO O HITCH.AI FUNCIONA</div>
-            <h2 className="h2">Veja o que está por trás das mensagens — antes de responder.</h2>
+            <h2 className="h2">
+              Veja o que está por trás das mensagens — antes de responder.
+            </h2>
             <p className="bodyText">
-              O Hitch.ai analisa conversas para identificar intenções, padrões emocionais e riscos invisíveis à primeira leitura —
-              ajudando você a responder com clareza e segurança.
+              O Hitch.ai analisa conversas para identificar intenções, padrões
+              emocionais e riscos invisíveis à primeira leitura — ajudando você
+              a responder com clareza e segurança.
             </p>
 
             <div style={{ marginTop: 18 }}>
@@ -115,9 +162,12 @@ export default function ExpSiteV12Page() {
         <div className="container">
           <div className="blockText">
             <div className="kicker">BENEFÍCIOS NA PRÁTICA</div>
-            <h2 className="h2">Clareza para decidir. Segurança para responder.</h2>
+            <h2 className="h2">
+              Clareza para decidir. Segurança para responder.
+            </h2>
             <p className="bodyText">
-              Evite respostas precipitadas, interprete o contexto real da conversa e aja com mais confiança — mesmo em situações delicadas.
+              Evite respostas precipitadas, interprete o contexto real da
+              conversa e aja com mais confiança — mesmo em situações delicadas.
             </p>
           </div>
         </div>
@@ -129,7 +179,10 @@ export default function ExpSiteV12Page() {
           <div className="blockText">
             <div className="kicker">FEATURES</div>
             <h2 className="h2">O essencial, do jeito certo.</h2>
-            <p className="bodyText">Quatro pilares para reduzir ruído, aumentar clareza e manter controle.</p>
+            <p className="bodyText">
+              Quatro pilares para reduzir ruído, aumentar clareza e manter
+              controle.
+            </p>
           </div>
 
           <div className="featuresWrap">
@@ -140,8 +193,13 @@ export default function ExpSiteV12Page() {
                 </div>
                 <div>
                   <p className="featureLabel">INTENÇÃO</p>
-                  <p className="featureTitle">Entenda o que está por trás das palavras</p>
-                  <p className="featureBody">Contexto e subtexto organizados pra você responder com clareza.</p>
+                  <p className="featureTitle">
+                    Entenda o que está por trás das palavras
+                  </p>
+                  <p className="featureBody">
+                    Contexto e subtexto organizados pra você responder com
+                    clareza.
+                  </p>
                 </div>
               </div>
 
@@ -152,7 +210,9 @@ export default function ExpSiteV12Page() {
                 <div>
                   <p className="featureLabel">VELOCIDADE</p>
                   <p className="featureTitle">Análise clara em segundos</p>
-                  <p className="featureBody">Leitura rápida para decisões melhores, sem ruído.</p>
+                  <p className="featureBody">
+                    Leitura rápida para decisões melhores, sem ruído.
+                  </p>
                 </div>
               </div>
 
@@ -162,8 +222,13 @@ export default function ExpSiteV12Page() {
                 </div>
                 <div>
                   <p className="featureLabel">SEGURANÇA</p>
-                  <p className="featureTitle">Responda com contexto, não no impulso</p>
-                  <p className="featureBody">Evite escaladas e reduza risco de conflito com respostas mais estratégicas.</p>
+                  <p className="featureTitle">
+                    Responda com contexto, não no impulso
+                  </p>
+                  <p className="featureBody">
+                    Evite escaladas e reduza risco de conflito com respostas
+                    mais estratégicas.
+                  </p>
                 </div>
               </div>
 
@@ -175,7 +240,9 @@ export default function ExpSiteV12Page() {
                   <p className="featureLabel">PRIVACIDADE</p>
                   <p className="featureTitle">Privacidade</p>
                   <p className="featureBody">
-                    As mensagens enviadas não são armazenadas. Após a análise todas as mensagens são descartadas e guardamos apenas os metadados do resultado.
+                    As mensagens enviadas não são armazenadas. Após a análise
+                    todas as mensagens são descartadas e guardamos apenas os
+                    metadados do resultado.
                   </p>
                 </div>
               </div>

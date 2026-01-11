@@ -1,4 +1,3 @@
-// FRONT — src/app/login/LoginClient.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -36,7 +35,7 @@ export default function LoginClient() {
 
   const redirectTo = useMemo(() => {
     const next = sp.get("next");
-    return typeof next === "string" && next.trim() ? next : "/";
+    return typeof next === "string" && next.trim() ? next : "/app";
   }, [sp]);
 
   useEffect(() => {
@@ -95,7 +94,9 @@ export default function LoginClient() {
 
         const nextQ = encodeURIComponent(redirectTo);
         const emailQ = encodeURIComponent(safeEmail);
-        router.replace(`/register?verify=1&email=${emailQ}&next=${nextQ}`);
+
+        // ✅ nesta branch o register está em /app/register
+        router.replace(`/app/register?verify=1&email=${emailQ}&next=${nextQ}`);
         return;
       }
 
@@ -169,7 +170,11 @@ export default function LoginClient() {
 
             {registerExists && (
               <div className="pt-2 text-center text-sm text-zinc-300/80">
-                <a href="/register" className="underline hover:text-zinc-200 transition">
+                {/* ✅ nesta branch o register está em /app/register */}
+                <a
+                  href="/app/register"
+                  className="underline hover:text-zinc-200 transition"
+                >
                   Criar conta
                 </a>
               </div>
@@ -178,7 +183,6 @@ export default function LoginClient() {
         </div>
       </div>
 
-      {/* Fix visual do autofill (Chrome) para manter o padrão escuro do .input */}
       <style jsx global>{`
         input.input:-webkit-autofill,
         input.input:-webkit-autofill:hover,
@@ -191,11 +195,7 @@ export default function LoginClient() {
         select.input:-webkit-autofill:focus {
           -webkit-text-fill-color: rgba(255, 255, 255, 0.92) !important;
           caret-color: rgba(255, 255, 255, 0.92) !important;
-
-          /* força fundo escuro (mesma pegada do register) */
           box-shadow: 0 0 0px 1000px rgba(8, 10, 18, 0.92) inset !important;
-
-          /* evita “flash” claro */
           transition: background-color 99999s ease-in-out 0s !important;
         }
       `}</style>

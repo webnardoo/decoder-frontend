@@ -34,9 +34,9 @@ export default function IdentityPage() {
       await refreshStatus();
       window.dispatchEvent(new Event("onboarding:refresh"));
 
-      // ✅ CANÔNICO: deixa o /start decidir TRIAL vs tutorial vs planos
-      router.push("/start");
-    } catch (e: any) {
+      // ✅ Nesta branch /start não existe. Volta para uma rota do app e deixa o Guard decidir.
+      router.replace("/app");
+    } catch {
       setErr("Falha ao salvar. Tente novamente.");
     } finally {
       setLoading(false);

@@ -13,10 +13,10 @@ export default function CheckoutCancelPage() {
         </p>
 
         <div className="flex gap-2 pt-2">
-          <Link className="btn btn-primary" href="/billing/plan">
+          <Link className="btn btn-primary" href="/app/billing/plan">
             Voltar para planos
           </Link>
-          <Link className="btn" href="/conversas">
+          <Link className="btn" href="/app/conversas">
             Ir para Conversas
           </Link>
         </div>

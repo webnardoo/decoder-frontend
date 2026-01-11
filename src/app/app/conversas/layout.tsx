@@ -1,21 +1,28 @@
-import { OnboardingRouteGuard } from "@/components/onboarding-route-guard";
+import type { ReactNode } from "react";
+import "@/app/globals.css";
+
+import {TopNav} from "@/components/top-nav";
 import { AppFooter } from "@/components/app-footer";
 
-export default function ConversasLayout({
+export default function AppLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <OnboardingRouteGuard>
-      {/* estrutura flex para footer ficar no rodapé mesmo em páginas curtas */}
-      <div className="min-h-[calc(100dvh-56px)] flex flex-col">
-        <main className="flex-1 px-4 py-6">
-          <div className="mx-auto max-w-6xl">{children}</div>
-        </main>
+    <div className="h-app-bg min-h-screen flex flex-col">
+      {/* Header */}
+      <TopNav />
 
-        <AppFooter />
-      </div>
-    </OnboardingRouteGuard>
+      {/* Área principal do app */}
+      <main className="app-main w-full flex-1">
+        <div className="mx-auto w-full max-w-6xl px-4 py-6 pb-24">
+          {children}
+        </div>
+      </main>
+
+      {/* Footer */}
+      <AppFooter />
+    </div>
   );
 }

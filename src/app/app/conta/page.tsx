@@ -182,7 +182,7 @@ export default function ContaPage() {
             <button
               type="button"
               className="btn"
-              onClick={() => router.replace("/")}
+              onClick={() => router.replace("/app")}
             >
               Voltar para análise
             </button>
