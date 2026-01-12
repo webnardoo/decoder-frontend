@@ -20,7 +20,7 @@ export async function GET() {
   try {
     const BACKEND_URL = getBackendUrl();
 
-    // ✅ cookies() é async no teu setup
+    // cookies() é async no teu setup
     const cookieStore = await cookies();
 
     const raw =
@@ -32,10 +32,11 @@ export async function GET() {
 
     const token = stripBearer(raw);
 
+    // ✅ Endpoint é público: NÃO exigir token.
+    // Se existir token, pode mandar, mas não depende disso.
     const headers: Record<string, string> = {};
     if (token) headers.Authorization = `Bearer ${token}`;
 
-    // ✅ Público: buscar planos sem exigir token
     const upstream = await fetch(`${BACKEND_URL}/api/v1/billing/public-plans`, {
       method: "GET",
       headers,
