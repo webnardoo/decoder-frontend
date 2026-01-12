@@ -20,7 +20,9 @@ export async function GET() {
   try {
     const BACKEND_URL = getBackendUrl();
 
+    // ✅ cookies() é async no teu setup
     const cookieStore = await cookies();
+
     const raw =
       cookieStore.get("decoder_auth")?.value ||
       cookieStore.get("accessToken")?.value ||
@@ -31,10 +33,10 @@ export async function GET() {
     const token = stripBearer(raw);
 
     const headers: Record<string, string> = {};
-    const endpoint = token ? "/api/v1/billing/plans" : "/api/v1/billing/public-plans";
     if (token) headers.Authorization = `Bearer ${token}`;
 
-    const upstream = await fetch(`${BACKEND_URL}${endpoint}`, {
+    // ✅ Público: buscar planos sem exigir token
+    const upstream = await fetch(`${BACKEND_URL}/api/v1/billing/public-plans`, {
       method: "GET",
       headers,
       cache: "no-store",
@@ -51,6 +53,9 @@ export async function GET() {
       },
     });
   } catch {
-    return NextResponse.json({ message: "BILLING_PLANS_PROXY_FAILED" }, { status: 500 });
+    return NextResponse.json(
+      { message: "BILLING_PLANS_PROXY_FAILED" },
+      { status: 500 },
+    );
   }
 }
