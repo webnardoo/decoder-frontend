@@ -1,57 +1,57 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
+import { cookies } from "next/headers";
 
-type CreditsBalanceResponse = {
-  userId: string;
-  balance: number;
-};
+function getBackendUrl() {
+  return (
+    process.env.DECODER_BACKEND_BASE_URL ||
+    process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL ||
+    process.env.BACKEND_URL ||
+    "http://localhost:4100"
+  );
+}
 
-async function proxyToBackend(): Promise<{ status: number; data: any } | null> {
-  const base = process.env.DECODER_BACKEND_URL;
-  if (!base) return null;
-
-  const url = `${base.replace(/\/$/, "")}/api/v1/credits/balance`;
-
-  try {
-    const h = await headers();
-    const auth = h.get("authorization") || "";
-    const cookie = h.get("cookie") || "";
-
-    const res = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        ...(auth ? { Authorization: auth } : {}),
-        ...(cookie ? { Cookie: cookie } : {}),
-      },
-      cache: "no-store",
-    });
-
-    const data = await res.json().catch(() => null);
-    return { status: res.status, data };
-  } catch {
-    return null;
-  }
+function stripBearer(raw?: string | null): string | null {
+  const v = (raw || "").trim();
+  if (!v) return null;
+  return v.toLowerCase().startsWith("bearer ") ? v.slice(7).trim() : v;
 }
 
 export async function GET() {
-  // 1) backend real (quando conectado)
-  const backend = await proxyToBackend();
-  if (backend) {
-    if (!backend.data) {
-      return NextResponse.json(
-        { message: "Algo não saiu como esperado. Tente novamente em instantes." },
-        { status: 500 },
-      );
-    }
-    return NextResponse.json(backend.data, { status: backend.status });
+  try {
+    const BACKEND_URL = getBackendUrl();
+    const cookieStore = await cookies();
+
+    const raw =
+      cookieStore.get("decoder_auth")?.value ||
+      cookieStore.get("accessToken")?.value ||
+      cookieStore.get("token")?.value ||
+      cookieStore.get("hint_access_token")?.value ||
+      null;
+
+    const token = stripBearer(raw);
+
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const upstream = await fetch(`${BACKEND_URL}/api/v1/credits/balance`, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    });
+
+    const text = await upstream.text().catch(() => "");
+    return new NextResponse(text || "", {
+      status: upstream.status,
+      headers: {
+        "Content-Type":
+          upstream.headers.get("content-type") ||
+          "application/json; charset=utf-8",
+      },
+    });
+  } catch {
+    return NextResponse.json(
+      { message: "CREDITS_BALANCE_PROXY_FAILED" },
+      { status: 500 },
+    );
   }
-
-  // 2) mock dormente (quando NÃO há backend)
-  const mock: CreditsBalanceResponse = {
-    userId: "mock",
-    balance: 340,
-  };
-
-  return NextResponse.json(mock, { status: 200 });
 }

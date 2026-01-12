@@ -1,20 +1,17 @@
-import { Suspense } from "react";
-import LoginClient from "./LoginClient";
+import { redirect } from "next/navigation";
 
-export default function Page() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex flex-1 items-center justify-center">
-          <div className="w-full max-w-md card card-premium p-6 md:p-7">
-            <div className="text-sm text-zinc-300/80">Carregando…</div>
-          </div>
-        </div>
-      }
-    >
-      <div className="flex flex-1 items-center justify-center">
-        <LoginClient />
-      </div>
-    </Suspense>
-  );
+export default function Page({
+  searchParams,
+}: {
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
+  const qs = new URLSearchParams();
+
+  for (const [k, v] of Object.entries(searchParams || {})) {
+    if (Array.isArray(v)) v.forEach((vv) => vv && qs.append(k, vv));
+    else if (typeof v === "string" && v) qs.set(k, v);
+  }
+
+  const suffix = qs.toString();
+  redirect(`/app/login${suffix ? `?${suffix}` : ""}`);
 }
