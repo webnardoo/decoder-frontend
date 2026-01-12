@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/v1/credits/balance",
+      "destination": "/api/v1/subscriptions/context/credits/balance"
+    }
+  ]
+}
