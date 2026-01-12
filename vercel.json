@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/api/v1/credits/balance",
-      "destination": "/api/v1/subscriptions/context/credits/balance"
+      "source": "/api/v1/(.*)",
+      "destination": "https://hitchai-backend-production.up.railway.app/api/v1/$1"
     }
   ]
 }
