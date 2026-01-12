@@ -20,9 +20,7 @@ export async function GET() {
   try {
     const BACKEND_URL = getBackendUrl();
 
-    // Next (versões recentes) tipa cookies() como Promise em alguns contexts
     const cookieStore = await cookies();
-
     const raw =
       cookieStore.get("decoder_auth")?.value ||
       cookieStore.get("accessToken")?.value ||
@@ -32,15 +30,13 @@ export async function GET() {
 
     const token = stripBearer(raw);
 
-    if (!token) {
-      return NextResponse.json({ message: "UNAUTHENTICATED" }, { status: 401 });
-    }
+    const headers: Record<string, string> = {};
+    const endpoint = token ? "/api/v1/billing/plans" : "/api/v1/billing/public-plans";
+    if (token) headers.Authorization = `Bearer ${token}`;
 
-    const upstream = await fetch(`${BACKEND_URL}/api/v1/billing/plans`, {
+    const upstream = await fetch(`${BACKEND_URL}${endpoint}`, {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers,
       cache: "no-store",
     });
 
@@ -55,9 +51,6 @@ export async function GET() {
       },
     });
   } catch {
-    return NextResponse.json(
-      { message: "BILLING_PLANS_PROXY_FAILED" },
-      { status: 500 },
-    );
+    return NextResponse.json({ message: "BILLING_PLANS_PROXY_FAILED" }, { status: 500 });
   }
 }

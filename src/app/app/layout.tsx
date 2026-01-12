@@ -1,11 +1,9 @@
-// src/app/app/layout.tsx
 import type { ReactNode } from "react";
 import { TopNav } from "@/components/top-nav";
-import { AppFooter } from "@/components/app-footer";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="h-app-bg min-h-screen flex flex-col">
+    <div className="flex flex-col flex-1">
       <TopNav />
 
       <main className="app-main w-full flex-1 flex">
@@ -13,8 +11,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           {children}
         </div>
       </main>
-
-      <AppFooter />
     </div>
   );
 }

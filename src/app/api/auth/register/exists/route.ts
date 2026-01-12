@@ -1,32 +1,47 @@
 import { NextResponse } from "next/server";
+import { getBackendBaseUrl } from "@/lib/backend/base-url";
 
-function apiBase() {
-  // Ex.: http://localhost:4100/api/v1
-  return (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100/api/v1")
-    .trim()
-    .replace(/\/$/, "");
-}
+type Body = {
+  email?: string;
+};
 
+// Proxy server-side: valida se email já existe no backend
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
+    const body = (await req.json().catch(() => ({}))) as Body;
+    const email = String(body.email || "").trim();
 
-    const res = await fetch(`${apiBase()}/auth/register`, {
+    if (!email) {
+      return NextResponse.json(
+        { ok: false, message: "email é obrigatório" },
+        { status: 400 }
+      );
+    }
+
+    const base = getBackendBaseUrl();
+    const upstream = await fetch(`${base}/api/v1/auth/register/exists`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
       cache: "no-store",
+      body: JSON.stringify({ email }),
     });
 
-    const text = await res.text();
-    return new NextResponse(text, {
-      status: res.status,
-      headers: { "Content-Type": res.headers.get("content-type") || "application/json" },
+    const text = await upstream.text().catch(() => "");
+    return new NextResponse(text || "", {
+      status: upstream.status,
+      headers: {
+        "Content-Type":
+          upstream.headers.get("content-type") ||
+          "application/json; charset=utf-8",
+      },
     });
   } catch (e: any) {
     return NextResponse.json(
-      { error: "PROXY_REGISTER_FAILED", message: e?.message || "Failed to proxy register" },
-      { status: 502 },
+      {
+        ok: false,
+        message: e?.message || "REGISTER_EXISTS_PROXY_FAILED",
+      },
+      { status: 500 }
     );
   }
 }

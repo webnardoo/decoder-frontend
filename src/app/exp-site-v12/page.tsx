@@ -41,7 +41,7 @@ export default function ExpSiteV12Page() {
             </Link>
 
             <nav className="navRight" aria-label="Navegação principal">
-              <Link className="navLink" href="/app/billing/plan">
+              <Link className="navLink" href="/planos">
                 Assinar
               </Link>
               <Link className="navLink" href="/app/login">
@@ -268,29 +268,6 @@ export default function ExpSiteV12Page() {
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="footer">
-        <div className="container">
-          <div className="footerInner">
-            <div className="footerLeft">© 2026 Aivion Technologies</div>
-
-            <div className="footerLinks">
-              <Link className="footerLink" href="#como-funciona">
-                Como funciona
-              </Link>
-              <Link className="footerLink" href="#por-que-funciona">
-                Por que funciona
-              </Link>
-              <Link className="footerLink" href="#quando-faz-diferenca">
-                Quando faz diferença
-              </Link>
-              <Link className="footerLink" href="#planos">
-                Planos
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
     </main>
   );
 }
