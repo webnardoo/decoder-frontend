@@ -6,14 +6,6 @@ import { AppFooter } from "@/components/app-footer";
 
 type RegisterStep = "FORM" | "CODE" | "DONE";
 
-function getBackendBaseUrl() {
-  return (
-    process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL ||
-    process.env.NEXT_PUBLIC_HITCH_BACKEND_BASE_URL ||
-    "http://localhost:4100"
-  );
-}
-
 function extractMessage(data: any): string | null {
   return (
     (typeof data?.message === "string" ? data.message : null) ??
@@ -41,16 +33,15 @@ export default function RegisterPage() {
     </Suspense>
   );
 }
+
 function RegisterPageInner() {
   const router = useRouter();
   const sp = useSearchParams();
 
-  const backendBaseUrl = useMemo(() => getBackendBaseUrl(), []);
-
   const verifyMode = sp.get("verify") === "1";
   const nextParam = sp.get("next");
   const redirectNext =
-  typeof nextParam === "string" && nextParam.trim() ? nextParam : "/app/start";
+    typeof nextParam === "string" && nextParam.trim() ? nextParam : "/app/start";
 
   const [step, setStep] = useState<RegisterStep>(verifyMode ? "CODE" : "FORM");
   const [email, setEmail] = useState(sp.get("email") ?? "");
@@ -62,6 +53,9 @@ function RegisterPageInner() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [info, setInfo] = useState<string>("");
+
+  // Base de chamadas do browser: SEMPRE same-origin via Next API routes
+  const authApi = useMemo(() => "/api/auth", []);
 
   useEffect(() => {
     if (verifyMode) {
@@ -76,9 +70,7 @@ function RegisterPageInner() {
       } catch {}
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-
   }, []);
-  <AppFooter />
 
   async function registerSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -93,7 +85,7 @@ function RegisterPageInner() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${backendBaseUrl}/api/v1/auth/register`, {
+      const res = await fetch(`${authApi}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
@@ -112,7 +104,7 @@ function RegisterPageInner() {
       setInfo("Código enviado para seu e-mail. Digite abaixo para confirmar.");
       setStep("CODE");
     } catch {
-      setError("Falha de conexão. Verifique o backend e tente novamente.");
+      setError("Falha de conexão. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -131,7 +123,7 @@ function RegisterPageInner() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${backendBaseUrl}/api/v1/auth/verify-email-code`, {
+      const res = await fetch(`${authApi}/verify-email-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
@@ -205,7 +197,7 @@ function RegisterPageInner() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${backendBaseUrl}/api/v1/auth/resend-email-code`, {
+      const res = await fetch(`${authApi}/resend-email-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
@@ -229,161 +221,185 @@ function RegisterPageInner() {
   }
 
   return (
-    <main className="flex-1 flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md">
-        <div className="card card-premium p-6 md:p-7">
-          <div className="mb-6">
-            <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
-              {step === "CODE" ? "Verificar e-mail" : "Criar conta"}
-            </h1>
-            <p className="mt-1 text-sm text-zinc-300/80">
-              {step === "CODE"
-                ? "Digite o código que enviamos para seu e-mail."
-                : "Comece sua jornada no Hitch com seu e-mail e senha."}
-            </p>
+    <>
+      <main className="flex-1 flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md">
+          <div className="card card-premium p-6 md:p-7">
+            <div className="mb-6">
+              <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
+                {step === "CODE" ? "Verificar e-mail" : "Criar conta"}
+              </h1>
+              <p className="mt-1 text-sm text-zinc-300/80">
+                {step === "CODE"
+                  ? "Digite o código que enviamos para seu e-mail."
+                  : "Comece sua jornada no Hitch com seu e-mail e senha."}
+              </p>
+            </div>
+
+            {info && (
+              <div className="mb-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+                {info}
+              </div>
+            )}
+
+            {error && (
+              <div className="mb-4 rounded-2xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                {error}
+              </div>
+            )}
+
+            {step === "FORM" && (
+              <form onSubmit={registerSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="label" htmlFor="email">
+                    E-mail
+                  </label>
+                  <input
+                    id="email"
+                    className="input"
+                    type="email"
+                    autoComplete="email"
+                    inputMode="email"
+                    placeholder="seuemail@exemplo.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="label" htmlFor="password">
+                    Senha
+                  </label>
+                  <input
+                    id="password"
+                    className="input"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="label" htmlFor="password2">
+                    Confirmar senha
+                  </label>
+                  <input
+                    id="password2"
+                    className="input"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    value={password2}
+                    onChange={(e) => setPassword2(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn-cta w-full"
+                  disabled={loading}
+                >
+                  {loading ? "Criando..." : "Criar conta"}
+                </button>
+
+                <button
+                  type="button"
+                  className="btn w-full"
+                  onClick={() => router.push("/app/login")}
+                  disabled={loading}
+                >
+                  Já tenho conta
+                </button>
+              </form>
+            )}
+
+            {step === "CODE" && (
+              <form onSubmit={verifyCodeSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="label" htmlFor="email2">
+                    E-mail
+                  </label>
+                  <input
+                    id="email2"
+                    className="input"
+                    type="email"
+                    placeholder="seuemail@exemplo.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="label" htmlFor="code">
+                    Código
+                  </label>
+                  <input
+                    id="code"
+                    className="input"
+                    inputMode="numeric"
+                    placeholder="Digite o código"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn-cta w-full"
+                  disabled={loading}
+                >
+                  {loading ? "Validando..." : "Validar código"}
+                </button>
+
+                <button
+                  type="button"
+                  className="btn w-full"
+                  disabled={loading}
+                  onClick={resendCode}
+                >
+                  {loading ? "Reenviando..." : "Reenviar código"}
+                </button>
+
+                <button
+                  type="button"
+                  className="btn w-full"
+                  onClick={() =>
+                    router.push(
+                      `/app/login?email=${encodeURIComponent(email || "")}`
+                    )
+                  }
+                  disabled={loading}
+                >
+                  Voltar para login
+                </button>
+              </form>
+            )}
+
+            {step === "DONE" && (
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+                  Conta confirmada. Vamos continuar.
+                </div>
+                <button
+                  className="btn-cta w-full"
+                  onClick={() => router.replace(redirectNext)}
+                >
+                  Continuar
+                </button>
+              </div>
+            )}
           </div>
-
-          {info && (
-            <div className="mb-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
-              {info}
-            </div>
-          )}
-
-          {error && (
-            <div className="mb-4 rounded-2xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-              {error}
-            </div>
-          )}
-
-          {step === "FORM" && (
-            <form onSubmit={registerSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label className="label" htmlFor="email">
-                  E-mail
-                </label>
-                <input
-                  id="email"
-                  className="input"
-                  type="email"
-                  autoComplete="email"
-                  inputMode="email"
-                  placeholder="seuemail@exemplo.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="label" htmlFor="password">
-                  Senha
-                </label>
-                <input
-                  id="password"
-                  className="input"
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="label" htmlFor="password2">
-                  Confirmar senha
-                </label>
-                <input
-                  id="password2"
-                  className="input"
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder="••••••••"
-                  value={password2}
-                  onChange={(e) => setPassword2(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-
-              <button type="submit" className="btn-cta w-full" disabled={loading}>
-                {loading ? "Criando..." : "Criar conta"}
-              </button>
-
-              <button
-                type="button"
-                className="btn w-full"
-                onClick={() => router.push("/app/login")}
-                disabled={loading}
-              >
-                Já tenho conta
-              </button>
-            </form>
-          )}
-
-          {step === "CODE" && (
-            <form onSubmit={verifyCodeSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label className="label" htmlFor="email2">
-                  E-mail
-                </label>
-                <input
-                  id="email2"
-                  className="input"
-                  type="email"
-                  placeholder="seuemail@exemplo.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="label" htmlFor="code">
-                  Código
-                </label>
-                <input
-                  id="code"
-                  className="input"
-                  inputMode="numeric"
-                  placeholder="Digite o código"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-
-              <button type="submit" className="btn-cta w-full" disabled={loading}>
-                {loading ? "Validando..." : "Validar código"}
-              </button>
-
-              <button type="button" className="btn w-full" disabled={loading} onClick={resendCode}>
-                {loading ? "Reenviando..." : "Reenviar código"}
-              </button>
-
-              <button
-                type="button"
-                className="btn w-full"
-                onClick={() => router.push(`/app/login?email=${encodeURIComponent(email || "")}`)}
-                disabled={loading}
-              >
-                Voltar para login
-              </button>
-            </form>
-          )}
-
-          {step === "DONE" && (
-            <div className="space-y-3">
-              <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
-                Conta confirmada. Vamos continuar.
-              </div>
-              <button className="btn-cta w-full" onClick={() => router.replace(redirectNext)}>
-                Continuar
-              </button>
-            </div>
-          )}
         </div>
-      </div>
-    </main>
+      </main>
+
+      <AppFooter />
+    </>
   );
 }
