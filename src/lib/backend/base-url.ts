@@ -6,6 +6,7 @@ function isPrd(): boolean {
     .trim()
     .toLowerCase();
 
+  // Vercel define VERCEL_ENV=production em PRD
   const vercelEnv = String(process.env.VERCEL_ENV || "").trim().toLowerCase();
   const nodeEnv = String(process.env.NODE_ENV || "").trim().toLowerCase();
 
@@ -17,14 +18,59 @@ function isPrd(): boolean {
   );
 }
 
-function normalizeBase(raw: unknown): string {
-  let base = String(raw || "").trim().replace(/\/+$/, "");
-  if (!base) return "";
+function hasEnv(name: string): boolean {
+  const v = (process.env as any)?.[name];
+  return typeof v === "string" && v.trim().length > 0;
+}
 
-  // Se vier com /api/v1, remove (helper devolve BASE sem /api/v1)
-  if (base.endsWith("/api/v1")) base = base.slice(0, -"/api/v1".length);
+function readEnv(name: string): string {
+  return String(((process.env as any)?.[name] as any) ?? "").trim();
+}
 
-  return base;
+/**
+ * Snapshot para debug em runtime (Vercel).
+ * Não vaza valores sensíveis; só indica presença/ausência e metadados do deploy.
+ */
+export function __debugBackendBaseUrlSnapshot() {
+  const prd = isPrd();
+
+  const knownKeys = [
+    // ✅ a key que você diz existir (precisa aparecer como true aqui)
+    "NEXT_PUBLIC_API_BASE_URL",
+
+    // outras possíveis (mantidas por compatibilidade)
+    "NEXT_PUBLIC_DECODER_BACKEND_BASE_URL",
+    "DECODER_BACKEND_BASE_URL",
+    "NEXT_PUBLIC_BACKEND_URL",
+    "BACKEND_URL_PRD",
+    "NEXT_PUBLIC_API_BASE_URL_PRD",
+    "BACKEND_URL",
+    "BACKEND_URL_LOCAL",
+    "NEXT_PUBLIC_API_BASE_URL_LOCAL",
+  ];
+
+  return {
+    isPrd: prd,
+    APP_ENV: readEnv("APP_ENV") || null,
+    NEXT_PUBLIC_APP_ENV: readEnv("NEXT_PUBLIC_APP_ENV") || null,
+    VERCEL_ENV: readEnv("VERCEL_ENV") || null,
+    NODE_ENV: readEnv("NODE_ENV") || null,
+
+    // Prova do deploy rodando
+    VERCEL_GIT_COMMIT_SHA: readEnv("VERCEL_GIT_COMMIT_SHA") || null,
+    VERCEL_GIT_COMMIT_REF: readEnv("VERCEL_GIT_COMMIT_REF") || null,
+    VERCEL_URL: readEnv("VERCEL_URL") || null,
+    VERCEL_REGION: readEnv("VERCEL_REGION") || null,
+
+    keys: Object.fromEntries(knownKeys.map((k) => [k, hasEnv(k)])),
+
+    // Para detectar caso bizarro: key existe mas vem com espaços/quebra de linha
+    rawLengths: {
+      NEXT_PUBLIC_API_BASE_URL: readEnv("NEXT_PUBLIC_API_BASE_URL")
+        ? readEnv("NEXT_PUBLIC_API_BASE_URL").length
+        : 0,
+    },
+  };
 }
 
 /**
@@ -33,62 +79,31 @@ function normalizeBase(raw: unknown): string {
  * - https://hitchai-backend-production.up.railway.app
  */
 export function getBackendBaseUrl(): string {
-  const candidates: Array<[string, string]> = [
-    ["NEXT_PUBLIC_DECODER_BACKEND_BASE_URL", normalizeBase(process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL)],
-    ["DECODER_BACKEND_BASE_URL", normalizeBase(process.env.DECODER_BACKEND_BASE_URL)],
-    ["NEXT_PUBLIC_BACKEND_URL", normalizeBase(process.env.NEXT_PUBLIC_BACKEND_URL)],
-    ["BACKEND_URL_PRD", normalizeBase(process.env.BACKEND_URL_PRD)],
-    ["NEXT_PUBLIC_API_BASE_URL_PRD", normalizeBase(process.env.NEXT_PUBLIC_API_BASE_URL_PRD)],
-    ["BACKEND_URL", normalizeBase(process.env.BACKEND_URL)],
-    ["NEXT_PUBLIC_API_BASE_URL", normalizeBase(process.env.NEXT_PUBLIC_API_BASE_URL)],
-    ["BACKEND_URL_LOCAL", normalizeBase(process.env.BACKEND_URL_LOCAL)],
-    ["NEXT_PUBLIC_API_BASE_URL_LOCAL", normalizeBase(process.env.NEXT_PUBLIC_API_BASE_URL_LOCAL)],
-  ];
+  // Ordem: preferir variáveis que você já tem no Vercel
+  const raw =
+    process.env.NEXT_PUBLIC_API_BASE_URL || // ✅ esta é a principal
+    process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL ||
+    process.env.DECODER_BACKEND_BASE_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    process.env.BACKEND_URL_PRD ||
+    process.env.NEXT_PUBLIC_API_BASE_URL_PRD ||
+    process.env.BACKEND_URL ||
+    process.env.BACKEND_URL_LOCAL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL_LOCAL ||
+    "http://127.0.0.1:4100";
 
-  const picked = candidates.find(([, v]) => !!v)?.[1] || "";
+  let base = String(raw || "").trim().replace(/\/+$/, "");
+  if (!base) throw new Error("Backend base URL não definido");
 
-  // ✅ PRD: se não existe env válida, NÃO faz fallback pra localhost (pra não mascarar erro)
-  if (isPrd()) {
-    if (!picked) {
-      const keysTried = candidates.map(([k]) => k).join(", ");
-      throw new Error(
-        `PRD: Backend base URL não definida no runtime. Keys verificadas: ${keysTried}. ` +
-          `Confirme que a variável está no PROJECT CORRETO do Vercel e salva para Production.`
-      );
-    }
+  // Se vier com /api/v1, remove (helper devolve BASE sem /api/v1)
+  if (base.endsWith("/api/v1")) base = base.slice(0, -"/api/v1".length);
 
-    if (/localhost|127\.0\.0\.1/.test(picked)) {
-      throw new Error(
-        "PRD: Backend base URL inválida (localhost). Verifique envs do Vercel."
-      );
-    }
-
-    return picked;
+  // ✅ Regra PRD: nunca permitir localhost como BASE
+  if (isPrd() && /localhost|127\.0\.0\.1/.test(base)) {
+    throw new Error(
+      "PRD: Backend base URL inválida (localhost). Verifique envs do Vercel."
+    );
   }
 
-  // DEV/preview/local: fallback permitido
-  return picked || "http://127.0.0.1:4100";
-}
-
-export function __debugBackendBaseUrlSnapshot() {
-  const snapshot = {
-    isPrd: isPrd(),
-    APP_ENV: process.env.APP_ENV ?? null,
-    NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV ?? null,
-    VERCEL_ENV: process.env.VERCEL_ENV ?? null,
-    NODE_ENV: process.env.NODE_ENV ?? null,
-    keys: {
-      NEXT_PUBLIC_DECODER_BACKEND_BASE_URL: !!process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL,
-      DECODER_BACKEND_BASE_URL: !!process.env.DECODER_BACKEND_BASE_URL,
-      NEXT_PUBLIC_BACKEND_URL: !!process.env.NEXT_PUBLIC_BACKEND_URL,
-      BACKEND_URL_PRD: !!process.env.BACKEND_URL_PRD,
-      NEXT_PUBLIC_API_BASE_URL_PRD: !!process.env.NEXT_PUBLIC_API_BASE_URL_PRD,
-      BACKEND_URL: !!process.env.BACKEND_URL,
-      NEXT_PUBLIC_API_BASE_URL: !!process.env.NEXT_PUBLIC_API_BASE_URL,
-      BACKEND_URL_LOCAL: !!process.env.BACKEND_URL_LOCAL,
-      NEXT_PUBLIC_API_BASE_URL_LOCAL: !!process.env.NEXT_PUBLIC_API_BASE_URL_LOCAL,
-    },
-  };
-
-  return snapshot;
+  return base;
 }
