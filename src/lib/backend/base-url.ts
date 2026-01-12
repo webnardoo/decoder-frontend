@@ -24,18 +24,32 @@ function isPrd(): boolean {
  * - https://hitchai-backend-production.up.railway.app
  */
 export function getBackendBaseUrl(): string {
-  // Ordem: preferir variáveis que você já tem no Vercel
-  const raw =
-    process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL ||
-    process.env.DECODER_BACKEND_BASE_URL ||
-    process.env.NEXT_PUBLIC_BACKEND_URL ||
-    process.env.BACKEND_URL_PRD ||
-    process.env.NEXT_PUBLIC_API_BASE_URL_PRD ||
-    process.env.BACKEND_URL ||
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    process.env.BACKEND_URL_LOCAL ||
-    process.env.NEXT_PUBLIC_API_BASE_URL_LOCAL ||
-    "http://127.0.0.1:4100";
+  const prd = isPrd();
+
+  // ✅ Prioridade POR AMBIENTE:
+  // - PRD: só considera vars de PRD + as que você já tem no Vercel (DECODER_BACKEND_BASE_URL)
+  // - Local: considera vars LOCAL primeiro
+  const raw = prd
+    ? process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL ||
+      process.env.DECODER_BACKEND_BASE_URL ||
+      process.env.BACKEND_URL_PRD ||
+      process.env.NEXT_PUBLIC_API_BASE_URL_PRD ||
+      // legadas (genéricas)
+      process.env.BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_BASE_URL ||
+      // último fallback (não deveria chegar aqui em PRD)
+      "http://127.0.0.1:4100"
+    : process.env.BACKEND_URL_LOCAL ||
+      process.env.NEXT_PUBLIC_API_BASE_URL_LOCAL ||
+      // legadas (genéricas)
+      process.env.BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_BASE_URL ||
+      // se alguém usa as de PRD também localmente, mantém como fallback
+      process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL ||
+      process.env.DECODER_BACKEND_BASE_URL ||
+      process.env.BACKEND_URL_PRD ||
+      process.env.NEXT_PUBLIC_API_BASE_URL_PRD ||
+      "http://127.0.0.1:4100";
 
   let base = String(raw || "").trim().replace(/\/+$/, "");
   if (!base) throw new Error("Backend base URL não definido");
@@ -44,9 +58,9 @@ export function getBackendBaseUrl(): string {
   if (base.endsWith("/api/v1")) base = base.slice(0, -"/api/v1".length);
 
   // ✅ Regra PRD: nunca permitir localhost como BASE
-  if (isPrd() && /localhost|127\.0\.0\.1/.test(base)) {
+  if (prd && /localhost|127\.0\.0\.1/.test(base)) {
     throw new Error(
-      "PRD: Backend base URL inválida (localhost). Verifique envs do Vercel."
+      "PRD: Backend base URL inválida (localhost). Garanta no Vercel: NEXT_PUBLIC_DECODER_BACKEND_BASE_URL (ou DECODER_BACKEND_BASE_URL), ou BACKEND_URL_PRD / NEXT_PUBLIC_API_BASE_URL_PRD."
     );
   }
 
