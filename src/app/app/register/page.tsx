@@ -13,6 +13,49 @@ function extractMessage(data: any): string | null {
   );
 }
 
+function routeForStage(stage: string): string {
+  const s = String(stage || "").toUpperCase().trim();
+
+  if (s === "READY") return "/app";
+
+  // Billing
+  if (s === "PAYMENT_REQUIRED") return "/app/billing/plan";
+  if (s === "PLAN_SELECTION_REQUIRED") return "/app/billing/plan";
+  if (s === "PAYMENT_PENDING") return "/app/billing/pending";
+  if (s === "PAYMENT_FAILED") return "/app/billing/failed";
+
+  // Identity
+  if (s === "NICKNAME_REQUIRED") return "/app/onboarding/identity";
+  if (s === "IDENTITY_REQUIRED") return "/app/onboarding/identity";
+
+  // Tutorial
+  if (s === "TUTORIAL_REQUIRED") return "/app/tutorial";
+
+  // Fallback seguro: /app (evita /app/start)
+  return "/app";
+}
+
+async function safeGetOnboardingTarget(): Promise<string | null> {
+  try {
+    const res = await fetch("/api/onboarding/status", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+    });
+
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.includes("application/json")) return "/app";
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data) return "/app";
+
+    const stage = String(data?.onboardingStage || "").trim();
+    return routeForStage(stage);
+  } catch {
+    return "/app";
+  }
+}
+
 export default function RegisterPage() {
   return (
     <Suspense
@@ -39,8 +82,10 @@ function RegisterPageInner() {
 
   const verifyMode = sp.get("verify") === "1";
   const nextParam = sp.get("next");
+
+  // ⚠️ Nunca usar /app/start como default (inconsistente no projeto).
   const redirectNext =
-    typeof nextParam === "string" && nextParam.trim() ? nextParam : "/app/start";
+    typeof nextParam === "string" && nextParam.trim() ? nextParam : "/app";
 
   const [step, setStep] = useState<RegisterStep>(verifyMode ? "CODE" : "FORM");
   const [email, setEmail] = useState(sp.get("email") ?? "");
@@ -63,9 +108,16 @@ function RegisterPageInner() {
           sessionStorage.getItem("decoder_pending_verify_email") || "";
         const pendingPass =
           sessionStorage.getItem("decoder_pending_verify_password") || "";
+        const pendingNext =
+          sessionStorage.getItem("decoder_pending_verify_next") || "";
 
         if (!email && pendingEmail) setEmail(pendingEmail);
         if (!password && pendingPass) setPassword(pendingPass);
+
+        // se a sessão tinha next, prioriza ele
+        if (pendingNext && !nextParam) {
+          // não sobrescrevo URL, só uso como referência local
+        }
       } catch {}
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -84,6 +136,13 @@ function RegisterPageInner() {
 
     setLoading(true);
     try {
+      // guarda dados para o modo verify=1 (caso reload / fluxo alternativo)
+      try {
+        sessionStorage.setItem("decoder_pending_verify_email", eMail);
+        sessionStorage.setItem("decoder_pending_verify_password", password);
+        sessionStorage.setItem("decoder_pending_verify_next", redirectNext);
+      } catch {}
+
       const res = await fetch(`${authApi}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -164,6 +223,7 @@ function RegisterPageInner() {
           return;
         }
 
+        // limpa pendências
         try {
           sessionStorage.removeItem("decoder_pending_verify_email");
           sessionStorage.removeItem("decoder_pending_verify_password");
@@ -171,7 +231,17 @@ function RegisterPageInner() {
         } catch {}
 
         setStep("DONE");
-        router.replace(redirectNext);
+
+        // ✅ REGRA: após OTP+login, obedecer onboarding/trial antes de qualquer next (inclui checkout)
+        const target = await safeGetOnboardingTarget();
+
+        if (target && target !== "/app") {
+          router.replace(target);
+          return;
+        }
+
+        // se READY, agora sim respeita next
+        router.replace(redirectNext || "/app");
         return;
       }
 
@@ -348,14 +418,23 @@ function RegisterPageInner() {
                 {loading ? "Validando..." : "Validar código"}
               </button>
 
-              <button type="button" className="btn w-full" disabled={loading} onClick={resendCode}>
+              <button
+                type="button"
+                className="btn w-full"
+                disabled={loading}
+                onClick={resendCode}
+              >
                 {loading ? "Reenviando..." : "Reenviar código"}
               </button>
 
               <button
                 type="button"
                 className="btn w-full"
-                onClick={() => router.push(`/app/login?email=${encodeURIComponent(email || "")}`)}
+                onClick={() =>
+                  router.push(
+                    `/app/login?email=${encodeURIComponent(email || "")}`
+                  )
+                }
                 disabled={loading}
               >
                 Voltar para login
@@ -368,7 +447,10 @@ function RegisterPageInner() {
               <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
                 Conta confirmada. Vamos continuar.
               </div>
-              <button className="btn-cta w-full" onClick={() => router.replace(redirectNext)}>
+              <button
+                className="btn-cta w-full"
+                onClick={() => router.replace("/app")}
+              >
                 Continuar
               </button>
             </div>
