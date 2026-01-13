@@ -89,25 +89,17 @@ export default function PublicPlansClient() {
       const qs = new URLSearchParams({ planId, billingCycle: cycle });
       const checkoutNext = `/app/checkout?${qs.toString()}`;
 
-      // ✅ Check confiável: sessão do app
       const authed = await isAuthenticated();
 
       // ✅ REGRA: nunca ir direto pro checkout; sempre passar pela jornada/guard
-      if (authed) {
-        try {
-          sessionStorage.setItem("decoder_pending_checkout_next", checkoutNext);
-        } catch {}
-        router.push("/app");
-        return;
-      }
 
       // Não logado -> pede email (popup)
       const email = window.prompt("Digite seu e-mail para continuar:");
       const eMail = String(email || "").trim();
       if (!eMail) return;
 
-      // Checa se já existe conta
-     const existsRes = await fetch("/api/auth/register-exists", {
+      // ✅ CANÔNICO (sem hífen): /api/auth/register/exists
+      const existsRes = await fetch("/api/auth/register/exists", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",

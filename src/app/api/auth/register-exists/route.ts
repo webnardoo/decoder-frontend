@@ -4,7 +4,7 @@ import { routeOrMock } from "@/lib/backend/proxy";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// POST /api/auth/register/exists
+// POST /api/auth/register-exists  (ALIAS)
 // body: { email: string }
 // resp: 200 { exists: boolean }
 export async function POST(req: NextRequest) {
