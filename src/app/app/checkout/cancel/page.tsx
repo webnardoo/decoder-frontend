@@ -16,9 +16,6 @@ export default function CheckoutCancelPage() {
           <Link className="btn btn-primary" href="/app/billing/plan">
             Voltar para planos
           </Link>
-          <Link className="btn" href="/app/conversas">
-            Ir para Conversas
-          </Link>
         </div>
       </div>
     </div>
