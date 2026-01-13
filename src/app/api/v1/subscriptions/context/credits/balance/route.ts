@@ -2,12 +2,18 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 function getBackendUrl() {
-  return (
+  const url =
     process.env.DECODER_BACKEND_BASE_URL ||
+    process.env.HITCH_BACKEND_BASE_URL ||
     process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL ||
+    process.env.NEXT_PUBLIC_HITCH_BACKEND_BASE_URL ||
     process.env.BACKEND_URL ||
-    "http://localhost:4100"
-  );
+    "";
+
+  // Em PRD, se não tiver env, melhor falhar explícito do que cair em localhost.
+  if (!url) return "";
+
+  return url.replace(/\/+$/, "");
 }
 
 function stripBearer(raw?: string | null): string | null {
@@ -19,6 +25,13 @@ function stripBearer(raw?: string | null): string | null {
 export async function GET() {
   try {
     const BACKEND_URL = getBackendUrl();
+    if (!BACKEND_URL) {
+      return NextResponse.json(
+        { message: "BACKEND_BASE_URL_NOT_CONFIGURED" },
+        { status: 500 },
+      );
+    }
+
     const cookieStore = await cookies();
 
     const raw =
