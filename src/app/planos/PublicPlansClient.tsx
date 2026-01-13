@@ -107,7 +107,7 @@ export default function PublicPlansClient() {
       if (!eMail) return;
 
       // Checa se já existe conta
-     const existsRes = await fetch("/api/auth/register/exists", {
+     const existsRes = await fetch("/api/auth/register-exists", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
