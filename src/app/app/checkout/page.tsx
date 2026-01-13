@@ -1,4 +1,3 @@
-// src/app/checkout/page.tsx
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
@@ -52,9 +51,6 @@ function extractCheckoutUrl(payload: any): string | null {
 }
 
 function buildCheckoutSessionEndpoint(base: string) {
-  // Aceita ambos cenários:
-  // - base = https://.../api/v1   -> adiciona /billing/...
-  // - base = https://...         -> adiciona /api/v1/billing/...
   return base.endsWith("/api/v1")
     ? `${base}/billing/stripe/checkout-session`
     : `${base}/api/v1/billing/stripe/checkout-session`;
@@ -70,10 +66,14 @@ export default async function CheckoutPage({
   const billingCycle = normalizeCycle(sp.billingCycle);
 
   const token = await getTokenFromCookies();
+
+  // ✅ Correto: login do app é /app/login e a própria rota é /app/checkout
   if (!token) {
     redirect(
-      `/login?next=${encodeURIComponent(
-        `/checkout?planId=${planId}&billingCycle=${billingCycle}`,
+      `/app/login?next=${encodeURIComponent(
+        `/app/checkout?planId=${encodeURIComponent(planId)}&billingCycle=${encodeURIComponent(
+          billingCycle,
+        )}`,
       )}`,
     );
   }
@@ -88,10 +88,7 @@ export default async function CheckoutPage({
       Authorization: `Bearer ${token}`,
     },
     cache: "no-store",
-    body: JSON.stringify({
-      planId,
-      billingCycle,
-    }),
+    body: JSON.stringify({ planId, billingCycle }),
   });
 
   const payload = await fetchJsonOrText(res);
@@ -103,7 +100,7 @@ export default async function CheckoutPage({
         : payload?.message || payload?.error || JSON.stringify(payload);
 
     redirect(
-      `/checkout/result?ok=0&msg=${encodeURIComponent(
+      `/app/checkout/result?ok=0&msg=${encodeURIComponent(
         String(msg).slice(0, 180),
       )}`,
     );
@@ -112,7 +109,7 @@ export default async function CheckoutPage({
   const checkoutUrl = extractCheckoutUrl(payload);
   if (!checkoutUrl) {
     redirect(
-      `/checkout/result?ok=0&msg=${encodeURIComponent(
+      `/app/checkout/result?ok=0&msg=${encodeURIComponent(
         "Backend não retornou checkout URL.",
       )}`,
     );

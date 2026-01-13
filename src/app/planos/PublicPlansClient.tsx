@@ -77,22 +77,30 @@ export default function PublicPlansClient() {
 
     try {
       const qs = new URLSearchParams({ planId, billingCycle: cycle });
+
+      // ✅ CHECKOUT é parte da área logada nesta branch (como você já está usando)
       const checkoutNext = `/app/checkout?${qs.toString()}`;
 
-      // 1) Se estiver logado, /api/v1/credits/balance retorna 200
+      // ✅ Só considero logado se der 200.
+      // 401/403 = deslogado
+      // Qualquer outro (404/500) não pode “pular” pro checkout.
       const me = await fetch("/api/v1/credits/balance", { cache: "no-store" });
 
-      if (me.status !== 401) {
+      if (me.status === 200) {
         router.push(checkoutNext);
         return;
       }
 
-      // 2) Não logado -> pede email
+      if (me.status !== 401 && me.status !== 403) {
+        throw new Error("Falha ao verificar sessão. Tente novamente.");
+      }
+
+      // Não logado -> pede email (popup)
       const email = window.prompt("Digite seu e-mail para continuar:");
       const eMail = String(email || "").trim();
       if (!eMail) return;
 
-      // 3) Checa se já existe conta
+      // Checa se já existe conta (rota Next pública)
       const existsRes = await fetch("/api/auth/register/exists", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -101,14 +109,14 @@ export default function PublicPlansClient() {
       });
 
       const existsData = await existsRes.json().catch(() => ({}));
-      const exists = Boolean(existsData?.exists === true);
-
       if (!existsRes.ok) {
         const msg = extractMessage(existsData) || "Falha ao validar e-mail.";
         throw new Error(msg);
       }
 
-      // 4) Se não existe -> mensagem + register
+      const exists = Boolean(existsData?.exists === true);
+
+      // ✅ Login/Register existem somente em /app/*
       if (!exists) {
         window.alert("Para assinar um plano você primeiro deve se cadastrar");
         router.push(
@@ -117,7 +125,6 @@ export default function PublicPlansClient() {
         return;
       }
 
-      // 5) Existe -> login
       router.push(
         `/app/login?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(checkoutNext)}`,
       );

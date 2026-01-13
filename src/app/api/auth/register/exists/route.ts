@@ -1,41 +1,24 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { routeOrMock } from "@/lib/backend/proxy";
 
-function normalizeEmail(input: unknown): string {
-  const v = typeof input === "string" ? input.trim() : "";
-  return v.toLowerCase();
-}
+// ✅ força Node runtime (env server-side garantida)
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 // Contrato:
 // POST { email: string } -> 200 { exists: boolean }
-// 405 para GET (pra não vazar comportamento)
-export async function POST(req: Request) {
-  try {
-    const body = await req.json().catch(() => ({}));
-    const email = normalizeEmail((body as any)?.email);
-
-    if (!email) {
-      return NextResponse.json(
-        { message: "EMAIL_REQUIRED" },
-        { status: 400 },
-      );
-    }
-
-    // IMPORTANTE:
-    // Aqui a gente só responde "exists" baseado no backend real quando você plugar.
-    // Se já existe uma rota/backend pra isso, você adapta este trecho para proxyar pro backend.
-    // Por enquanto, devolve false (e o fluxo deve levar pro registro).
-    return NextResponse.json({ exists: false }, { status: 200 });
-  } catch {
-    return NextResponse.json(
-      { message: "REGISTER_EXISTS_FAILED" },
-      { status: 500 },
-    );
-  }
+export async function POST(req: NextRequest) {
+  return routeOrMock(
+    req,
+    async () =>
+      NextResponse.json(
+        { error: "mock not implemented" },
+        { status: 501 },
+      ),
+    "/api/v1/auth/register/exists",
+  );
 }
 
 export async function GET() {
-  return NextResponse.json(
-    { message: "METHOD_NOT_ALLOWED" },
-    { status: 405 },
-  );
+  return NextResponse.json({ message: "METHOD_NOT_ALLOWED" }, { status: 405 });
 }
