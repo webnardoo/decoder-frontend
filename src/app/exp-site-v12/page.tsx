@@ -9,7 +9,6 @@ export default function ExpSiteV12Page() {
         <div className="container">
           <div className="navInner">
             <Link className="brand" href="#top">
-              {/* Logo "H" (sem styled-jsx) */}
               <span
                 aria-hidden
                 style={{
@@ -47,8 +46,6 @@ export default function ExpSiteV12Page() {
               <Link className="navLink" href="/app/login">
                 Entrar
               </Link>
-
-              {/* FIX: estava sem "/" */}
               <Link className="btn btnPrimary" href="/app/register">
                 Começar a degustação
               </Link>
@@ -57,7 +54,7 @@ export default function ExpSiteV12Page() {
         </div>
       </header>
 
-      {/* DOBRA 1 */}
+      {/* HERO */}
       <section id="top" className="section hero1">
         <div className="container">
           <div className="heroGrid">
@@ -84,15 +81,101 @@ export default function ExpSiteV12Page() {
               </div>
             </div>
 
+            {/* HERO VISUAL — AMBIENT (sem card, sem borda) */}
             <div
-              className="frame"
-              aria-label="Frame de imagem do sistema (placeholder)"
-            />
+              aria-label="Visual do sistema Hitch.ai"
+              style={{
+                position: "relative",
+                width: "100%",
+                minHeight: 420,
+
+                // importante: sem “cartão”
+                background: "transparent",
+                border: "none",
+                boxShadow: "none",
+                borderRadius: 0,
+                overflow: "visible",
+              }}
+            >
+              {/* Glow de base (cola no fundo roxo sem parecer “elemento”) */}
+              <div
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  inset: "-18% -12% -18% -12%",
+                  background:
+                    "radial-gradient(55% 55% at 65% 45%, rgba(168,85,247,0.22) 0%, rgba(168,85,247,0.0) 60%)",
+                  filter: "blur(2px)",
+                  pointerEvents: "none",
+                }}
+              />
+
+              {/* Imagem “vazando” + máscara (fade) */}
+              <img
+                src="/HeroSystem.png"
+                alt="Visual do sistema Hitch.ai"
+                style={{
+                  position: "absolute",
+                  inset: "-8% -8% -8% -8%",
+                  width: "116%",
+                  height: "116%",
+                  objectFit: "cover",
+                  display: "block",
+
+                  // reduz “cara de stock”
+                  filter: "contrast(1.02) saturate(0.85) brightness(0.78)",
+                  opacity: 0.92,
+                  transform: "scale(1.03)",
+
+                  // AQUI está o que resolve: a imagem some para o fundo (não vira card)
+                  WebkitMaskImage:
+                    "radial-gradient(60% 70% at 65% 45%, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0.65) 55%, rgba(0,0,0,0) 78%)",
+                  maskImage:
+                    "radial-gradient(60% 70% at 65% 45%, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0.65) 55%, rgba(0,0,0,0) 78%)",
+                }}
+              />
+
+              {/* Overlay para casar com o gradiente do hero (sem escurecer demais) */}
+              <div
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  inset: "-8% -8% -8% -8%",
+                  background:
+                    "linear-gradient(90deg, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.30) 42%, rgba(0,0,0,0.08) 70%, rgba(0,0,0,0.55) 100%)",
+                  pointerEvents: "none",
+                  WebkitMaskImage:
+                    "radial-gradient(60% 70% at 65% 45%, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0.65) 55%, rgba(0,0,0,0) 78%)",
+                  maskImage:
+                    "radial-gradient(60% 70% at 65% 45%, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0.65) 55%, rgba(0,0,0,0) 78%)",
+                }}
+              />
+
+              {/* Label: opcional e discreta (não chama foco) */}
+              <div
+                style={{
+                  position: "absolute",
+                  right: 10,
+                  bottom: 10,
+                  padding: "6px 10px",
+                  borderRadius: 999,
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "rgba(0,0,0,0.18)",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                  color: "rgba(255,255,255,0.70)",
+                  fontSize: 12,
+                  letterSpacing: "0.01em",
+                }}
+              >
+                Camadas de leitura • sinais • decisão
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* DOBRA 2 — Como funciona (sem radial + 3 cards grandes) */}
+      {/* DOBRA 2 */}
       <section id="como-funciona" className="section hero2">
         <div className="container">
           <div>
@@ -173,7 +256,7 @@ export default function ExpSiteV12Page() {
         </div>
       </section>
 
-      {/* DOBRA 5 — Features 2x2 */}
+      {/* DOBRA 5 */}
       <section id="features" className="section hero2">
         <div className="container">
           <div className="blockText">
@@ -251,7 +334,7 @@ export default function ExpSiteV12Page() {
         </div>
       </section>
 
-      {/* DOBRA FINAL — Planos */}
+      {/* DOBRA FINAL */}
       <section id="planos" className="section hero2">
         <div className="container">
           <div className="blockText">
@@ -267,7 +350,6 @@ export default function ExpSiteV12Page() {
           </div>
         </div>
       </section>
-
     </main>
   );
 }
