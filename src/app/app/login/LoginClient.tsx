@@ -3,10 +3,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+type RegisterExistsResponse = {
+  exists?: boolean;
+  shouldStartOnboarding?: boolean;
+  shouldLogin?: boolean;
+};
+
 function extractMessage(data: any): string | null {
   return (
     (typeof data?.message === "string" ? data.message : null) ??
-    (typeof data?.error?.message === "string" ? data.error.message : null)
+    (typeof data?.error?.message === "string" ? data.error.message : null) ??
+    (typeof data?.error === "string" ? data.error : null)
   );
 }
 
@@ -22,6 +29,12 @@ function isEmailNotVerified(msg: string | null): boolean {
   );
 }
 
+/**
+ * 🔒 CONGELAMENTO DE ROTAS (NÃO ALTERAR SEM DECISÃO EXPLÍCITA)
+ *
+ * - /app/login é usado somente quando o backend indicar shouldLogin=true (READY).
+ * - Se shouldStartOnboarding=true, este screen NÃO deve ser mostrado: redireciona para /app/register.
+ */
 export default function LoginClient() {
   const router = useRouter();
   const sp = useSearchParams();
@@ -32,6 +45,7 @@ export default function LoginClient() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [registerExists, setRegisterExists] = useState(false);
+  const [guardChecked, setGuardChecked] = useState(false);
 
   const redirectTo = useMemo(() => {
     const next = sp.get("next");
@@ -39,8 +53,11 @@ export default function LoginClient() {
   }, [sp]);
 
   useEffect(() => {
-    const prefillEmail = sp.get("email");
-    if (prefillEmail && typeof prefillEmail === "string") setEmail(prefillEmail);
+    const prefillEmailRaw = sp.get("email");
+    const prefillEmail =
+      typeof prefillEmailRaw === "string" ? prefillEmailRaw.trim().toLowerCase() : "";
+
+    if (prefillEmail) setEmail(prefillEmail);
 
     try {
       const last = sessionStorage.getItem("decoder_login_error");
@@ -52,11 +69,46 @@ export default function LoginClient() {
 
     (async () => {
       try {
-        const res = await fetch("/api/auth/register/exists", { cache: "no-store" });
-        const data = await res.json().catch(() => null);
-        setRegisterExists(Boolean(data?.exists));
+        // Só faz sentido validar exists com e-mail presente
+        if (!prefillEmail) {
+          setRegisterExists(false);
+          setGuardChecked(true);
+          return;
+        }
+
+        const res = await fetch("/api/auth/register/exists", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          body: JSON.stringify({ email: prefillEmail }),
+        });
+
+        const data = (await res.json().catch(() => null)) as RegisterExistsResponse | null;
+
+        if (!res.ok) {
+          setRegisterExists(false);
+          setGuardChecked(true);
+          return;
+        }
+
+        const exists = data?.exists === true;
+        const shouldStartOnboarding = data?.shouldStartOnboarding === true;
+        const shouldLogin = data?.shouldLogin === true;
+
+        setRegisterExists(exists);
+
+        // ✅ Se existe mas NÃO está pronto -> reinicia onboarding (register)
+        if (exists && shouldStartOnboarding && !shouldLogin) {
+          const nextQ = encodeURIComponent(redirectTo);
+          const emailQ = encodeURIComponent(prefillEmail);
+          router.replace(`/app/register?email=${emailQ}&next=${nextQ}`);
+          return;
+        }
+
+        setGuardChecked(true);
       } catch {
         setRegisterExists(false);
+        setGuardChecked(true);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -67,7 +119,7 @@ export default function LoginClient() {
     setErrorMsg(null);
     setLoading(true);
 
-    const safeEmail = (email || "").trim();
+    const safeEmail = (email || "").trim().toLowerCase();
 
     try {
       const res = await fetch("/api/auth/login", {
@@ -95,7 +147,6 @@ export default function LoginClient() {
         const nextQ = encodeURIComponent(redirectTo);
         const emailQ = encodeURIComponent(safeEmail);
 
-        // ✅ nesta branch o register está em /app/register
         router.replace(`/app/register?verify=1&email=${emailQ}&next=${nextQ}`);
         return;
       }
@@ -124,6 +175,17 @@ export default function LoginClient() {
       setErrorMsg("Não foi possível conectar ao servidor.");
       setLoading(false);
     }
+  }
+
+  // evita piscar o form se for redirecionar pro /app/register
+  if (!guardChecked) {
+    return (
+      <div className="flex-1 flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md card card-premium p-6 md:p-7">
+          <div className="text-sm text-zinc-300/80">Carregando…</div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -170,7 +232,6 @@ export default function LoginClient() {
 
             {registerExists && (
               <div className="pt-2 text-center text-sm text-zinc-300/80">
-                {/* ✅ nesta branch o register está em /app/register */}
                 <a
                   href="/app/register"
                   className="underline hover:text-zinc-200 transition"
