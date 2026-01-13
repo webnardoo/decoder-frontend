@@ -24,16 +24,12 @@ function extractMessage(data: any): string | null {
 }
 
 async function isAuthenticated(): Promise<boolean> {
-  // ✅ Fonte de verdade do app (Next API) — se não tiver cookie/sessão, deve falhar.
-  const res = await fetch("/api/onboarding/status", { cache: "no-store" });
+  // ✅ check real: server-side confirma cookie httpOnly (decoder_auth)
+  const res = await fetch("/api/auth/session", { cache: "no-store" });
 
-  // 200 => tem sessão válida
   if (res.status === 200) return true;
-
-  // 401/403 => não logado
   if (res.status === 401 || res.status === 403) return false;
 
-  // Qualquer outro status = não dá pra confiar (não pode pular pro checkout)
   throw new Error("Falha ao verificar sessão. Tente novamente.");
 }
 
@@ -95,8 +91,13 @@ export default function PublicPlansClient() {
 
       // ✅ Check confiável: sessão do app
       const authed = await isAuthenticated();
+
+      // ✅ REGRA: nunca ir direto pro checkout; sempre passar pela jornada/guard
       if (authed) {
-        router.push(checkoutNext);
+        try {
+          sessionStorage.setItem("decoder_pending_checkout_next", checkoutNext);
+        } catch {}
+        router.push("/app");
         return;
       }
 
