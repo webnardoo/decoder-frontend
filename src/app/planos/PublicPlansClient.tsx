@@ -23,6 +23,20 @@ function extractMessage(data: any): string | null {
   );
 }
 
+async function isAuthenticated(): Promise<boolean> {
+  // ✅ Fonte de verdade do app (Next API) — se não tiver cookie/sessão, deve falhar.
+  const res = await fetch("/api/onboarding/status", { cache: "no-store" });
+
+  // 200 => tem sessão válida
+  if (res.status === 200) return true;
+
+  // 401/403 => não logado
+  if (res.status === 401 || res.status === 403) return false;
+
+  // Qualquer outro status = não dá pra confiar (não pode pular pro checkout)
+  throw new Error("Falha ao verificar sessão. Tente novamente.");
+}
+
 export default function PublicPlansClient() {
   const router = useRouter();
 
@@ -77,22 +91,13 @@ export default function PublicPlansClient() {
 
     try {
       const qs = new URLSearchParams({ planId, billingCycle: cycle });
-
-      // ✅ CHECKOUT é parte da área logada nesta branch (como você já está usando)
       const checkoutNext = `/app/checkout?${qs.toString()}`;
 
-      // ✅ Só considero logado se der 200.
-      // 401/403 = deslogado
-      // Qualquer outro (404/500) não pode “pular” pro checkout.
-      const me = await fetch("/api/v1/credits/balance", { cache: "no-store" });
-
-      if (me.status === 200) {
+      // ✅ Check confiável: sessão do app
+      const authed = await isAuthenticated();
+      if (authed) {
         router.push(checkoutNext);
         return;
-      }
-
-      if (me.status !== 401 && me.status !== 403) {
-        throw new Error("Falha ao verificar sessão. Tente novamente.");
       }
 
       // Não logado -> pede email (popup)
@@ -100,7 +105,7 @@ export default function PublicPlansClient() {
       const eMail = String(email || "").trim();
       if (!eMail) return;
 
-      // Checa se já existe conta (rota Next pública)
+      // Checa se já existe conta
       const existsRes = await fetch("/api/auth/register/exists", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -116,7 +121,6 @@ export default function PublicPlansClient() {
 
       const exists = Boolean(existsData?.exists === true);
 
-      // ✅ Login/Register existem somente em /app/*
       if (!exists) {
         window.alert("Para assinar um plano você primeiro deve se cadastrar");
         router.push(
