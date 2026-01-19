@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Você está DESTRUINDO seus relacionamentos e nem PERCEBE | Hitch.ai</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .screen {
+            display: none;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* TELA INICIAL */
+        .intro-screen {
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #ff0000, #ff4444);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+            color: #ffffff;
+        }
+
+        .highlight {
+            color: #ff0000;
+            text-decoration: underline;
+            text-decoration-color: #ff0000;
+            text-decoration-thickness: 4px;
+        }
+
+        .subheadline {
+            font-size: 1.3rem;
+            color: #cccccc;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .hook {
+            background: rgba(255, 0, 0, 0.1);
+            border-left: 4px solid #ff0000;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            font-style: italic;
+        }
+
+        .btn {
+            background: #ff0000;
+            color: #ffffff;
+            border: none;
+            padding: 1.5rem 3rem;
+            font-size: 1.3rem;
+            font-weight: 700;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 10px 30px rgba(255, 0, 0, 0.3);
+        }
+
+        .btn:hover {
+            background: #cc0000;
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(255, 0, 0, 0.5);
+        }
+
+        /* PERGUNTAS */
+        .question-screen {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 3rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .progress-bar {
+            background: rgba(255, 255, 255, 0.1);
+            height: 8px;
+            border-radius: 4px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #ff0000, #ff4444);
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        .question-number {
+            color: #ff0000;
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .scenario {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            border-left: 4px solid #ff0000;
+        }
+
+        .scenario-label {
+            color: #ff4444;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+
+        .message {
+            font-size: 1.2rem;
+            font-style: italic;
+            color: #ffffff;
+            line-height: 1.6;
+        }
+
+        .question-title {
+            font-size: 1.5rem;
+            margin: 2rem 0 1.5rem;
+            font-weight: 700;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .option {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            padding: 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.1rem;
+        }
+
+        .option:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #ff0000;
+            transform: translateX(5px);
+        }
+
+        .option.selected {
+            background: rgba(255, 0, 0, 0.2);
+            border-color: #ff0000;
+        }
+
+        /* ANÁLISE */
+        .analysis {
+            background: rgba(255, 0, 0, 0.1);
+            border: 2px solid #ff0000;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .analysis-title {
+            font-size: 1.8rem;
+            color: #ff0000;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .analysis-section {
+            margin: 1.5rem 0;
+        }
+
+        .analysis-section h4 {
+            color: #ff4444;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .analysis-section p {
+            color: #cccccc;
+            line-height: 1.8;
+            font-size: 1.05rem;
+        }
+
+        .insight {
+            background: rgba(0, 255, 136, 0.1);
+            border-left: 4px solid #00ff88;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #00ff88;
+        }
+
+        .impact {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .btn-next {
+            margin-top: 2rem;
+            width: 100%;
+        }
+
+        /* RESULTADO */
+        .result-screen {
+            text-align: center;
+        }
+
+        .result-title {
+            font-size: 2.5rem;
+            color: #ff0000;
+            margin-bottom: 2rem;
+            font-weight: 900;
+        }
+
+        .problem-list {
+            background: rgba(255, 0, 0, 0.1);
+            border: 2px solid #ff0000;
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: left;
+        }
+
+        .problem-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1rem 0;
+            font-size: 1.2rem;
+        }
+
+        .x-mark {
+            color: #ff0000;
+            font-size: 1.5rem;
+            font-weight: 900;
+        }
+
+        .check-mark {
+            color: #00ff88;
+            font-size: 1.5rem;
+            font-weight: 900;
+        }
+
+        .solution-list {
+            background: rgba(0, 255, 136, 0.1);
+            border: 2px solid #00ff88;
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: left;
+        }
+
+        .solution-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1rem 0;
+            font-size: 1.2rem;
+        }
+
+        .brutal-truth {
+            background: rgba(0, 0, 0, 0.5);
+            border: 3px solid #ff0000;
+            padding: 2rem;
+            margin: 3rem 0;
+            border-radius: 12px;
+        }
+
+        .brutal-truth h2 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: #ff0000;
+        }
+
+        .options-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .option-box {
+            padding: 2rem;
+            border-radius: 12px;
+            border: 2px solid;
+        }
+
+        .option-1 {
+            background: rgba(255, 0, 0, 0.1);
+            border-color: #ff0000;
+        }
+
+        .option-2 {
+            background: rgba(0, 255, 136, 0.1);
+            border-color: #00ff88;
+        }
+
+        .option-label {
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin-bottom: 1rem;
+        }
+
+        .choice-text {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin: 2rem 0;
+        }
+
+        .cta-final {
+            background: #ff0000;
+            padding: 2rem;
+            border-radius: 12px;
+            margin: 2rem 0;
+        }
+
+        .cta-final h3 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .testimonials {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2rem;
+            border-radius: 12px;
+            margin-top: 2rem;
+        }
+
+        .testimonial {
+            margin: 1rem 0;
+            font-style: italic;
+            color: #cccccc;
+        }
+
+        .testimonial-author {
+            color: #ff4444;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .subheadline {
+                font-size: 1.1rem;
+            }
+
+            .question-screen {
+                padding: 1.5rem;
+            }
+
+            .options-box {
+                grid-template-columns: 1fr;
+            }
+
+            .btn {
+                padding: 1.2rem 2rem;
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- TELA INICIAL -->
+        <div class="screen active" id="intro">
+            <div class="intro-screen">
+                <div class="logo">HITCH.AI</div>
+                <h1>Você está <span class="highlight">DESTRUINDO</span> seus relacionamentos e nem <span class="highlight">PERCEBE</span>.</h1>
+
+                <p class="subheadline">
+                    Cada vez que você responde errado. Cada vez que interpreta mal. Cada vez que não entende o que realmente querem dizer... você está MATANDO conexões que poderiam ser incríveis.
+                </p>
+
+                <div class="hook">
+                    "Tá tudo bem." — Mas você SENTE que não está.<br>
+                    "Podemos conversar depois." — E você fica ansioso sem saber o porquê.<br>
+                    "Não precisa se preocupar." — Mas algo ali não fecha.<br><br>
+                    <strong>Você está cansado de ADIVINHAR o que as pessoas realmente querem dizer?</strong>
+                </div>
+
+                <button class="btn" onclick="startQuiz()">QUERO DESCOBRIR AGORA</button>
+            </div>
+        </div>
+
+        <!-- PERGUNTA 1 -->
+        <div class="screen" id="question1">
+            <div class="question-screen">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 33%"></div>
+                </div>
+
+                <div class="question-number">Pergunta 1 de 3</div>
+
+                <h2 class="question-title">Seu relacionamento pode estar acabando AGORA</h2>
+
+                <div class="scenario">
+                    <div class="scenario-label">💔 Você manda: "Quer fazer algo hoje à noite?"</div>
+                    <div class="message">Resposta: "Tô cansado(a)... acho melhor a gente ficar em casa."</div>
+                </div>
+
+                <p class="question-title">O que você FAZ?</p>
+
+                <div class="options">
+                    <div class="option" onclick="selectOption(1, 'A', this)">
+                        <strong>A)</strong> Fico chateado(a) e respondo seco(a): "Tá bom então"
+                    </div>
+                    <div class="option" onclick="selectOption(1, 'B', this)">
+                        <strong>B)</strong> Insisto: "Mas vai ser legal, vamos!"
+                    </div>
+                    <div class="option" onclick="selectOption(1, 'C', this)">
+                        <strong>C)</strong> Fico remoendo sozinho(a), criando cenários na cabeça
+                    </div>
+                    <div class="option" onclick="selectOption(1, 'D', this)">
+                        <strong>D)</strong> Preciso ENTENDER o que essa pessoa realmente quer dizer
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANÁLISE 1 -->
+        <div class="screen" id="analysis1">
+            <div class="question-screen">
+                <div class="analysis">
+                    <h3 class="analysis-title">💡 O QUE ESTÁ REALMENTE ACONTECENDO:</h3>
+
+                    <div class="analysis-section">
+                        <h4>HITCH.AI REVELA A VERDADE:</h4>
+                        <p>• Nível de interesse genuíno: 75%<br>
+                        • Cansaço real vs. evasiva: 80% real / 20% evasiva<br>
+                        • Abertura para alternativa: 65%<br>
+                        • Desejo de intimidade caseira: 70%<br>
+                        • Risco de conflito se você insistir: ALTO (85%)</p>
+                    </div>
+
+                    <div class="analysis-section">
+                        <h4>O que você NÃO está vendo:</h4>
+                        <p>• "Tô cansado(a)" = vulnerabilidade, não rejeição<br>
+                        • "Acho melhor" = ainda quer sua companhia, mas no ritmo dela<br>
+                        • Reticências = abertura pra você propor algo mais leve<br>
+                        • Ela NÃO disse "não quero te ver" — disse "não quero sair"</p>
+                    </div>
+
+                    <div class="insight">
+                        Resposta que SALVA a noite: "Que tal pedirmos algo gostoso e assistirmos aquela série? Fica todo mundo confortável e a gente aproveita junto ❤️"
+                    </div>
+
+                    <div class="impact">
+                        <strong>VOCÊ IA CRIAR UM CONFLITO DO NADA.</strong><br>
+                        Quantas vezes você já fez isso sem perceber?<br>
+                        Quantos relacionamentos você perdeu assim?
+                    </div>
+                </div>
+
+                <button class="btn btn-next" onclick="nextQuestion(2)">PRÓXIMA →</button>
+            </div>
+        </div>
+
+        <!-- PERGUNTA 2 -->
+        <div class="screen" id="question2">
+            <div class="question-screen">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 66%"></div>
+                </div>
+
+                <div class="question-number">Pergunta 2 de 3</div>
+
+                <h2 class="question-title">Sua amizade está morrendo em silêncio</h2>
+
+                <div class="scenario">
+                    <div class="scenario-label">😔 Você chama seu melhor amigo(a) pra sair:</div>
+                    <div class="message">"Não posso hoje, outra hora a gente marca."</div>
+                </div>
+
+                <p class="question-title">Isso já aconteceu 3 vezes seguidas. O que você pensa?</p>
+
+                <div class="options">
+                    <div class="option" onclick="selectOption(2, 'A', this)">
+                        <strong>A)</strong> "Não quer mais ser meu amigo, vou parar de chamar"
+                    </div>
+                    <div class="option" onclick="selectOption(2, 'B', this)">
+                        <strong>B)</strong> "Tá me evitando. Fiz algo errado?"
+                    </div>
+                    <div class="option" onclick="selectOption(2, 'C', this)">
+                        <strong>C)</strong> "Tanto faz, vou sair com outras pessoas"
+                    </div>
+                    <div class="option" onclick="selectOption(2, 'D', this)">
+                        <strong>D)</strong> Preciso ENTENDER o que está realmente acontecendo
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANÁLISE 2 -->
+        <div class="screen" id="analysis2">
+            <div class="question-screen">
+                <div class="analysis">
+                    <h3 class="analysis-title">💡 A VERDADE QUE VOCÊ NÃO VIU:</h3>
+
+                    <div class="analysis-section">
+                        <h4>HITCH.AI ANALISA O PADRÃO:</h4>
+                        <p>• Sinceridade da justificativa: 85%<br>
+                        • Afastamento intencional: 25%<br>
+                        • Sobrecarga emocional/vida pessoal: 90%<br>
+                        • Ainda valoriza a amizade: 80%<br>
+                        • "Outra hora a gente marca" = vontade real, timing ruim</p>
+                    </div>
+
+                    <div class="analysis-section">
+                        <h4>Sinais que você está ignorando:</h4>
+                        <p>• Não disse "não quero" — disse "não POSSO"<br>
+                        • "Outra hora a gente marca" = compromisso futuro<br>
+                        • Ausência de agressividade = não há conflito entre vocês<br>
+                        • Padrão de 3x = provavelmente passando por algo difícil<br>
+                        • Se quisesse te evitar, nem responderia</p>
+                    </div>
+
+                    <div class="insight">
+                        Mensagem que SALVA a amizade: "Sem problema! Mas tá tudo bem contigo? Parece que tá uma correria aí. Se precisar conversar, tô aqui, beleza?"
+                    </div>
+
+                    <div class="impact">
+                        <strong>VOCÊ IA DESISTIR DO SEU AMIGO NO PIOR MOMENTO.</strong><br>
+                        Quando ele mais precisa de você.<br>
+                        Por MÁ INTERPRETAÇÃO.
+                    </div>
+                </div>
+
+                <button class="btn btn-next" onclick="nextQuestion(3)">PRÓXIMA →</button>
+            </div>
+        </div>
+
+        <!-- PERGUNTA 3 -->
+        <div class="screen" id="question3">
+            <div class="question-screen">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 100%"></div>
+                </div>
+
+                <div class="question-number">Pergunta 3 de 3</div>
+
+                <h2 class="question-title">Essa conversa vai EXPLODIR</h2>
+
+                <div class="scenario">
+                    <div class="scenario-label">🔥 Sua mãe/pai manda às 23h:</div>
+                    <div class="message">"Precisamos conversar sobre suas escolhas."</div>
+                </div>
+
+                <p class="question-title">Como você reage AGORA?</p>
+
+                <div class="options">
+                    <div class="option" onclick="selectOption(3, 'A', this)">
+                        <strong>A)</strong> Já fico na defensiva: "Lá vem crítica de novo..."
+                    </div>
+                    <div class="option" onclick="selectOption(3, 'B', this)">
+                        <strong>B)</strong> Ignoro e vou dormir com raiva
+                    </div>
+                    <div class="option" onclick="selectOption(3, 'C', this)">
+                        <strong>C)</strong> Respondo irritado: "Agora não dá"
+                    </div>
+                    <div class="option" onclick="selectOption(3, 'D', this)">
+                        <strong>D)</strong> Preciso ENTENDER a intenção real antes de brigar
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANÁLISE 3 -->
+        <div class="screen" id="analysis3">
+            <div class="question-screen">
+                <div class="analysis">
+                    <h3 class="analysis-title">💡 VOCÊ ESTÁ PRESTES A CRIAR UMA GUERRA:</h3>
+
+                    <div class="analysis-section">
+                        <h4>O QUE O HITCH.AI DETECTA:</h4>
+                        <p>• Tom: Preocupação, não ataque (75%)<br>
+                        • Intenção de crítica destrutiva: 20%<br>
+                        • Desejo de conexão/diálogo: 80%<br>
+                        • Ansiedade dos pais sobre seu futuro: 95%<br>
+                        • Medo disfarçado de controle: ALTO</p>
+                    </div>
+
+                    <div class="analysis-section">
+                        <h4>O que você NÃO percebeu:</h4>
+                        <p>• "Precisamos conversar" = quer incluir VOCÊ na conversa<br>
+                        • "Suas escolhas" = não disse "suas PÉSSIMAS escolhas"<br>
+                        • Horário tardio = ansiedade genuína, não pode esperar<br>
+                        • Tom neutro sem emojis = tentando ser maduro/sério<br>
+                        • Se fosse ataque, seria mais agressivo</p>
+                    </div>
+
+                    <div class="insight">
+                        Resposta que EVITA O CONFLITO: "Claro! Amanhã de manhã funciona pra você? Quero conversar com calma sobre isso."
+                    </div>
+
+                    <div class="impact">
+                        <strong>VOCÊ IA TRANSFORMAR PREOCUPAÇÃO EM BRIGA.</strong><br>
+                        Mais uma noite perdida em conflito familiar desnecessário.<br>
+                        Quantas dessas brigas poderiam ter sido evitadas?
+                    </div>
+                </div>
+
+                <button class="btn btn-next" onclick="showResults()">VER RESULTADO FINAL →</button>
+            </div>
+        </div>
+
+        <!-- RESULTADO -->
+        <div class="screen" id="result">
+            <div class="result-screen">
+                <div class="logo">HITCH.AI</div>
+                <h1 class="result-title">SEU RESULTADO:</h1>
+                <h2 style="font-size: 2.5rem; margin-bottom: 2rem;">Você está <span class="highlight">DESTRUINDO</span> relacionamentos que poderiam ser <span class="highlight">INCRÍVEIS</span>.</h2>
+
+                <div class="problem-list">
+                    <h3 style="margin-bottom: 1.5rem; font-size: 1.5rem;">Baseado nas suas respostas, você está:</h3>
+                    <div class="problem-item">
+                        <span class="x-mark">❌</span>
+                        <span>Criando brigas e conflitos DO NADA</span>
+                    </div>
+                    <div class="problem-item">
+                        <span class="x-mark">❌</span>
+                        <span>Perdendo pessoas importantes por MÁ INTERPRETAÇÃO</span>
+                    </div>
+                    <div class="problem-item">
+                        <span class="x-mark">❌</span>
+                        <span>Passando noites em claro com ansiedade desnecessária</span>
+                    </div>
+                    <div class="problem-item">
+                        <span class="x-mark">❌</span>
+                        <span>Afastando quem mais te ama sem perceber</span>
+                    </div>
+                    <div class="problem-item">
+                        <span class="x-mark">❌</span>
+                        <span>Vivendo no "achismo" sobre o que os outros sentem</span>
+                    </div>
+                </div>
+
+                <div class="brutal-truth">
+                    <h2>A VERDADE BRUTAL:</h2>
+                    <p style="font-size: 1.3rem; line-height: 1.8; margin-bottom: 2rem;">
+                        Enquanto você continua <strong>ADIVINHANDO</strong> o que as pessoas querem dizer...<br>
+                        Enquanto você cria <strong>CONFLITOS</strong> que não existem...<br>
+                        Enquanto você perde <strong>NOITES DE SONO</strong> com ansiedade...<br><br>
+                        Outras pessoas estão usando <strong>INTELIGÊNCIA</strong> para:
+                    </p>
+
+                    <div class="solution-list">
+                        <div class="solution-item">
+                            <span class="check-mark">✅</span>
+                            <span>Ter relacionamentos mais profundos e verdadeiros</span>
+                        </div>
+                        <div class="solution-item">
+                            <span class="check-mark">✅</span>
+                            <span>Evitar 99% dos conflitos desnecessários</span>
+                        </div>
+                        <div class="solution-item">
+                            <span class="check-mark">✅</span>
+                            <span>Dormir tranquilo sabendo exatamente o que está acontecendo</span>
+                        </div>
+                        <div class="solution-item">
+                            <span class="check-mark">✅</span>
+                            <span>Fortalecer amizades em vez de perdê-las</span>
+                        </div>
+                        <div class="solution-item">
+                            <span class="check-mark">✅</span>
+                            <span>Ter clareza emocional em TODAS as conversas</span>
+                        </div>
+                    </div>
+                </div>
+
+                <h1 style="font-size: 3rem; margin: 3rem 0; line-height: 1.3;">
+                    "Pare de <span class="highlight">DESTRUIR</span>.<br>Comece a <span class="highlight">CONECTAR</span>."
+                </h1>
+
+                <div class="options-box">
+                    <div class="option-box option-1">
+                        <div class="option-label" style="color: #ff0000;">OPÇÃO 1:</div>
+                        <p>Continuar interpretando tudo errado. Criar mais brigas. Perder mais pessoas. Viver ansioso sem saber o que os outros realmente querem dizer.</p>
+                    </div>
+                    <div class="option-box option-2">
+                        <div class="option-label" style="color: #00ff88;">OPÇÃO 2:</div>
+                        <p>Usar o Hitch.ai e ter CLAREZA TOTAL sobre cada conversa. Salvar relacionamentos. Evitar conflitos. Dormir em paz.</p>
+                    </div>
+                </div>
+
+                <p class="choice-text">Quantas pessoas você já perdeu por não entender o que elas queriam dizer?<br>Quantas mais você vai perder antes de agir?</p>
+
+                <div class="cta-final">
+                    <h3>PARE DE DESTRUIR SEUS RELACIONAMENTOS</h3>
+                    <button class="btn" style="background: #000; margin-top: 1rem;" onclick="window.location.href='https://www.hitchai.online/exp-site-v12/register'">QUERO CLAREZA AGORA - COMEÇAR GRÁTIS</button>
+                    <p style="margin-top: 1rem; font-size: 0.9rem;">7 dias de degustação. Entenda TODAS as suas conversas.</p>
+                </div>
+
+                <div class="testimonials">
+                    <div class="testimonial">
+                        "Meu namoro estava acabando e eu nem sabia por quê. O Hitch.ai me mostrou que eu estava interpretando TUDO errado. Hoje estamos mais fortes do que nunca."
+                        <div class="testimonial-author">— Carolina M., 28 anos</div>
+                    </div>
+                    <div class="testimonial">
+                        "Parei de brigar com minha mãe. Simples assim. Agora eu ENTENDO o que ela quer dizer antes de explodir."
+                        <div class="testimonial-author">— Pedro L., 34 anos</div>
+                    </div>
+                    <div class="testimonial">
+                        "Salvei uma amizade de 15 anos que eu achei que tinha acabado. Era só ansiedade minha. O Hitch.ai me mostrou a verdade."
+                        <div class="testimonial-author">— Juliana S., 31 anos</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function startQuiz() {
+            showScreen('question1');
+        }
+
+        // CORREÇÃO: não depender de "event". Passa o elemento clicado via "this"
+        function selectOption(questionNum, option, el) {
+            const options = document.querySelectorAll(`#question${questionNum} .option`);
+            options.forEach(opt => opt.classList.remove('selected'));
+
+            el.classList.add('selected');
+
+            setTimeout(() => {
+                showScreen(`analysis${questionNum}`);
+            }, 500);
+        }
+
+        function nextQuestion(questionNum) {
+            showScreen(`question${questionNum}`);
+        }
+
+        function showResults() {
+            showScreen('result');
+        }
+
+        function showScreen(screenId) {
+            const screens = document.querySelectorAll('.screen');
+            screens.forEach(screen => screen.classList.remove('active'));
+
+            document.getElementById(screenId).classList.add('active');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
