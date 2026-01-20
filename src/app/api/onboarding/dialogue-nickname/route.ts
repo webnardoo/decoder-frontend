@@ -17,17 +17,16 @@ function getBackendBaseUrl() {
   return "http://localhost:4100";
 }
 
-async function proxy(req: NextRequest, method: "POST" | "PATCH") {
-  const backendBase = ensureApiV1(getBackendBaseUrl());
-  const url = `${backendBase}/onboarding/dialogue-nickname`;
-
-  const contentType = req.headers.get("content-type") ?? "application/json";
-  const authorization = req.headers.get("authorization") ?? "";
-  const cookie = req.headers.get("cookie") ?? "";
-
-  const body = await req.text();
-
-  const upstream = await fetch(url, {
+async function forward(
+  req: NextRequest,
+  url: string,
+  method: "PATCH" | "PUT",
+  body: string,
+  contentType: string,
+  authorization: string,
+  cookie: string
+) {
+  return fetch(url, {
     method,
     headers: {
       "content-type": contentType,
@@ -37,6 +36,27 @@ async function proxy(req: NextRequest, method: "POST" | "PATCH") {
     body,
     cache: "no-store",
   });
+}
+
+async function proxy(req: NextRequest, _method: "POST" | "PATCH") {
+  const backendBase = ensureApiV1(getBackendBaseUrl());
+
+  // ✅ FIX: endpoint correto no backend é profile/dialogue-nickname (não onboarding/dialogue-nickname)
+  const url = `${backendBase}/profile/dialogue-nickname`;
+
+  const contentType = req.headers.get("content-type") ?? "application/json";
+  const authorization = req.headers.get("authorization") ?? "";
+  const cookie = req.headers.get("cookie") ?? "";
+
+  const body = await req.text();
+
+  // O front antigo chama POST/PATCH; o backend pode estar em PATCH ou PUT.
+  // Fazemos tentativa PATCH primeiro e, se 404/405, tentamos PUT.
+  let upstream = await forward(req, url, "PATCH", body, contentType, authorization, cookie);
+
+  if (upstream.status === 404 || upstream.status === 405) {
+    upstream = await forward(req, url, "PUT", body, contentType, authorization, cookie);
+  }
 
   const text = await upstream.text();
 

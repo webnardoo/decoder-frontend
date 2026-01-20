@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:4100";
 
 export async function POST(req: NextRequest) {
-  const url = `${BACKEND_URL}/api/v1/auth/register`;
+  // ✅ novo fluxo: request otp (cria/atualiza PendingSignup e envia OTP)
+  const url = `${BACKEND_URL}/api/v1/auth/signup/request-otp`;
 
   const upstream = await fetch(url, {
     method: "POST",
@@ -20,10 +24,11 @@ export async function POST(req: NextRequest) {
     ? await upstream.json().catch(() => null)
     : await upstream.text().catch(() => "");
 
-  // Register não seta cookie aqui; a tela faz login depois.
   if (!upstream.ok) {
     return NextResponse.json(
-      typeof payload === "string" ? { message: payload } : payload ?? { message: "Register falhou" },
+      typeof payload === "string"
+        ? { message: payload }
+        : payload ?? { message: "request-otp falhou" },
       { status: upstream.status },
     );
   }
