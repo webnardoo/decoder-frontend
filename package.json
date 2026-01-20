@@ -9,6 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@plasmicapp/host": "^1.0.234",
+    "@plasmicapp/loader-nextjs": "^1.0.450",
+    "@plasmicapp/react-web": "^0.2.413",
     "next": "16.0.10",
     "react": "19.2.1",
     "react-dom": "19.2.1"
@@ -20,6 +23,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.0.10",
+    "plasmic": "^1.0.3",
     "tailwindcss": "^4",
     "typescript": "5.9.3"
   }

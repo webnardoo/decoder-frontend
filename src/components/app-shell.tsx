@@ -5,7 +5,9 @@ import { TopNav } from "@/components/top-nav";
 import { TutorialPopupsGate } from "@/components/tutorial-popups-gate";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const pathnameRaw = usePathname();
+  const pathname = pathnameRaw ?? "";
+
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
 
   // ✅ Admin tools não deve ser bloqueado por onboarding gate nem poluir network com /status

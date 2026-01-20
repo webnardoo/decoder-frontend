@@ -3,72 +3,102 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-type OnboardingStatus = { onboardingStage: string };
+type StatusResponse = {
+  ok?: boolean;
+  status?: string;
+  message?: string;
+};
 
-function routeFromStage(stage: string) {
-  const s = String(stage || "").toUpperCase().trim();
-  if (s === "NICKNAME_REQUIRED") return "/onboarding/identity";
-  if (s === "IDENTITY_REQUIRED") return "/onboarding/identity";
-  if (s === "TUTORIAL_REQUIRED") return "/tutorial";
-  if (s === "READY") return "/";
-  if (s === "PAYMENT_FAILED") return "/billing/failed";
-  if (s === "PAYMENT_PENDING") return "/billing/pending";
-  if (s === "PAYMENT_REQUIRED") return "/billing/plan";
-  return "/start";
-}
-
-export default function ResultClient() {
+export default function CheckoutResultClient() {
   const router = useRouter();
   const sp = useSearchParams();
-  const checkoutId = String(sp.get("checkoutId") ?? "").trim();
+  const qp = sp ?? new URLSearchParams();
+
+  const checkoutId = String(qp.get("checkoutId") ?? "").trim();
 
   const ran = useRef(false);
   const [error, setError] = useState<string>("");
+  const [status, setStatus] = useState<string>("checking");
 
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
 
-    async function run() {
+    (async () => {
       try {
-        if (!checkoutId) throw new Error("checkoutId ausente.");
+        if (!checkoutId) {
+          setStatus("invalid");
+          setError("Checkout inválido.");
+          return;
+        }
 
-        const res = await fetch(`/api/checkout/${encodeURIComponent(checkoutId)}/confirm`, {
+        const res = await fetch("/api/checkout/status", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ providerResultRef: "any" }),
           cache: "no-store",
+          body: JSON.stringify({ checkoutId }),
         });
 
-        if (res.status === 401) {
-          router.replace("/login");
+        const data = (await res.json().catch(() => null)) as StatusResponse | null;
+
+        if (!res.ok) {
+          setStatus("failed");
+          setError(data?.message || `Falha ao consultar status (${res.status}).`);
           return;
         }
 
-        // independente do retorno, obedecer backend onboardingStage
-        const st = await fetch("/api/onboarding/status", { credentials: "include", cache: "no-store" });
+        const st = String(data?.status || "").trim().toLowerCase();
 
-        if (st.status === 401) {
-          router.replace("/login");
+        if (st === "paid" || st === "success" || st === "succeeded" || st === "complete") {
+          setStatus("success");
+          router.replace("/app");
           return;
         }
 
-        const statusJson = (await st.json()) as OnboardingStatus;
-        router.replace(routeFromStage(statusJson.onboardingStage));
+        if (st === "pending" || st === "processing") {
+          setStatus("pending");
+          // mantém na tela (ou você pode mandar pra /app/billing/pending se preferir)
+          return;
+        }
+
+        if (st === "canceled" || st === "cancelled") {
+          setStatus("canceled");
+          router.replace("/app/billing/plan");
+          return;
+        }
+
+        setStatus("unknown");
+        setError(data?.message || "Status desconhecido.");
       } catch (e: any) {
-        setError(String(e?.message || "Falha ao processar checkout."));
+        setStatus("failed");
+        setError(e?.message || "Falha ao verificar status do checkout.");
       }
-    }
-
-    void run();
+    })();
   }, [checkoutId, router]);
 
   return (
-    <div className="card p-5 space-y-2">
-      <div className="text-sm font-medium">Checkout</div>
-      <div className="text-sm text-zinc-400">Finalizando confirmação…</div>
-      {error && <div className="text-sm text-red-400">{error}</div>}
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-lg font-semibold">Resultado do checkout</h1>
+        <p className="text-sm text-zinc-400">Verificando status do pagamento…</p>
+      </div>
+
+      <div className="card p-5 space-y-2">
+        <div className="text-xs text-zinc-500">
+          Status: <span className="text-zinc-200">{status}</span>
+        </div>
+
+        {!!error && <div className="text-sm text-red-400">{error}</div>}
+
+        <div className="flex gap-2 pt-2">
+          <button className="btn btn-primary" onClick={() => router.replace("/app")}>
+            Ir para o app
+          </button>
+          <button className="btn" onClick={() => router.replace("/app/billing/plan")}>
+            Voltar para planos
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

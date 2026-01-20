@@ -5,7 +5,9 @@ import { usePathname } from "next/navigation";
 import { useOnboardingStatus } from "@/lib/onboarding/OnboardingStore";
 
 const NavLink = ({ href, label }: { href: string; label: string }) => {
-  const pathname = usePathname();
+  const pathnameRaw = usePathname();
+  const pathname = pathnameRaw ?? "";
+
   const active = pathname === href || (href !== "/" && pathname.startsWith(href));
 
   return (

@@ -16,9 +16,9 @@ type PublicPlan = {
 };
 
 type RegisterExistsResponse = {
-  exists?: boolean;
-  shouldStartOnboarding?: boolean;
-  shouldLogin?: boolean;
+  exists: boolean;
+  shouldStartOnboarding: boolean;
+  shouldLogin: boolean;
 };
 
 function extractMessage(data: any): string | null {
@@ -29,32 +29,19 @@ function extractMessage(data: any): string | null {
   );
 }
 
-async function isAuthenticated(): Promise<boolean> {
-  // ✅ check real: server-side confirma cookie httpOnly (decoder_auth)
-  const res = await fetch("/api/auth/session", { cache: "no-store" });
-
-  if (res.status === 200) return true;
-  if (res.status === 401 || res.status === 403) return false;
-
-  throw new Error("Falha ao verificar sessão. Tente novamente.");
+function normalizeEmail(input: string): string {
+  return (input || "").trim().toLowerCase();
 }
 
 /**
- * 🔒 CONGELAMENTO DE ROTAS (NÃO ALTERAR SEM DECISÃO EXPLÍCITA)
+ * ==========================================================
+ * ROTAS CONGELADAS (CANÔNICO)
+ * - Público: /planos
+ * - Logado: /app/billing/plan
  *
- * ROTAS PÚBLICAS:
- * - /                  (site marketing)
- * - /planos            (planos públicos)
- *
- * ROTAS LOGADAS:
- * - /app               (home do app)
- * - /app/planos        (planos logado - pós onboarding / etapa final)
- * - /app/checkout      (checkout - somente logado / etapa final)
- * - /app/login         (login)
- * - /app/register      (registro/onboarding)
- *
- * REGRA: página pública /planos NUNCA empurra direto pra /app/checkout.
- * Ela SEMPRE faz gate por e-mail + decisão do backend (/api/v1/auth/register/exists).
+ * REGRA: em /planos (público), NUNCA ir direto para checkout.
+ * Sempre pedir e-mail -> decidir fluxo via /api/auth/register/exists.
+ * ==========================================================
  */
 export default function PublicPlansClient() {
   const router = useRouter();
@@ -92,6 +79,7 @@ export default function PublicPlansClient() {
         const list = Array.isArray(data?.plans)
           ? (data.plans as PublicPlan[])
           : [];
+
         if (!cancelled) setPlans(list);
       } catch (e: any) {
         if (!cancelled) setErr(String(e?.message || "Erro ao carregar planos."));
@@ -106,7 +94,7 @@ export default function PublicPlansClient() {
     };
   }, []);
 
-  async function ensureAuthBeforeCheckout(planId: string) {
+  async function onSubscribe(planId: string) {
     setChoosingPlanId(planId);
     setErr(null);
 
@@ -114,12 +102,9 @@ export default function PublicPlansClient() {
       const qs = new URLSearchParams({ planId, billingCycle: cycle });
       const checkoutNext = `/app/checkout?${qs.toString()}`;
 
-      // Nota: mesmo logado, a regra do /planos público é sempre pedir e-mail
-      // (isso mantém o fluxo canônico e evita bypass em produção)
-      await isAuthenticated().catch(() => false);
-
+      // ✅ CANÔNICO: sempre pedir e-mail em /planos (público)
       const email = window.prompt("Digite seu e-mail para continuar:");
-      const eMail = String(email || "").trim().toLowerCase();
+      const eMail = normalizeEmail(String(email || ""));
       if (!eMail) return;
 
       const existsRes = await fetch("/api/auth/register/exists", {
@@ -129,7 +114,8 @@ export default function PublicPlansClient() {
         body: JSON.stringify({ email: eMail }),
       });
 
-      const existsData = (await existsRes.json().catch(() => ({}))) as RegisterExistsResponse;
+      const existsData =
+        (await existsRes.json().catch(() => ({}))) as Partial<RegisterExistsResponse>;
 
       if (!existsRes.ok) {
         const msg = extractMessage(existsData) || "Falha ao validar e-mail.";
@@ -140,27 +126,23 @@ export default function PublicPlansClient() {
       const shouldStartOnboarding = existsData?.shouldStartOnboarding === true;
       const shouldLogin = existsData?.shouldLogin === true;
 
-      // ✅ REGRA CORRETA:
-      // - não existe -> /app/register
-      // - existe mas não READY -> /app/register (reinicia onboarding)
-      // - existe e READY -> /app/login
-      if (!exists || shouldStartOnboarding) {
+      // ✅ Contrato canônico
+      if (!exists) {
         router.push(
           `/app/register?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(checkoutNext)}`,
         );
         return;
       }
 
-      if (shouldLogin) {
+      if (shouldStartOnboarding && !shouldLogin) {
         router.push(
-          `/app/login?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(checkoutNext)}`,
+          `/app/register?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(checkoutNext)}`,
         );
         return;
       }
 
-      // fallback seguro: se por algum motivo não veio coerente
       router.push(
-        `/app/register?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(checkoutNext)}`,
+        `/app/login?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(checkoutNext)}`,
       );
     } catch (e: any) {
       setErr(String(e?.message || "Falha ao iniciar assinatura."));
@@ -207,12 +189,8 @@ export default function PublicPlansClient() {
             <div className="text-sm text-zinc-400">Carregando planos…</div>
           ) : plans.length === 0 ? (
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
-              <div className="text-sm font-medium text-zinc-200">
-                Nenhum plano disponível
-              </div>
-              <div className="mt-1 text-sm text-zinc-400">
-                Tente novamente em instantes.
-              </div>
+              <div className="text-sm font-medium text-zinc-200">Nenhum plano disponível</div>
+              <div className="mt-1 text-sm text-zinc-400">Tente novamente em instantes.</div>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3">
@@ -224,12 +202,8 @@ export default function PublicPlansClient() {
                   <div key={p.planId} className="card p-5 space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="font-semibold text-zinc-100 truncate">
-                          {p.name}
-                        </div>
-                        <div className="mt-1 text-sm text-zinc-400">
-                          {p.description || "—"}
-                        </div>
+                        <div className="font-semibold text-zinc-100 truncate">{p.name}</div>
+                        <div className="mt-1 text-sm text-zinc-400">{p.description || "—"}</div>
                       </div>
 
                       {p.isUnlimited ? (
@@ -244,12 +218,9 @@ export default function PublicPlansClient() {
                     </div>
 
                     <div className="text-xs text-zinc-500">
-                      Modalidade:{" "}
-                      <span className="text-zinc-300">{cycleLabel}</span>
+                      Modalidade: <span className="text-zinc-300">{cycleLabel}</span>
                       {!canUseCycle && (
-                        <span className="ml-2 text-red-300">
-                          • indisponível neste ciclo
-                        </span>
+                        <span className="ml-2 text-red-300">• indisponível neste ciclo</span>
                       )}
                     </div>
 
@@ -257,7 +228,7 @@ export default function PublicPlansClient() {
                       <button
                         className="btn btn-primary w-full sm:w-fit"
                         disabled={isBusy || !canUseCycle}
-                        onClick={() => void ensureAuthBeforeCheckout(p.planId)}
+                        onClick={() => void onSubscribe(p.planId)}
                         type="button"
                       >
                         {isChoosingThis ? "Abrindo…" : "Assinar"}

@@ -1,11 +1,60 @@
 "use client";
 
-// src/app/exp-site-v12/page.tsx
 import Link from "next/link";
 
 const PURPLE = "#220D54";
 
-function HeroImageOverlay() {
+export type SiteV13ClientProps = {
+  // NAV
+  brandText?: string;
+  navPlanosLabel?: string;
+  navEntrarLabel?: string;
+  navCtaLabel?: string;
+
+  // HERO 1
+  heroEyebrow?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  heroCtaLabel?: string;
+  heroImageUrl?: string;
+
+  // HERO 2 / Como funciona
+  howTitle?: string;
+  howSubtitle?: string;
+
+  step1Title?: string;
+  step1Body?: string;
+  step2Title?: string;
+  step2Body?: string;
+  step3Title?: string;
+  step3Body?: string;
+
+  // Seções
+  whyKicker?: string;
+  whyTitle?: string;
+  whyBody?: string;
+  whyCtaLabel?: string;
+
+  benefitsKicker?: string;
+  benefitsTitle?: string;
+  benefitsBody?: string;
+
+  featuresKicker?: string;
+  featuresTitle?: string;
+  featuresSubtitle?: string;
+
+  planosKicker?: string;
+  planosTitle?: string;
+  planosBody?: string;
+  planosCtaLabel?: string;
+
+  // Links (se precisar alterar depois)
+  hrefPlanos?: string;
+  hrefLogin?: string;
+  hrefRegister?: string;
+};
+
+function HeroImageOverlay({ heroImageUrl }: { heroImageUrl: string }) {
   return (
     <div
       aria-hidden
@@ -18,53 +67,45 @@ function HeroImageOverlay() {
         zIndex: 1,
         pointerEvents: "none",
 
-        // 4 fades + 2 vinhetas (uma suave + uma mais “cinema”)
         backgroundImage: `
-          /* TOP */
           linear-gradient(to bottom,
             rgba(0,0,0,0.92) 0%,
             rgba(0,0,0,0.42) 16%,
             rgba(0,0,0,0.00) 42%
           ),
-          /* BOTTOM */
           linear-gradient(to top,
             rgba(0,0,0,0.96) 0%,
             rgba(0,0,0,0.48) 16%,
             rgba(0,0,0,0.00) 44%
           ),
-          /* LEFT */
           linear-gradient(to right,
             rgba(0,0,0,0.98) 0%,
             rgba(0,0,0,0.64) 12%,
             rgba(0,0,0,0.00) 34%
           ),
-          /* RIGHT */
           linear-gradient(to left,
             rgba(0,0,0,0.98) 0%,
             rgba(0,0,0,0.70) 14%,
             rgba(0,0,0,0.16) 34%,
             rgba(0,0,0,0.00) 58%
           ),
-          /* vinheta suave */
           radial-gradient(120% 120% at 70% 48%,
             rgba(0,0,0,0.00) 0%,
             rgba(0,0,0,0.12) 58%,
             rgba(0,0,0,0.42) 100%
           ),
-          /* vinheta “cinema” (muito leve) */
           radial-gradient(140% 120% at 62% 52%,
             rgba(0,0,0,0.00) 0%,
             rgba(0,0,0,0.06) 52%,
             rgba(0,0,0,0.22) 100%
           ),
-          url("/HeroSystem.png")
+          url("${heroImageUrl}")
         `,
         backgroundSize: "cover",
         backgroundPosition: "left center",
         backgroundRepeat: "no-repeat",
 
         opacity: 0.99,
-        // realça sem estourar (o que estava faltando)
         filter: "saturate(1.10) contrast(1.10) brightness(1.05)",
         transform: "translateZ(0)",
       }}
@@ -72,22 +113,59 @@ function HeroImageOverlay() {
   );
 }
 
-export default function ExpSiteV12Page() {
+export default function SiteV13Client({
+  brandText = "Hitch.ai",
+  navPlanosLabel = "Assinar",
+  navEntrarLabel = "Entrar",
+  navCtaLabel = "Começar a degustação",
+
+  heroEyebrow = "HITCH.AI\nINTELIGÊNCIA ARTIFICIAL PARA ANÁLISE DE CONVERSAS",
+  heroTitle = "Entenda o que está por trás de cada conversa.",
+  heroSubtitle = "Análise clara de mensagens para interpretar intenções e responder com mais segurança.",
+  heroCtaLabel = "Analisar uma conversa",
+  heroImageUrl = "/HeroSystem.png",
+
+  howTitle = "Como funciona",
+  howSubtitle = "Leitura estratégica em poucos passos.",
+
+  step1Title = "Cole a conversa",
+  step1Body = "Qualquer mensagem ambígua ou delicada",
+  step2Title = "O Hitch.ai analisa",
+  step2Body = "Intenção, emoção e riscos invisíveis.",
+  step3Title = "Você entende antes de responder",
+  step3Body = "Clareza antes da ação.",
+
+  whyKicker = "COMO O HITCH.AI FUNCIONA",
+  whyTitle = "Veja o que está por trás das mensagens — antes de responder.",
+  whyBody = "O Hitch.ai analisa conversas para identificar intenções, padrões emocionais e riscos invisíveis à primeira leitura — ajudando você a responder com clareza e segurança.",
+  whyCtaLabel = "Começar a degustação",
+
+  benefitsKicker = "BENEFÍCIOS NA PRÁTICA",
+  benefitsTitle = "Clareza para decidir. Segurança para responder.",
+  benefitsBody = "Evite respostas precipitadas, interprete o contexto real da conversa e aja com mais confiança — mesmo em situações delicadas.",
+
+  featuresKicker = "FEATURES",
+  featuresTitle = "O essencial, do jeito certo.",
+  featuresSubtitle = "Quatro pilares para reduzir ruído, aumentar clareza e manter controle.",
+
+  planosKicker = "PLANOS",
+  planosTitle = "Escolha o plano e siga para o app.",
+  planosBody = "Veja os detalhes na página de planos.",
+  planosCtaLabel = "Ver planos",
+
+  hrefPlanos = "/planos",
+  hrefLogin = "/app/login",
+  hrefRegister = "/app/register",
+}: SiteV13ClientProps) {
   return (
     <main className="page h-fixed-radial-bg">
-      {/* OVERRIDES — remove overlays que geram “faixa” nos heros */}
       <style jsx global>{`
-        /* remove a faixa/retângulo aplicado via pseudo-elemento no HERO 1 */
         .hero1::after {
           content: none !important;
         }
-
-        /* corta qualquer “ponte”/seam herdada do HERO 1 → HERO 2 */
         .hero2FromHero {
           background: transparent !important;
         }
-
-        /* garante transparência das seções para o radial base aparecer por baixo */
         .hero1,
         .hero2,
         .section {
@@ -95,7 +173,6 @@ export default function ExpSiteV12Page() {
         }
       `}</style>
 
-      {/* NAV */}
       <header className="navbar">
         <div className="container">
           <div className="navInner">
@@ -118,69 +195,44 @@ export default function ExpSiteV12Page() {
               >
                 H
               </span>
-              <span
-                style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  letterSpacing: "0.02em",
-                }}
-              >
-                Hitch.ai
+              <span style={{ fontSize: 14, fontWeight: 600, letterSpacing: "0.02em" }}>
+                {brandText}
               </span>
             </Link>
 
             <nav className="navRight" aria-label="Navegação principal">
-              <Link className="navLink" href="/planos">
-                Assinar
+              <Link className="navLink" href={hrefPlanos}>
+                {navPlanosLabel}
               </Link>
-              <Link className="navLink" href="/app/login">
-                Entrar
+              <Link className="navLink" href={hrefLogin}>
+                {navEntrarLabel}
               </Link>
-              <Link className="btn btnPrimary" href="/app/register">
-                Começar a degustação
+              <Link className="btn btnPrimary" href={hrefRegister}>
+                {navCtaLabel}
               </Link>
             </nav>
           </div>
         </div>
       </header>
 
-      {/* WRAPPER (HERO1 + HERO2) — sem fundo próprio, deixa o radial base aparecer */}
-      <div
-        style={{
-          position: "relative",
-          overflow: "hidden",
-          background: "transparent",
-        }}
-      >
-        {/* HERO 1 */}
+      <div style={{ position: "relative", overflow: "hidden", background: "transparent" }}>
         <section id="top" className="section hero1" style={{ position: "relative", zIndex: 2 }}>
           <div className="container">
-            <div
-              className="heroGrid"
-              style={{
-                position: "relative",
-                overflow: "hidden",
-                background: "transparent",
-              }}
-            >
-              <HeroImageOverlay />
+            <div className="heroGrid" style={{ position: "relative", overflow: "hidden", background: "transparent" }}>
+              <HeroImageOverlay heroImageUrl={heroImageUrl} />
 
               <div className="heroCopy" style={{ position: "relative", zIndex: 2 }}>
-                <div className="eyebrow heroEyebrow">
-                  HITCH.AI
-                  <br />
-                  INTELIGÊNCIA ARTIFICIAL PARA ANÁLISE DE CONVERSAS
+                <div className="eyebrow heroEyebrow" style={{ whiteSpace: "pre-line" }}>
+                  {heroEyebrow}
                 </div>
 
-                <h1 className="h1Hero">Entenda o que está por trás de cada conversa.</h1>
+                <h1 className="h1Hero">{heroTitle}</h1>
 
-                <p className="bodyText heroSubtitle">
-                  Análise clara de mensagens para interpretar intenções e responder com mais segurança.
-                </p>
+                <p className="bodyText heroSubtitle">{heroSubtitle}</p>
 
                 <div className="heroCtaRow">
-                  <Link className="btn btnPrimary" href="/exp-site-v12/register">
-                    Analisar uma conversa
+                  <Link className="btn btnPrimary" href={hrefRegister}>
+                    {heroCtaLabel}
                   </Link>
                 </div>
               </div>
@@ -190,36 +242,31 @@ export default function ExpSiteV12Page() {
           </div>
         </section>
 
-        {/* HERO 2 */}
-        <section
-          id="como-funciona"
-          className="section hero2"
-          style={{ position: "relative", zIndex: 2, background: "transparent" }}
-        >
+        <section id="como-funciona" className="section hero2" style={{ position: "relative", zIndex: 2, background: "transparent" }}>
           <div className="container">
             <div>
-              <h2 className="h2">Como funciona</h2>
-              <p className="bodyText">Leitura estratégica em poucos passos.</p>
+              <h2 className="h2">{howTitle}</h2>
+              <p className="bodyText">{howSubtitle}</p>
 
               <div className="stepsRow" role="list">
                 <div className="stepCard" role="listitem">
                   <div className="stepTop">01</div>
-                  <p className="stepTitle">Cole a conversa</p>
-                  <p className="stepBody">Qualquer mensagem ambígua ou delicada</p>
+                  <p className="stepTitle">{step1Title}</p>
+                  <p className="stepBody">{step1Body}</p>
                   <div className="stepMedia" aria-label="Área para print (placeholder)" />
                 </div>
 
                 <div className="stepCard" role="listitem">
                   <div className="stepTop">02</div>
-                  <p className="stepTitle">O Hitch.ai analisa</p>
-                  <p className="stepBody">Intenção, emoção e riscos invisíveis.</p>
+                  <p className="stepTitle">{step2Title}</p>
+                  <p className="stepBody">{step2Body}</p>
                   <div className="stepMedia" aria-label="Área para print (placeholder)" />
                 </div>
 
                 <div className="stepCard" role="listitem">
                   <div className="stepTop">03</div>
-                  <p className="stepTitle">Você entende antes de responder</p>
-                  <p className="stepBody">Clareza antes da ação.</p>
+                  <p className="stepTitle">{step3Title}</p>
+                  <p className="stepBody">{step3Body}</p>
                   <div className="stepMedia" aria-label="Área para print (placeholder)" />
                 </div>
               </div>
@@ -228,24 +275,16 @@ export default function ExpSiteV12Page() {
         </section>
       </div>
 
-      {/* RESTANTE DA PÁGINA — tudo transparente para deixar o radial base “por baixo” */}
-      <section
-        id="por-que-funciona"
-        className="section"
-        style={{ position: "relative", background: "transparent" }}
-      >
+      <section id="por-que-funciona" className="section" style={{ position: "relative", background: "transparent" }}>
         <div className="container">
           <div className="blockText">
-            <div className="kicker">COMO O HITCH.AI FUNCIONA</div>
-            <h2 className="h2">Veja o que está por trás das mensagens — antes de responder.</h2>
-            <p className="bodyText">
-              O Hitch.ai analisa conversas para identificar intenções, padrões emocionais e riscos
-              invisíveis à primeira leitura — ajudando você a responder com clareza e segurança.
-            </p>
+            <div className="kicker">{whyKicker}</div>
+            <h2 className="h2">{whyTitle}</h2>
+            <p className="bodyText">{whyBody}</p>
 
             <div style={{ marginTop: 18 }}>
-              <Link className="btn" href="/exp-site-v12/register">
-                Começar a degustação
+              <Link className="btn" href={hrefRegister}>
+                {whyCtaLabel}
               </Link>
             </div>
           </div>
@@ -255,12 +294,9 @@ export default function ExpSiteV12Page() {
       <section id="beneficios" className="section" style={{ background: "transparent" }}>
         <div className="container">
           <div className="blockText">
-            <div className="kicker">BENEFÍCIOS NA PRÁTICA</div>
-            <h2 className="h2">Clareza para decidir. Segurança para responder.</h2>
-            <p className="bodyText">
-              Evite respostas precipitadas, interprete o contexto real da conversa e aja com mais
-              confiança — mesmo em situações delicadas.
-            </p>
+            <div className="kicker">{benefitsKicker}</div>
+            <h2 className="h2">{benefitsTitle}</h2>
+            <p className="bodyText">{benefitsBody}</p>
           </div>
         </div>
       </section>
@@ -268,32 +304,25 @@ export default function ExpSiteV12Page() {
       <section id="features" className="section" style={{ background: "transparent" }}>
         <div className="container">
           <div className="blockText">
-            <div className="kicker">FEATURES</div>
-            <h2 className="h2">O essencial, do jeito certo.</h2>
-            <p className="bodyText">
-              Quatro pilares para reduzir ruído, aumentar clareza e manter controle.
-            </p>
+            <div className="kicker">{featuresKicker}</div>
+            <h2 className="h2">{featuresTitle}</h2>
+            <p className="bodyText">{featuresSubtitle}</p>
           </div>
 
           <div className="featuresWrap">
             <div className="featuresGrid">
+              {/* Mantive hardcoded aqui por enquanto (podemos “propizar” depois) */}
               <div className="featureCard">
-                <div className="featureIcon" aria-hidden>
-                  ▢
-                </div>
+                <div className="featureIcon" aria-hidden>▢</div>
                 <div>
                   <p className="featureLabel">INTENÇÃO</p>
                   <p className="featureTitle">Entenda o que está por trás das palavras</p>
-                  <p className="featureBody">
-                    Contexto e subtexto organizados pra você responder com clareza.
-                  </p>
+                  <p className="featureBody">Contexto e subtexto organizados pra você responder com clareza.</p>
                 </div>
               </div>
 
               <div className="featureCard">
-                <div className="featureIcon" aria-hidden>
-                  ○
-                </div>
+                <div className="featureIcon" aria-hidden>○</div>
                 <div>
                   <p className="featureLabel">VELOCIDADE</p>
                   <p className="featureTitle">Análise clara em segundos</p>
@@ -302,28 +331,22 @@ export default function ExpSiteV12Page() {
               </div>
 
               <div className="featureCard">
-                <div className="featureIcon" aria-hidden>
-                  △
-                </div>
+                <div className="featureIcon" aria-hidden>△</div>
                 <div>
                   <p className="featureLabel">SEGURANÇA</p>
                   <p className="featureTitle">Responda com contexto, não no impulso</p>
-                  <p className="featureBody">
-                    Evite escaladas e reduza risco de conflito com respostas mais estratégicas.
-                  </p>
+                  <p className="featureBody">Evite escaladas e reduza risco de conflito com respostas mais estratégicas.</p>
                 </div>
               </div>
 
               <div className="featureCard">
-                <div className="featureIcon" aria-hidden>
-                  🔒
-                </div>
+                <div className="featureIcon" aria-hidden>🔒</div>
                 <div>
                   <p className="featureLabel">PRIVACIDADE</p>
                   <p className="featureTitle">Privacidade</p>
                   <p className="featureBody">
-                    As mensagens enviadas não são armazenadas. Após a análise todas as mensagens
-                    são descartadas e guardamos apenas os metadados do resultado.
+                    As mensagens enviadas não são armazenadas. Após a análise todas as mensagens são descartadas e
+                    guardamos apenas os metadados do resultado.
                   </p>
                 </div>
               </div>
@@ -335,13 +358,13 @@ export default function ExpSiteV12Page() {
       <section id="planos" className="section" style={{ background: "transparent" }}>
         <div className="container">
           <div className="blockText">
-            <div className="kicker">PLANOS</div>
-            <h2 className="h2">Escolha o plano e siga para o app.</h2>
-            <p className="bodyText">Veja os detalhes na página de planos.</p>
+            <div className="kicker">{planosKicker}</div>
+            <h2 className="h2">{planosTitle}</h2>
+            <p className="bodyText">{planosBody}</p>
 
             <div style={{ marginTop: 18 }}>
-              <Link className="btn" href="/exp-site-v12/planos">
-                Ver planos
+              <Link className="btn" href={hrefPlanos}>
+                {planosCtaLabel}
               </Link>
             </div>
 

@@ -56,6 +56,19 @@ async function safeGetOnboardingTarget(): Promise<string | null> {
   }
 }
 
+function sanitizeNext(nextParam: string | null): string {
+  const raw = typeof nextParam === "string" ? nextParam.trim() : "";
+  if (!raw) return "/app";
+
+  // bloqueia explicitamente home MKT
+  if (raw === "/") return "/app";
+
+  // só aceitamos navegação interna do app
+  if (!raw.startsWith("/app")) return "/app";
+
+  return raw;
+}
+
 export default function RegisterPage() {
   return (
     <Suspense
@@ -80,15 +93,14 @@ function RegisterPageInner() {
   const router = useRouter();
   const sp = useSearchParams();
 
-  const verifyMode = sp.get("verify") === "1";
-  const nextParam = sp.get("next");
+  const verifyMode = (sp?.get("verify") ?? "") === "1";
+  const nextParam = sp?.get("next") ?? null;
 
-  // ⚠️ Nunca usar /app/start como default (inconsistente no projeto).
-  const redirectNext =
-    typeof nextParam === "string" && nextParam.trim() ? nextParam : "/app";
+  // ✅ Nunca permitir next apontar para "/" (home MKT) ou fora de "/app"
+  const redirectNext = sanitizeNext(nextParam);
 
   const [step, setStep] = useState<RegisterStep>(verifyMode ? "CODE" : "FORM");
-  const [email, setEmail] = useState(sp.get("email") ?? "");
+  const [email, setEmail] = useState(sp?.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
 
@@ -98,7 +110,6 @@ function RegisterPageInner() {
   const [error, setError] = useState<string>("");
   const [info, setInfo] = useState<string>("");
 
-  // Base de chamadas do browser: SEMPRE same-origin via Next API routes
   const authApi = useMemo(() => "/api/auth", []);
 
   useEffect(() => {
@@ -114,10 +125,8 @@ function RegisterPageInner() {
         if (!email && pendingEmail) setEmail(pendingEmail);
         if (!password && pendingPass) setPassword(pendingPass);
 
-        // se a sessão tinha next, prioriza ele
-        if (pendingNext && !nextParam) {
-          // não sobrescrevo URL, só uso como referência local
-        }
+        // se a sessão tinha next, prioriza ele (mas sem sobrescrever URL)
+        void pendingNext;
       } catch {}
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -136,7 +145,6 @@ function RegisterPageInner() {
 
     setLoading(true);
     try {
-      // guarda dados para o modo verify=1 (caso reload / fluxo alternativo)
       try {
         sessionStorage.setItem("decoder_pending_verify_email", eMail);
         sessionStorage.setItem("decoder_pending_verify_password", password);
@@ -216,14 +224,13 @@ function RegisterPageInner() {
           } catch {}
 
           router.replace(
-            `/app/login?email=${encodeURIComponent(
-              eMail
-            )}&next=${encodeURIComponent(redirectNext)}`
+            `/app/login?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(
+              redirectNext,
+            )}`,
           );
           return;
         }
 
-        // limpa pendências
         try {
           sessionStorage.removeItem("decoder_pending_verify_email");
           sessionStorage.removeItem("decoder_pending_verify_password");
@@ -232,7 +239,6 @@ function RegisterPageInner() {
 
         setStep("DONE");
 
-        // ✅ REGRA: após OTP+login, obedecer onboarding/trial antes de qualquer next (inclui checkout)
         const target = await safeGetOnboardingTarget();
 
         if (target && target !== "/app") {
@@ -240,15 +246,14 @@ function RegisterPageInner() {
           return;
         }
 
-        // se READY, agora sim respeita next
         router.replace(redirectNext || "/app");
         return;
       }
 
       router.replace(
-        `/app/login?email=${encodeURIComponent(
-          eMail
-        )}&next=${encodeURIComponent(redirectNext)}`
+        `/app/login?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(
+          redirectNext,
+        )}`,
       );
     } catch {
       setError("Falha de conexão. Tente novamente.");
@@ -431,9 +436,7 @@ function RegisterPageInner() {
                 type="button"
                 className="btn w-full"
                 onClick={() =>
-                  router.push(
-                    `/app/login?email=${encodeURIComponent(email || "")}`
-                  )
+                  router.push(`/app/login?email=${encodeURIComponent(email || "")}`)
                 }
                 disabled={loading}
               >
@@ -447,10 +450,7 @@ function RegisterPageInner() {
               <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
                 Conta confirmada. Vamos continuar.
               </div>
-              <button
-                className="btn-cta w-full"
-                onClick={() => router.replace("/app")}
-              >
+              <button className="btn-cta w-full" onClick={() => router.replace("/app")}>
                 Continuar
               </button>
             </div>
