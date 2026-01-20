@@ -26,6 +26,8 @@ type Banner = {
   fix?: string;
 };
 
+type Journey = "PAID" | "TRIAL" | "UNKNOWN" | string;
+
 type OnboardingStatus = {
   onboardingStage?: string;
   trialGuided?: boolean;
@@ -38,6 +40,9 @@ type OnboardingStatus = {
   // >>> adicionados para UI (sem quebrar contrato: se não vier, fica undefined)
   dialogueNickname?: string;
   creditsBalance?: number;
+
+  // >>> NOVO: se vier, usamos pra bypass do onboarding guiado
+  journey?: Journey;
 };
 
 const MIN_CHARS_NORMAL = 60;
@@ -182,10 +187,28 @@ export default function HomePage() {
   const inConversaMode = mode === "CONVERSA";
   const hasConversaSelected = !!conversaId;
 
+  // ✅ bypass one-shot: se veio do pós-checkout, não deixa onboarding “invadir”
+  const [skipOnboardingOnce, setSkipOnboardingOnce] = useState(false);
+
+  useEffect(() => {
+    try {
+      const v = sessionStorage.getItem("hitch_skip_onboarding_once");
+      if (v === "1") {
+        setSkipOnboardingOnce(true);
+        sessionStorage.removeItem("hitch_skip_onboarding_once");
+      }
+    } catch {
+      // silencioso
+    }
+  }, []);
+
   useEffect(() => {
     const list = listConversas().map((c) => ({ id: c.id, name: c.name }));
     setConversas(list);
   }, []);
+
+  // >>> helper: paid journey bypass
+  const isPaidJourney = String(onboarding?.journey ?? "").toUpperCase() === "PAID";
 
   async function refreshOnboarding() {
     try {
@@ -199,6 +222,23 @@ export default function HomePage() {
         setCreditsBalance((cur) =>
           typeof cur === "number" ? cur : data.creditsBalance!
         );
+      }
+
+      // ✅ bypass one-shot tem prioridade (independe de journey)
+      if (skipOnboardingOnce) {
+        setShowTrialStart(false);
+        setShowTrialEnd(false);
+        setStepId(null);
+        return;
+      }
+
+      // >>> BYPASS: se for PAID, NUNCA ativa trial guiado/popup
+      const isPaid = String(data?.journey ?? "").toUpperCase() === "PAID";
+      if (isPaid) {
+        setShowTrialStart(false);
+        setShowTrialEnd(false);
+        setStepId(null);
+        return;
       }
 
       const isTrialActive =
@@ -220,9 +260,13 @@ export default function HomePage() {
   useEffect(() => {
     refreshOnboarding();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [skipOnboardingOnce]);
 
+  // >>> BYPASS: paid nunca entra no guided trial, mesmo que backend retorne TRIAL_ACTIVE
+  // ✅ também bypassa no one-shot
   const isTrialGuided =
+    !skipOnboardingOnce &&
+    !isPaidJourney &&
     onboarding?.onboardingStage === "TRIAL_ACTIVE" &&
     onboarding?.trialGuided === true &&
     onboarding?.trialActive === true &&
@@ -632,12 +676,11 @@ export default function HomePage() {
     typeof creditsBalance === "number"
       ? `${creditsBalance} créditos`
       : typeof onboarding?.creditsBalance === "number"
-        ? `${onboarding.creditsBalance} créditos`
-        : "—";
+      ? `${onboarding.creditsBalance} créditos`
+      : "—";
 
   return (
     <div className="p-6 space-y-8">
-        
       <GuidedOverlay
         enabled={overlayEnabled}
         step={currentStep}
@@ -719,7 +762,6 @@ export default function HomePage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* agora vai pra /app/conta */}
           <Link className="btn" href="/app/conta">
             Conta
           </Link>
@@ -732,7 +774,9 @@ export default function HomePage() {
         <div className="flex items-center justify-between gap-4 rounded-2xl border border-[rgba(255,255,255,0.10)] bg-white/[0.02] px-4 py-3">
           {/* esquerda */}
           <div className="flex items-center gap-2 text-xs text-zinc-200/80 min-w-0">
-            <span className="shrink-0">Você será identificado nos diálogos como</span>
+            <span className="shrink-0">
+              Você será identificado nos diálogos como
+            </span>
 
             <div className="relative group shrink-0">
               <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-[11px] font-semibold text-zinc-200/80 cursor-default">
@@ -744,9 +788,13 @@ export default function HomePage() {
                   Por que isso é obrigatório?
                 </div>
                 <p className="text-zinc-200/80 leading-relaxed">
-                  O sistema usa esse nome para separar você da outra pessoa no diálogo.
+                  O sistema usa esse nome para separar você da outra pessoa no
+                  diálogo.
                   <br />
-                  Se o nome não corresponder ao que aparece na conversa, a interpretação do contexto fica incorreta e a qualidade da análise e, principalmente, das respostas sugeridas será comprometida.
+                  Se o nome não corresponder ao que aparece na conversa, a
+                  interpretação do contexto fica incorreta e a qualidade da
+                  análise e, principalmente, das respostas sugeridas será
+                  comprometida.
                 </p>
               </div>
             </div>
@@ -759,7 +807,7 @@ export default function HomePage() {
 
           {/* direita */}
           <div className="text-xs text-zinc-300/80 whitespace-nowrap">
-            Seu saldo atual de créditos é de:    {" "}
+            Seu saldo atual de créditos é de:{" "}
             <span className="text-zinc-100 font-semibold">{balanceLabel}</span>
           </div>
         </div>
@@ -789,7 +837,9 @@ export default function HomePage() {
         <div className="segmented w-fit gap-1">
           <button
             data-tour-id="quick-mode-summary"
-            className={`btn-seg ${quickMode === "RESUMO" ? "btn-seg-active" : ""}`}
+            className={`btn-seg ${
+              quickMode === "RESUMO" ? "btn-seg-active" : ""
+            }`}
             onClick={() => {
               setQuickMode("RESUMO");
             }}
@@ -801,7 +851,9 @@ export default function HomePage() {
 
           <button
             data-tour-id="quick-mode-reply"
-            className={`btn-seg ${quickMode === "RESPONDER" ? "btn-seg-active" : ""}`}
+            className={`btn-seg ${
+              quickMode === "RESPONDER" ? "btn-seg-active" : ""
+            }`}
             onClick={() => {
               setQuickMode("RESPONDER");
               setResult(null);
@@ -815,11 +867,16 @@ export default function HomePage() {
         </div>
 
         <div className="label pt-2">Tipo de relação</div>
-        <div className="flex flex-wrap gap-2" data-tour-id="quick-relationship-option">
+        <div
+          className="flex flex-wrap gap-2"
+          data-tour-id="quick-relationship-option"
+        >
           {relationshipOptions.map((opt) => (
             <button
               key={opt.value}
-              className={`chip ${relationshipType === opt.value ? "chip-active" : ""}`}
+              className={`chip ${
+                relationshipType === opt.value ? "chip-active" : ""
+              }`}
               onClick={() => setRelationshipType(opt.value)}
               disabled={loading}
               type="button"
@@ -843,7 +900,9 @@ export default function HomePage() {
           <div className="rounded-2xl border border-zinc-800/70 bg-black/30 p-4 text-sm">
             <div className="font-medium">{banner.title}</div>
             <div className="text-zinc-300/80">{banner.reason}</div>
-            {banner.fix && <div className="text-zinc-300/70">{banner.fix}</div>}
+            {banner.fix && (
+              <div className="text-zinc-300/70">{banner.fix}</div>
+            )}
           </div>
         )}
       </div>

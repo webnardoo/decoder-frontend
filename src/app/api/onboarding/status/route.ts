@@ -1,4 +1,3 @@
-// FRONT — src/app/api/onboarding/status/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
@@ -31,6 +30,19 @@ async function getAuthTokenFromCookies(): Promise<string | null> {
   return normalized || null;
 }
 
+function pickJourney(data: any): string | undefined {
+  const direct = data?.journey;
+  if (typeof direct === "string" && direct.trim()) return direct;
+
+  const fromUser = data?.user?.journey;
+  if (typeof fromUser === "string" && fromUser.trim()) return fromUser;
+
+  const fromMeta = data?.meta?.journey;
+  if (typeof fromMeta === "string" && fromMeta.trim()) return fromMeta;
+
+  return undefined;
+}
+
 export async function GET() {
   try {
     const backendBaseUrl = getBackendBaseUrl();
@@ -40,7 +52,6 @@ export async function GET() {
       return NextResponse.json({ message: "Não autenticado." }, { status: 401 });
     }
 
-    // ✅ FIX: endpoint correto no BACK é /api/v1/onboarding/status (sem /app)
     const upstream = await fetch(`${backendBaseUrl}/api/v1/onboarding/status`, {
       method: "GET",
       headers: {
@@ -62,6 +73,12 @@ export async function GET() {
         { message: "Resposta inválida do backend (não-JSON).", raw: text || null },
         { status: 502 }
       );
+    }
+
+    // ✅ Normaliza journey sem inventar: só promove pra raiz se existir em algum lugar
+    const journey = pickJourney(data);
+    if (journey && data && typeof data === "object" && typeof data.journey !== "string") {
+      data = { ...data, journey };
     }
 
     return NextResponse.json(data, { status: upstream.status });
