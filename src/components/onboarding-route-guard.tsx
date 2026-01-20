@@ -37,7 +37,8 @@ function getHttpStatusFromError(err: any): number | null {
   if (typeof err?.body?.status === "number") return err.body.status;
 
   if (typeof err?.backendStatus === "number") return err.backendStatus;
-  if (typeof err?.backendBody?.statusCode === "number") return err.backendBody.statusCode;
+  if (typeof err?.backendBody?.statusCode === "number")
+    return err.backendBody.statusCode;
 
   return null;
 }
@@ -45,6 +46,8 @@ function getHttpStatusFromError(err: any): number | null {
 export function OnboardingRouteGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const safePathname = pathname ?? "";
+
   const { status, loading, error, refreshStatus } = useOnboardingStatus();
 
   useEffect(() => {
@@ -54,7 +57,7 @@ export function OnboardingRouteGuard({ children }: { children: React.ReactNode }
     const http = getHttpStatusFromError(error);
     if (http === 401 || http === 403) {
       // login real nesta branch: /app/login
-      if (pathname !== "/app/login") router.replace("/app/login");
+      if (safePathname !== "/app/login") router.replace("/app/login");
       return;
     }
 
@@ -70,18 +73,18 @@ export function OnboardingRouteGuard({ children }: { children: React.ReactNode }
     // ✅ assinante ativo nunca fica preso em jornada
     if (status.subscriptionActive === true) {
       const isJourneyRoute =
-        pathname === "/app/tutorial" ||
-        pathname === "/app/start" ||
-        pathname.startsWith("/app/onboarding") ||
-        pathname.startsWith("/app/billing") ||
-        pathname.startsWith("/app/checkout");
+        safePathname === "/app/tutorial" ||
+        safePathname === "/app/start" ||
+        safePathname.startsWith("/app/onboarding") ||
+        safePathname.startsWith("/app/billing") ||
+        safePathname.startsWith("/app/checkout");
 
       if (isJourneyRoute) router.replace("/app");
       return;
     }
 
     // ✅ permite permanecer em /app/checkout enquanto NÃO é assinante
-    if (pathname.startsWith("/app/checkout")) {
+    if (safePathname.startsWith("/app/checkout")) {
       if (String(status.onboardingStage || "").toUpperCase().trim() === "READY") {
         router.replace("/app");
       }
@@ -89,14 +92,14 @@ export function OnboardingRouteGuard({ children }: { children: React.ReactNode }
     }
 
     // ✅ tutorialPopupsPending manda pro tutorial real
-    if (status.tutorialPopupsPending && pathname !== "/app/tutorial") {
+    if (status.tutorialPopupsPending && safePathname !== "/app/tutorial") {
       router.replace("/app/tutorial");
       return;
     }
 
     const target = routeForStage(status.onboardingStage);
-    if (pathname !== target) router.replace(target);
-  }, [loading, error, status, pathname, router]);
+    if (safePathname !== target) router.replace(target);
+  }, [loading, error, status, safePathname, router]);
 
   if (loading) {
     return <div className="card p-5 text-sm text-zinc-400">Carregando…</div>;

@@ -30,6 +30,33 @@ a {
   text-decoration: none;
 }
 
+/* =========================================================
+   FUNDO BASE FIXO (SÓ QUANDO A PÁGINA USAR A CLASSE)
+   - radial central: #240A61 com 67% -> preto
+   - FIXO na viewport (não rola)
+   ========================================================= */
+.h-fixed-radial-bg {
+  position: relative;
+  isolation: isolate; /* garante empilhamento correto */
+}
+
+.h-fixed-radial-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+
+  /* radial central fixo */
+  background: radial-gradient(
+    1200px 700px at 50% 50%,
+    rgba(36, 10, 97, 0.67) 0%,
+    rgba(36, 10, 97, 0.35) 28%,
+    rgba(0, 0, 0, 1) 72%,
+    rgba(0, 0, 0, 1) 100%
+  );
+}
+
 /* background do app (aplicado via class no wrapper/layout quando existir) */
 .h-app-bg {
   background: var(--h-app-bg);

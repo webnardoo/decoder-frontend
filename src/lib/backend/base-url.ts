@@ -6,7 +6,6 @@ function isPrd(): boolean {
     .trim()
     .toLowerCase();
 
-  // Vercel define VERCEL_ENV=production em PRD
   const vercelEnv = String(process.env.VERCEL_ENV || "").trim().toLowerCase();
   const nodeEnv = String(process.env.NODE_ENV || "").trim().toLowerCase();
 
@@ -27,26 +26,35 @@ function readEnv(name: string): string {
   return String(((process.env as any)?.[name] as any) ?? "").trim();
 }
 
+function stripApiV1(input: string): string {
+  let base = String(input || "").trim().replace(/\/+$/, "");
+  if (base.endsWith("/api/v1")) base = base.slice(0, -"/api/v1".length);
+  return base;
+}
+
 /**
  * Snapshot para debug em runtime (Vercel).
- * Não vaza valores sensíveis; só indica presença/ausência e metadados do deploy.
+ * Não vaza valores sensíveis; só presença/ausência e metadados do deploy.
  */
 export function __debugBackendBaseUrlSnapshot() {
   const prd = isPrd();
 
   const knownKeys = [
-    // ✅ a key que você diz existir (precisa aparecer como true aqui)
-    "NEXT_PUBLIC_API_BASE_URL",
+    "APP_ENV",
+    "NEXT_PUBLIC_APP_ENV",
 
-    // outras possíveis (mantidas por compatibilidade)
+    // Preferidas por ambiente
+    "BACKEND_URL_LOCAL",
+    "BACKEND_URL_PRD",
+
+    // Alternativas/legado (mantidas por compatibilidade)
+    "NEXT_PUBLIC_API_BASE_URL",
+    "NEXT_PUBLIC_API_BASE_URL_LOCAL",
+    "NEXT_PUBLIC_API_BASE_URL_PRD",
     "NEXT_PUBLIC_DECODER_BACKEND_BASE_URL",
     "DECODER_BACKEND_BASE_URL",
     "NEXT_PUBLIC_BACKEND_URL",
-    "BACKEND_URL_PRD",
-    "NEXT_PUBLIC_API_BASE_URL_PRD",
     "BACKEND_URL",
-    "BACKEND_URL_LOCAL",
-    "NEXT_PUBLIC_API_BASE_URL_LOCAL",
   ];
 
   return {
@@ -56,20 +64,12 @@ export function __debugBackendBaseUrlSnapshot() {
     VERCEL_ENV: readEnv("VERCEL_ENV") || null,
     NODE_ENV: readEnv("NODE_ENV") || null,
 
-    // Prova do deploy rodando
     VERCEL_GIT_COMMIT_SHA: readEnv("VERCEL_GIT_COMMIT_SHA") || null,
     VERCEL_GIT_COMMIT_REF: readEnv("VERCEL_GIT_COMMIT_REF") || null,
     VERCEL_URL: readEnv("VERCEL_URL") || null,
     VERCEL_REGION: readEnv("VERCEL_REGION") || null,
 
     keys: Object.fromEntries(knownKeys.map((k) => [k, hasEnv(k)])),
-
-    // Para detectar caso bizarro: key existe mas vem com espaços/quebra de linha
-    rawLengths: {
-      NEXT_PUBLIC_API_BASE_URL: readEnv("NEXT_PUBLIC_API_BASE_URL")
-        ? readEnv("NEXT_PUBLIC_API_BASE_URL").length
-        : 0,
-    },
   };
 }
 
@@ -79,27 +79,25 @@ export function __debugBackendBaseUrlSnapshot() {
  * - https://hitchai-backend-production.up.railway.app
  */
 export function getBackendBaseUrl(): string {
-  // Ordem: preferir variáveis que você já tem no Vercel
-  const raw =
-    process.env.NEXT_PUBLIC_API_BASE_URL || // ✅ esta é a principal
-    process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL ||
-    process.env.DECODER_BACKEND_BASE_URL ||
-    process.env.NEXT_PUBLIC_BACKEND_URL ||
-    process.env.BACKEND_URL_PRD ||
-    process.env.NEXT_PUBLIC_API_BASE_URL_PRD ||
-    process.env.BACKEND_URL ||
-    process.env.BACKEND_URL_LOCAL ||
-    process.env.NEXT_PUBLIC_API_BASE_URL_LOCAL ||
-    "http://127.0.0.1:4100";
+  const prd = isPrd();
 
-  let base = String(raw || "").trim().replace(/\/+$/, "");
+  // ✅ Seleção por ambiente (isso corrige teu caso)
+  const envPicked = prd
+    ? readEnv("BACKEND_URL_PRD") ||
+      readEnv("NEXT_PUBLIC_API_BASE_URL_PRD") ||
+      readEnv("NEXT_PUBLIC_API_BASE_URL") ||
+      readEnv("BACKEND_URL")
+    : readEnv("BACKEND_URL_LOCAL") ||
+      readEnv("NEXT_PUBLIC_API_BASE_URL_LOCAL") ||
+      readEnv("NEXT_PUBLIC_API_BASE_URL") ||
+      readEnv("BACKEND_URL");
+
+  const base = stripApiV1(envPicked || "http://127.0.0.1:4100");
+
   if (!base) throw new Error("Backend base URL não definido");
 
-  // Se vier com /api/v1, remove (helper devolve BASE sem /api/v1)
-  if (base.endsWith("/api/v1")) base = base.slice(0, -"/api/v1".length);
-
   // ✅ Regra PRD: nunca permitir localhost como BASE
-  if (isPrd() && /localhost|127\.0\.0\.1/.test(base)) {
+  if (prd && /localhost|127\.0\.0\.1/.test(base)) {
     throw new Error(
       "PRD: Backend base URL inválida (localhost). Verifique envs do Vercel."
     );

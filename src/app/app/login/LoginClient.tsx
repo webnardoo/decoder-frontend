@@ -48,14 +48,16 @@ export default function LoginClient() {
   const [guardChecked, setGuardChecked] = useState(false);
 
   const redirectTo = useMemo(() => {
-    const next = sp.get("next");
+    const next = sp?.get("next");
     return typeof next === "string" && next.trim() ? next : "/app";
   }, [sp]);
 
   useEffect(() => {
-    const prefillEmailRaw = sp.get("email");
+    const prefillEmailRaw = sp?.get("email");
     const prefillEmail =
-      typeof prefillEmailRaw === "string" ? prefillEmailRaw.trim().toLowerCase() : "";
+      typeof prefillEmailRaw === "string"
+        ? prefillEmailRaw.trim().toLowerCase()
+        : "";
 
     if (prefillEmail) setEmail(prefillEmail);
 
@@ -83,7 +85,9 @@ export default function LoginClient() {
           body: JSON.stringify({ email: prefillEmail }),
         });
 
-        const data = (await res.json().catch(() => null)) as RegisterExistsResponse | null;
+        const data = (await res.json().catch(() => null)) as
+          | RegisterExistsResponse
+          | null;
 
         if (!res.ok) {
           setRegisterExists(false);
@@ -192,7 +196,9 @@ export default function LoginClient() {
     <>
       <div className="flex-1 flex items-center justify-center px-4 py-10">
         <div className="w-full max-w-md card card-premium p-6 md:p-7">
-          <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Entrar</h1>
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
+            Entrar
+          </h1>
           <p className="mt-1 text-sm text-zinc-300/80">
             Use seu e-mail e senha para acessar.
           </p>

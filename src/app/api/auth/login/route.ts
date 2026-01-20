@@ -1,4 +1,3 @@
-// src/app/api/auth/login/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getBackendBaseUrl } from "@/lib/backend/base-url";
@@ -15,12 +14,18 @@ function isPrd(): boolean {
   const nextPublicAppEnv = String(process.env.NEXT_PUBLIC_APP_ENV || "")
     .trim()
     .toLowerCase();
+
   return (
     vercelEnv === "production" ||
     nodeEnv === "production" ||
     appEnv === "prd" ||
     nextPublicAppEnv === "prd"
   );
+}
+
+function canDebug(): boolean {
+  // Só devolve base/url no response quando NÃO for PRD
+  return !isPrd();
 }
 
 export async function POST(req: Request) {
@@ -36,8 +41,19 @@ export async function POST(req: Request) {
       );
     }
 
-    const base = getBackendBaseUrl();
+    const base = String(getBackendBaseUrl() || "").trim().replace(/\/+$/, "");
     const url = `${base}/api/v1/auth/login`;
+
+    if (!base) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Backend base URL vazio. Verifique envs e getBackendBaseUrl().",
+          ...(canDebug() ? { base, url } : {}),
+        },
+        { status: 500 }
+      );
+    }
 
     const upstream = await fetch(url, {
       method: "POST",
@@ -47,12 +63,14 @@ export async function POST(req: Request) {
     });
 
     const data = await upstream.json().catch(() => ({} as any));
+
     if (!upstream.ok) {
       return NextResponse.json(
         {
           ok: false,
           status: upstream.status,
           error: data?.message || data?.error || "Falha no login (backend).",
+          ...(canDebug() ? { base, url } : {}),
         },
         { status: upstream.status }
       );
@@ -61,19 +79,21 @@ export async function POST(req: Request) {
     const accessToken = String(data?.accessToken || "").trim();
     if (!accessToken) {
       return NextResponse.json(
-        { ok: false, error: "Backend não retornou accessToken." },
+        {
+          ok: false,
+          error: "Backend não retornou accessToken.",
+          ...(canDebug() ? { base, url } : {}),
+        },
         { status: 502 }
       );
     }
 
-    // ✅ Cookie do APP setado pelo Vercel (domínio correto automaticamente)
     const cookieStore = await cookies();
     cookieStore.set("decoder_auth", accessToken, {
       httpOnly: true,
       secure: isPrd(),
       sameSite: "lax",
       path: "/",
-      // NÃO definir domain aqui. Em Vercel, deixa o browser usar o domínio atual (hitchai.online).
     });
 
     return NextResponse.json(

@@ -3,9 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-type CheckoutSessionResponse =
-  | { url: string }
-  | { message?: string };
+type CheckoutSessionResponse = { url: string } | { message?: string };
 
 type BillingCycle = "monthly" | "annual";
 
@@ -26,9 +24,10 @@ type OnboardingStatus = { onboardingStage: string };
 export default function CheckoutClient() {
   const router = useRouter();
   const sp = useSearchParams();
+  const qp = sp ?? new URLSearchParams();
 
-  const planId = String(sp.get("planId") || "").trim(); // Plan.id (FK)
-  const billingCycle = String(sp.get("billingCycle") || "").trim() as BillingCycle; // monthly|annual
+  const planId = String(qp.get("planId") || "").trim(); // Plan.id (FK)
+  const billingCycle = String(qp.get("billingCycle") || "").trim() as BillingCycle; // monthly|annual
 
   const planLabel = useMemo(() => {
     const p = planId.toLowerCase();
@@ -116,7 +115,7 @@ export default function CheckoutClient() {
 
     // Se o usuário já voltou do Stripe para /checkout por algum motivo,
     // tentamos apenas obedecer onboarding (read-only) e sair da tela.
-    const returned = sp.get("returned");
+    const returned = qp.get("returned");
     if (returned) {
       void fetchOnboardingAndRedirect();
       return;
