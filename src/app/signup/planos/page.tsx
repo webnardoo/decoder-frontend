@@ -23,13 +23,11 @@ type RegisterExistsResponse = {
 
 type BillingMeResponse = {
   ok?: boolean;
+  subscriptionActive?: boolean;
   plan?: {
-    planId?: string;
-    id?: string;
     code?: string;
     name?: string;
   } | null;
-  billingCycle?: string | null;
   [k: string]: any;
 };
 
@@ -146,9 +144,9 @@ export default function PublicPlansClient() {
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
   const [plans, setPlans] = useState<PublicPlan[]>([]);
 
-  // ✅ plano atual (se estiver logado)
-  const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
-  const [currentPlanName, setCurrentPlanName] = useState<string | null>(null);
+  // ✅ para desabilitar plano atual e mostrar mensagem
+  const [loadingMe, setLoadingMe] = useState(true);
+  const [me, setMe] = useState<BillingMeResponse | null>(null);
 
   const cycleLabel = useMemo(
     () => (cycle === "monthly" ? "Mensal" : "Anual"),
@@ -156,6 +154,15 @@ export default function PublicPlansClient() {
   );
 
   const isBusy = loadingPlans || choosingPlanId != null;
+
+  const currentPlanKey = useMemo(() => {
+    const raw = me?.plan?.code;
+    return raw ? codeKey(String(raw)) : null;
+  }, [me]);
+
+  const currentPlanName = useMemo(() => {
+    return me?.plan?.name ? String(me.plan.name) : null;
+  }, [me]);
 
   useEffect(() => {
     let cancelled = false;
@@ -182,40 +189,36 @@ export default function PublicPlansClient() {
       }
     }
 
-    async function loadCurrentPlanIfLogged() {
+    async function loadMe() {
       try {
+        setLoadingMe(true);
         const res = await fetch("/api/v1/billing/me", { cache: "no-store" });
-
-        // não logado → ignora (página pública)
-        if (res.status === 401 || res.status === 403) return;
-
-        const data = (await res.json().catch(() => ({}))) as BillingMeResponse;
-        if (!res.ok) return;
-
-        const pid = String(data?.plan?.planId || data?.plan?.id || "");
-        const pname = String(data?.plan?.name || data?.plan?.code || "");
-
-        if (!cancelled) {
-          setCurrentPlanId(pid || null);
-          setCurrentPlanName(pname || null);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          // se não autenticado, só ignora (página pública também pode existir)
+          if (!cancelled) setMe(null);
+          return;
         }
+        if (!cancelled) setMe(data as BillingMeResponse);
       } catch {
-        // silencioso: não bloqueia a tela
+        if (!cancelled) setMe(null);
+      } finally {
+        if (!cancelled) setLoadingMe(false);
       }
     }
 
     void loadPlans();
-    void loadCurrentPlanIfLogged();
+    void loadMe();
 
     return () => {
       cancelled = true;
     };
   }, []);
 
-  async function onSubscribe(planId: string, planDisplayNameForMsg: string) {
-    // ✅ guarda: se já é o plano atual
-    if (currentPlanId && planId === currentPlanId) {
-      setErr(`Você já é assinante do plano ${planDisplayNameForMsg} selecione outro plano.`);
+  async function onSubscribe(planId: string, planCode: string, planNameForMsg: string) {
+    // ✅ trava se já for o plano atual
+    if (currentPlanKey && codeKey(planCode) === currentPlanKey) {
+      setErr(`Você já é assinante do plano ${planNameForMsg} selecione outro plano.`);
       return;
     }
 
@@ -335,10 +338,8 @@ export default function PublicPlansClient() {
               {plans
                 .slice()
                 .sort((a, b) => {
-                  const oa =
-                    codeKey(a.code) === "pro" ? 2 : codeKey(a.code) === "unlimited" ? 3 : 1;
-                  const ob =
-                    codeKey(b.code) === "pro" ? 2 : codeKey(b.code) === "unlimited" ? 3 : 1;
+                  const oa = codeKey(a.code) === "pro" ? 2 : codeKey(a.code) === "unlimited" ? 3 : 1;
+                  const ob = codeKey(b.code) === "pro" ? 2 : codeKey(b.code) === "unlimited" ? 3 : 1;
                   return oa - ob;
                 })
                 .map((p) => {
@@ -347,9 +348,10 @@ export default function PublicPlansClient() {
                   const canUseCycle = p.billingCycles?.includes(cycle);
                   const isChoosingThis = choosingPlanId === p.planId;
 
-                  // ✅ plano atual
-                  const isCurrentPlan = !!currentPlanId && p.planId === currentPlanId;
-                  const planDisplayNameForMsg = currentPlanName || p.name || ui.title;
+                  const isCurrentPlan =
+                    !loadingMe && currentPlanKey != null && key === currentPlanKey;
+
+                  const planDisplayName = currentPlanName || ui.title;
 
                   return (
                     <div
@@ -370,7 +372,9 @@ export default function PublicPlansClient() {
                         }}
                       />
 
-                      <div className="relative p-5 md:p-6">
+                      {/* ✅ layout travado para ficar igual em DEV e PRD */}
+                      <div className="relative p-5 md:p-6 flex flex-col min-h-[420px]">
+                        {/* pill */}
                         <div className="mb-3">
                           <div
                             className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] text-zinc-200 border ${ui.topPillBorder} ${ui.topPillBg}`}
@@ -379,61 +383,62 @@ export default function PublicPlansClient() {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-[1fr_auto] gap-4 items-center md:grid-cols-1 md:items-start">
-                          <div className="min-w-0 space-y-2">
-                            <div className="text-sm font-semibold tracking-wide text-zinc-200">
-                              {ui.title}
-                            </div>
-
-                            <div className="text-3xl font-semibold tracking-tight text-zinc-100">
-                              {ui.price}
-                            </div>
-
-                            <div className="text-sm text-zinc-200/90">{ui.midLine}</div>
-
-                            <div className="text-sm text-zinc-400 leading-relaxed md:hidden">
-                              {ui.bodyShort}
-                            </div>
-
-                            <div className="hidden md:block text-sm text-zinc-400 leading-relaxed">
-                              {ui.bodyLong}
-                            </div>
+                        {/* conteúdo */}
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="text-sm font-semibold tracking-wide text-zinc-200">
+                            {ui.title}
                           </div>
 
-                          <div className="flex flex-col items-end gap-2 w-[190px] md:w-full md:items-stretch">
-                            <button
-                              className="w-[190px] rounded-full px-4 py-3 text-sm font-semibold transition-transform active:scale-[0.99] disabled:opacity-60 md:w-full"
-                              disabled={isBusy || !canUseCycle || isCurrentPlan}
-                              onClick={() => void onSubscribe(p.planId, planDisplayNameForMsg)}
-                              type="button"
-                              style={{
-                                background: ui.ctaBg,
-                                border: `1px solid ${ui.ctaBorder}`,
-                                color: ui.ctaText,
-                                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18)",
-                              }}
-                            >
-                              {isCurrentPlan ? "Plano atual" : isChoosingThis ? "Abrindo…" : ui.cta}
-                            </button>
+                          <div className="text-3xl font-semibold tracking-tight text-zinc-100">
+                            {ui.price}
+                          </div>
 
-<div
-  className={`w-[190px] md:w-full md:text-left ${
-    isCurrentPlan
-      ? "text-sm md:text-base font-medium text-zinc-200"
-      : "text-xs text-zinc-400"
-  }`}
->
-  {isCurrentPlan
-    ? `Você já é assinante do plano ${planDisplayNameForMsg}`
-    : ui.hint}
-</div>
+                          <div className="text-sm text-zinc-200/90">{ui.midLine}</div>
+
+                          <div className="text-sm text-zinc-400 leading-relaxed md:hidden">
+                            {ui.bodyShort}
+                          </div>
+
+                          <div className="hidden md:block text-sm text-zinc-400 leading-relaxed">
+                            {ui.bodyLong}
                           </div>
                         </div>
 
-                        <div className="text-[11px] text-zinc-500 text-center pt-1 md:text-left">
-                          Modalidade: <span className="text-zinc-300">{cycleLabel}</span>
-                          {!canUseCycle && (
-                            <span className="ml-2 text-red-300">• indisponível neste ciclo</span>
+                        {/* CTA preso no rodapé */}
+                        <div className="mt-5">
+                          <button
+                            className="w-full rounded-full px-4 py-3 text-sm font-semibold transition-transform active:scale-[0.99] disabled:opacity-60"
+                            disabled={isBusy || !canUseCycle || isCurrentPlan}
+                            onClick={() => void onSubscribe(p.planId, p.code, planDisplayName)}
+                            type="button"
+                            style={{
+                              background: ui.ctaBg,
+                              border: `1px solid ${ui.ctaBorder}`,
+                              color: ui.ctaText,
+                              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18)",
+                            }}
+                          >
+                            {isCurrentPlan ? "Plano atual" : isChoosingThis ? "Abrindo…" : ui.cta}
+                          </button>
+
+                          <div className="mt-2 text-xs text-zinc-400 text-center">
+                            {ui.hint}
+                          </div>
+
+                          <div className="mt-2 text-[11px] text-zinc-500 text-center">
+                            Modalidade: <span className="text-zinc-300">{cycleLabel}</span>
+                            {!canUseCycle && (
+                              <span className="ml-2 text-red-300">• indisponível neste ciclo</span>
+                            )}
+                          </div>
+
+                          {/* ✅ mensagem maior para assinante */}
+                          {isCurrentPlan && (
+                            <div className="mt-2 text-sm text-zinc-200/80 text-center">
+                              Você já é assinante do plano{" "}
+                              <span className="text-zinc-100 font-semibold">{planDisplayName}</span>{" "}
+                              selecione outro plano.
+                            </div>
                           )}
                         </div>
 
