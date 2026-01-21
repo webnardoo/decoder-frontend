@@ -771,10 +771,10 @@ export default function HomePage() {
       {/* CARD QUICK */}
       <div className="card card-premium p-6 space-y-4">
         {/* Identificação */}
-        <div className="flex items-center justify-between gap-4 rounded-2xl border border-[rgba(255,255,255,0.10)] bg-white/[0.02] px-4 py-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 rounded-2xl border border-[rgba(255,255,255,0.10)] bg-white/[0.02] px-4 py-3">
           {/* esquerda */}
-          <div className="flex items-center gap-2 text-xs text-zinc-200/80 min-w-0">
-            <span className="shrink-0">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-200/80 min-w-0">
+            <span className="whitespace-normal">
               Você será identificado nos diálogos como
             </span>
 
@@ -806,7 +806,7 @@ export default function HomePage() {
           </div>
 
           {/* direita */}
-          <div className="text-xs text-zinc-300/80 whitespace-nowrap">
+          <div className="text-xs text-zinc-300/80 text-left sm:text-right w-full sm:w-auto break-words">
             Seu saldo atual de créditos é de:{" "}
             <span className="text-zinc-100 font-semibold">{balanceLabel}</span>
           </div>
@@ -837,9 +837,7 @@ export default function HomePage() {
         <div className="segmented w-fit gap-1">
           <button
             data-tour-id="quick-mode-summary"
-            className={`btn-seg ${
-              quickMode === "RESUMO" ? "btn-seg-active" : ""
-            }`}
+            className={`btn-seg ${quickMode === "RESUMO" ? "btn-seg-active" : ""}`}
             onClick={() => {
               setQuickMode("RESUMO");
             }}
@@ -900,9 +898,7 @@ export default function HomePage() {
           <div className="rounded-2xl border border-zinc-800/70 bg-black/30 p-4 text-sm">
             <div className="font-medium">{banner.title}</div>
             <div className="text-zinc-300/80">{banner.reason}</div>
-            {banner.fix && (
-              <div className="text-zinc-300/70">{banner.fix}</div>
-            )}
+            {banner.fix && <div className="text-zinc-300/70">{banner.fix}</div>}
           </div>
         )}
       </div>

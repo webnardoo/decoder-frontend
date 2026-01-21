@@ -3,20 +3,35 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const BACKEND_URL = process.env.BACKEND_URL;
-
 function normalizeBaseUrl(raw?: string) {
   const v = (raw ?? "").trim();
   if (!v) return null;
-  // remove trailing slash
   return v.endsWith("/") ? v.slice(0, -1) : v;
 }
 
-export async function POST(req: NextRequest) {
-  const baseUrl = normalizeBaseUrl(BACKEND_URL);
+function getBaseUrl() {
+  // 1) PRD canônico (server env)
+  const prd = normalizeBaseUrl(process.env.BACKEND_URL);
+  if (prd) return prd;
 
-  if (!baseUrl) {
-    console.error("[/api/auth/register] BACKEND_URL ausente em runtime.");
+  // 2) DEV (mantém compatível com o padrão do front)
+  const dev =
+    normalizeBaseUrl(process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL) ??
+    normalizeBaseUrl(process.env.NEXT_PUBLIC_HITCH_BACKEND_BASE_URL);
+
+  if (dev) return dev;
+
+  // 3) fallback local
+  return "http://localhost:4100";
+}
+
+export async function POST(req: NextRequest) {
+  const baseUrl = getBaseUrl();
+
+  // Protege PRD: se estiver em produção e BACKEND_URL não existir, não deixa cair em localhost.
+  const isProd = process.env.NODE_ENV === "production";
+  if (isProd && !normalizeBaseUrl(process.env.BACKEND_URL)) {
+    console.error("[/api/auth/register] BACKEND_URL ausente em runtime (production).");
     return NextResponse.json(
       { message: "Configuração ausente: BACKEND_URL não está definida em PRD." },
       { status: 500 },

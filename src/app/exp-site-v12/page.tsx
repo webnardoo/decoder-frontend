@@ -75,7 +75,7 @@ function HeroImageOverlay() {
 export default function ExpSiteV12Page() {
   return (
     <main className="page h-fixed-radial-bg">
-      {/* OVERRIDES — remove overlays que geram “faixa” nos heros */}
+      {/* OVERRIDES — remove overlays que geram “faixa” nos heros + FIX NAV MOBILE */}
       <style jsx global>{`
         /* remove a faixa/retângulo aplicado via pseudo-elemento no HERO 1 */
         .hero1::after {
@@ -92,6 +92,51 @@ export default function ExpSiteV12Page() {
         .hero2,
         .section {
           background: transparent !important;
+        }
+
+        /* =========================
+           FIX: NAV LINKS NO MOBILE
+           ========================= */
+        .navInner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
+
+        /* força exibição do bloco da direita mesmo se houver "hidden" via CSS externo */
+        .navRight {
+          display: flex !important;
+          align-items: center;
+          gap: 16px;
+          flex: 0 0 auto;
+        }
+
+        /* garante que links não sejam escondidos por media query externa */
+        .navRight .navLink {
+          display: inline-flex !important;
+          align-items: center;
+          white-space: nowrap;
+        }
+
+        /* Mobile: encaixar links ao lado do botão */
+        @media (max-width: 640px) {
+          .navRight {
+            gap: 10px;
+          }
+
+          .navRight .navLink {
+            font-size: 13px;
+            opacity: 0.9;
+          }
+
+          /* deixa o botão caber sem esmagar os links */
+          .navRight .btnPrimary {
+            padding: 10px 12px;
+            font-size: 13px;
+            line-height: 1;
+            white-space: nowrap;
+          }
         }
       `}</style>
 
@@ -153,7 +198,11 @@ export default function ExpSiteV12Page() {
         }}
       >
         {/* HERO 1 */}
-        <section id="top" className="section hero1" style={{ position: "relative", zIndex: 2 }}>
+        <section
+          id="top"
+          className="section hero1"
+          style={{ position: "relative", zIndex: 2 }}
+        >
           <div className="container">
             <div
               className="heroGrid"

@@ -56,12 +56,14 @@ export default function ContaPage() {
   const [billingMe, setBillingMe] = useState<BillingMeResponse | null>(null);
   const [planMsg, setPlanMsg] = useState<string | null>(null);
 
+  const [loggingOut, setLoggingOut] = useState(false);
+
   async function loadOnboardingStatus() {
     setLoadingProfile(true);
     setProfileMsg(null);
 
     try {
-      const res = await fetch("/api/onboarding/status");
+      const res = await fetch("/api/onboarding/status", { cache: "no-store" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message || "Falha ao carregar perfil.");
       setStatus(data);
@@ -103,7 +105,7 @@ export default function ContaPage() {
     setPlanMsg(null);
 
     try {
-      const res = await fetch("/api/v1/billing/me");
+      const res = await fetch("/api/v1/billing/me", { cache: "no-store" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message || "Falha ao carregar plano.");
       setBillingMe(data);
@@ -115,9 +117,60 @@ export default function ContaPage() {
     }
   }
 
+  async function handleLogout() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    setProfileMsg(null);
+    setPlanMsg(null);
+
+    try {
+      // 1) derruba sessão (cookies) no servidor Next
+      const res = await fetch("/api/auth/logout", {
+        method: "POST",
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.message || "Falha ao sair.");
+      }
+
+      // 2) limpa storages do client (seguro; evita tokens em localStorage/sessionStorage)
+      try {
+        sessionStorage.clear();
+      } catch {}
+      try {
+        // remove chaves comuns sem nukar tudo (mais conservador)
+        const keys = [
+          "token",
+          "accessToken",
+          "refreshToken",
+          "jwt",
+          "session",
+          "decoder_token",
+          "hitch_token",
+          "hitch_access_token",
+          "hitch_refresh_token",
+        ];
+        for (const k of keys) localStorage.removeItem(k);
+      } catch {}
+
+      // 3) vai para Home MKT (app/page => "/")
+      router.replace("/");
+      router.refresh();
+    } catch (e: any) {
+      const msg = String(e?.message || "Erro ao sair.");
+      setProfileMsg(msg);
+      setPlanMsg(msg);
+    } finally {
+      setLoggingOut(false);
+    }
+  }
+
   useEffect(() => {
     loadOnboardingStatus();
     loadBillingMe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // --------- labels defensivos ---------
@@ -128,7 +181,7 @@ export default function ContaPage() {
       status?.subscription?.planName ||
       status?.planName ||
       "—",
-    [billingMe, status]
+    [billingMe, status],
   );
 
   const billingCycleLabel = useMemo(() => {
@@ -167,6 +220,9 @@ export default function ContaPage() {
     return raw ? formatDate(raw) : "—";
   }, [billingMe, status]);
 
+  const disableAll =
+    loadingProfile || savingNickname || loadingPlan || loggingOut;
+
   return (
     <div className="app-main">
       <div className="mx-auto w-full max-w-6xl px-4 py-6">
@@ -183,33 +239,44 @@ export default function ContaPage() {
               type="button"
               className="btn"
               onClick={() => router.replace("/app")}
+              disabled={disableAll}
             >
               Voltar para análise
             </button>
           </div>
 
           <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-[260px_1fr]">
-            {/* Sidebar */}
-            <div className="card p-3">
-              <div className="text-xs font-semibold tracking-wide text-white/55">
-               
-              </div>
+{/* Sidebar */}
+<div className="card p-3">
+  <div className="mt-3 flex flex-col gap-2">
+    <button
+      className={tab === "profile" ? "btn btn-primary" : "btn"}
+      onClick={() => setTab("profile")}
+      type="button"
+    >
+      Profile
+    </button>
 
-              <div className="mt-3 flex flex-col gap-2">
-                <button
-                  className={tab === "profile" ? "btn btn-primary" : "btn"}
-                  onClick={() => setTab("profile")}
-                >
-                  Profile
-                </button>
-                <button
-                  className={tab === "plano" ? "btn btn-primary" : "btn"}
-                  onClick={() => setTab("plano")}
-                >
-                  Plano
-                </button>
-              </div>
-            </div>
+    <button
+      className={tab === "plano" ? "btn btn-primary" : "btn"}
+      onClick={() => setTab("plano")}
+      type="button"
+    >
+      Plano
+    </button>
+
+    {/* 🔹 Separador visual */}
+    <div className="my-2 h-px w-full bg-white/10" />
+
+    <button
+      className="btn text-red-300 hover:text-red-200 hover:border-red-400/40"
+      onClick={handleLogout}
+      type="button"
+    >
+      Sair
+    </button>
+  </div>
+</div>
 
             {/* Content */}
             <div className="card p-4 md:p-5">
@@ -220,21 +287,23 @@ export default function ContaPage() {
                     className="input"
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
-                    disabled={loadingProfile || savingNickname}
+                    disabled={loadingProfile || savingNickname || loggingOut}
                   />
 
                   <div className="mt-4 flex gap-3">
                     <button
                       className="btn-cta"
                       onClick={saveNickname}
-                      disabled={savingNickname}
+                      disabled={savingNickname || loggingOut}
+                      type="button"
                     >
                       Salvar
                     </button>
                     <button
                       className="btn"
                       onClick={loadOnboardingStatus}
-                      disabled={savingNickname}
+                      disabled={savingNickname || loggingOut}
+                      type="button"
                     >
                       Atualizar
                     </button>
@@ -255,18 +324,29 @@ export default function ContaPage() {
                       label="Créditos do plano"
                       value={planMonthlyCreditsLabel}
                     />
-                    <InfoRow
-                      label="Saldo atual"
-                      value={creditsBalanceLabel}
-                    />
+                    <InfoRow label="Saldo atual" value={creditsBalanceLabel} />
                     <InfoRow label="Renovação" value={renewalLabel} />
                   </div>
 
-                  <div className="mt-4">
+                  {planMsg && (
+                    <div className="mt-3 text-sm text-white/60">{planMsg}</div>
+                  )}
+
+                  <div className="mt-4 flex gap-3">
                     <button
                       className="btn"
                       onClick={loadBillingMe}
-                      disabled={loadingPlan}
+                      disabled={loadingPlan || loggingOut}
+                      type="button"
+                    >
+                      Atualizar
+                    </button>
+
+                    <button
+                      className="btn"
+                      onClick={() => router.push("/app/billing/plan")}
+                      type="button"
+                      disabled={loggingOut}
                     >
                       Atualizar plano
                     </button>
