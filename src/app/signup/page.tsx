@@ -27,13 +27,13 @@ export default function SignupPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex-1 flex items-center justify-center px-4 py-10">
+        <div className="flex flex-1 items-center justify-center px-4">
           <div className="w-full max-w-md">
             <div className="card card-premium p-6 md:p-7">
               <div className="text-sm text-zinc-300/80">Carregando…</div>
             </div>
           </div>
-        </main>
+        </div>
       }
     >
       <SignupInner />
@@ -96,9 +96,9 @@ function SignupInner() {
 
       setInfo("Código enviado. Redirecionando…");
       router.replace(
-        `/signup/verify?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(
-          redirectNext,
-        )}`,
+        `/signup/verify?email=${encodeURIComponent(
+          eMail,
+        )}&next=${encodeURIComponent(redirectNext)}`,
       );
     } catch {
       setError("Falha de conexão. Tente novamente.");
@@ -108,7 +108,7 @@ function SignupInner() {
   }
 
   return (
-    <main className="flex-1 flex items-center justify-center px-4 py-10">
+    <div className="flex flex-1 items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="card card-premium p-6 md:p-7">
           <div className="mb-6">
@@ -197,6 +197,6 @@ function SignupInner() {
           </form>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

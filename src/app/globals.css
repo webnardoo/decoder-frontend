@@ -62,9 +62,11 @@ a {
   background: var(--h-app-bg);
 }
 
-/* Área útil do app (entre TopNav e Footer) */
+/* Área útil do app (entre TopNav e Footer)
+   FIX: não usar calc com altura hardcoded do footer (gera overflow no /signup) */
 .app-main {
-  min-height: calc(100dvh - var(--h-topnav-h) - var(--h-footer-h));
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }

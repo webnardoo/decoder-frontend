@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
-import { TopNav } from "@/components/top-nav";
 
-export default function Layout({ children }: { children: ReactNode }) {
+export default function PlanosLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-col flex-1">
-      <TopNav />
-      <main className="flex-1 flex flex-col">{children}</main>
-    </div>
+    <main className="app-main w-full flex-1 flex">
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 flex flex-1 flex-col">
+        {children}
+      </div>
+    </main>
   );
 }
