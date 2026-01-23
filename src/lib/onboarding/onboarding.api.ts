@@ -63,7 +63,7 @@ export async function updateDialogueNickname(nickname: string) {
   const dialogueNickname = String(nickname ?? "").trim();
 
   const res = await fetch("/api/onboarding/dialogue-nickname", {
-    method: "POST", // proxy converte para PATCH
+    method: "PATCH", // ✅ backend exige PATCH (proxy suporta PATCH)
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
     body: JSON.stringify({ dialogueNickname }),

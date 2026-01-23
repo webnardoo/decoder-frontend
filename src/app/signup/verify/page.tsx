@@ -11,12 +11,40 @@ function extractMessage(data: any): string | null {
   );
 }
 
-function sanitizeNext(nextParam: string | null): string {
-  const raw = typeof nextParam === "string" ? nextParam.trim() : "";
-  if (!raw) return "/signup/nickname";
-  if (raw === "/") return "/signup/nickname";
-  if (raw.startsWith("/signup")) return raw;
-  return "/signup/nickname";
+// ✅ regra permanente: nicknameDefined OU dialogueNickname preenchido
+function hasDialogueNickname(status: any): boolean {
+  const byFlag = status?.nicknameDefined === true;
+  const byValue =
+    typeof status?.dialogueNickname === "string" && status.dialogueNickname.trim().length > 0;
+  return byFlag || byValue;
+}
+
+function computePaidPostVerifyTarget(status: any): string {
+  const subscriptionActive = status?.subscriptionActive === true;
+  if (subscriptionActive) return "/app";
+
+  const nickOk = hasDialogueNickname(status);
+  if (!nickOk) return "/app/onboarding/identity?next=%2Fapp%2Fbilling%2Fplan";
+
+  return "/app/billing/plan";
+}
+
+function readPendingPasswordFromSession(): string {
+  try {
+    // ✅ compat: PAID antigo e chaves atuais do projeto
+    return (
+      sessionStorage.getItem("signup_pending_password") ||
+      sessionStorage.getItem("decoder_pending_verify_password") ||
+      ""
+    );
+  } catch {
+    return "";
+  }
+}
+
+// ✅ aceita undefined (Next types)
+function sanitizeEmail(v: string | null | undefined): string {
+  return String(v || "").trim();
 }
 
 export default function SignupVerifyPage() {
@@ -41,10 +69,17 @@ function SignupVerifyInner() {
   const router = useRouter();
   const sp = useSearchParams();
 
+  // ⚠️ next é preferência, nunca autoridade. Mantemos só para fallback extremo.
   const nextParam = sp?.get("next") ?? null;
-  const redirectNext = useMemo(() => sanitizeNext(nextParam), [nextParam]);
+  const fallbackNext = useMemo(() => {
+    const raw = typeof nextParam === "string" ? nextParam.trim() : "";
+    if (!raw) return "/app/billing/plan";
+    if (raw === "/") return "/app/billing/plan";
+    if (raw.startsWith("/app")) return raw;
+    return "/app/billing/plan";
+  }, [nextParam]);
 
-  const [email, setEmail] = useState(sp?.get("email") ?? "");
+  const [email, setEmail] = useState(sanitizeEmail(sp?.get("email")));
   const [code, setCode] = useState("");
 
   const [loading, setLoading] = useState(false);
@@ -56,8 +91,8 @@ function SignupVerifyInner() {
     setError("");
     setInfo("");
 
-    const eMail = (email || "").trim();
-    const otp = (code || "").trim();
+    const eMail = sanitizeEmail(email);
+    const otp = String(code || "").trim();
 
     if (!eMail) return setError("E-mail é obrigatório.");
     if (!otp) return setError("Código é obrigatório.");
@@ -79,21 +114,13 @@ function SignupVerifyInner() {
         return;
       }
 
-      // 2) login automático usando password guardado
-      const pendingPass =
-        (() => {
-          try {
-            return sessionStorage.getItem("signup_pending_password") || "";
-          } catch {
-            return "";
-          }
-        })() || "";
+      // 2) login automático usando senha pendente
+      const pendingPass = readPendingPasswordFromSession().trim();
 
       if (!pendingPass || pendingPass.length < 6) {
-        // sem senha em sessão, manda pro login do app
         router.replace(
           `/app/login?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(
-            "/signup/nickname",
+            "/app/billing/plan",
           )}`,
         );
         return;
@@ -109,21 +136,32 @@ function SignupVerifyInner() {
       const loginData = await loginRes.json().catch(() => ({}));
       if (!loginRes.ok) {
         const msg =
-          extractMessage(loginData) ||
-          "E-mail verificado, mas falha ao entrar. Faça login.";
+          extractMessage(loginData) || "E-mail verificado, mas falha ao entrar. Faça login.";
         setError(msg);
         return;
       }
 
-      // 3) obrigatório: nickname -> planos -> checkout
+      // 3) ✅ REGRA PACOTE 4 (PAID): status → decisão → redirect (guard reforça)
       setInfo("E-mail confirmado. Continuando…");
 
-      const safeNext = redirectNext || "/signup/nickname";
-      router.replace(
-        `/signup/nickname?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(
-          safeNext,
-        )}`,
-      );
+      const stRes = await fetch("/api/onboarding/status", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      });
+
+      const stCt = stRes.headers.get("content-type") ?? "";
+      const stBody = stCt.includes("application/json")
+        ? await stRes.json().catch(() => null)
+        : await stRes.text().catch(() => null);
+
+      if (!stRes.ok || !stBody || typeof stBody !== "object") {
+        router.replace(fallbackNext || "/app/billing/plan");
+        return;
+      }
+
+      const target = computePaidPostVerifyTarget(stBody);
+      router.replace(target);
     } catch {
       setError("Falha de conexão. Tente novamente.");
     } finally {
@@ -135,7 +173,7 @@ function SignupVerifyInner() {
     setError("");
     setInfo("");
 
-    const eMail = (email || "").trim();
+    const eMail = sanitizeEmail(email);
     if (!eMail) return setError("E-mail é obrigatório.");
 
     setLoading(true);
@@ -149,8 +187,7 @@ function SignupVerifyInner() {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const msg =
-          extractMessage(data) || "Não foi possível reenviar. Tente novamente.";
+        const msg = extractMessage(data) || "Não foi possível reenviar. Tente novamente.";
         setError(msg);
         return;
       }
@@ -168,12 +205,8 @@ function SignupVerifyInner() {
       <div className="w-full max-w-md">
         <div className="card card-premium p-6 md:p-7">
           <div className="mb-6">
-            <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
-              Verificar e-mail
-            </h1>
-            <p className="mt-1 text-sm text-zinc-300/80">
-              Digite o código que enviamos para seu e-mail.
-            </p>
+            <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Verificar e-mail</h1>
+            <p className="mt-1 text-sm text-zinc-300/80">Digite o código que enviamos para seu e-mail.</p>
           </div>
 
           {info && (
@@ -223,12 +256,7 @@ function SignupVerifyInner() {
               {loading ? "Validando..." : "Validar código"}
             </button>
 
-            <button
-              type="button"
-              className="btn w-full"
-              disabled={loading}
-              onClick={() => void onResend()}
-            >
+            <button type="button" className="btn w-full" disabled={loading} onClick={() => void onResend()}>
               {loading ? "Reenviando..." : "Reenviar código"}
             </button>
 
