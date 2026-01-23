@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useMemo, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function extractMessage(data: any): string | null {
@@ -21,6 +21,27 @@ function sanitizeNext(nextParam: string | null): string {
 
   // default seguro do funil
   return "/signup/nickname";
+}
+
+type Journey = "PAID" | "TRIAL";
+
+function normalizeJourney(v: any): Journey {
+  const s = String(v ?? "").trim().toUpperCase();
+  if (s === "TRIAL") return "TRIAL";
+  return "PAID";
+}
+
+async function markJourney(journey: Journey) {
+  try {
+    await fetch("/api/journey/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify({ journey }),
+    }).catch(() => null);
+  } catch {
+    // silencioso
+  }
 }
 
 export default function SignupPage() {
@@ -47,6 +68,15 @@ function SignupInner() {
 
   const nextParam = sp?.get("next") ?? null;
   const redirectNext = useMemo(() => sanitizeNext(nextParam), [nextParam]);
+
+  const journeyParam = sp?.get("journey");
+  const journey = useMemo(() => normalizeJourney(journeyParam), [journeyParam]);
+
+  // ✅ /signup é PAID por padrão, mas se vier journey na URL, respeita.
+  // ✅ isso só funciona se /api/journey/start setar cookie hitch_journey.
+  useEffect(() => {
+    void markJourney(journey);
+  }, [journey]);
 
   const [email, setEmail] = useState(sp?.get("email") ?? "");
   const [password, setPassword] = useState("");
@@ -76,6 +106,7 @@ function SignupInner() {
         sessionStorage.setItem("signup_pending_email", eMail);
         sessionStorage.setItem("signup_pending_password", password);
         sessionStorage.setItem("signup_pending_next", redirectNext);
+        sessionStorage.setItem("hitch_journey", journey); // debug/apoio client
       } catch {}
 
       const res = await fetch(`${authApi}/register`, {
@@ -97,8 +128,10 @@ function SignupInner() {
       setInfo("Código enviado. Redirecionando…");
       router.replace(
         `/signup/verify?email=${encodeURIComponent(
-          eMail,
-        )}&next=${encodeURIComponent(redirectNext)}`,
+          eMail
+        )}&next=${encodeURIComponent(redirectNext)}&journey=${encodeURIComponent(
+          journey
+        )}`
       );
     } catch {
       setError("Falha de conexão. Tente novamente.");

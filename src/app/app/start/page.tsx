@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useOnboardingStatus } from "@/lib/onboarding/OnboardingStore";
 
+const APP_BASE = "/app";
+
 export default function StartPage() {
   const router = useRouter();
   const { status, loading, refreshStatus } = useOnboardingStatus();
@@ -17,28 +19,43 @@ export default function StartPage() {
   useEffect(() => {
     if (loading || !status) return;
 
-    // ✅ tudo do APP fica em /app/*
-    if (status.nicknameDefined !== true || status.onboardingStage === "NICKNAME_REQUIRED") {
-      router.replace("/app/onboarding/identity");
+    if (
+      status.nicknameDefined !== true ||
+      String(status.onboardingStage || "").toUpperCase().trim() === "NICKNAME_REQUIRED" ||
+      String(status.onboardingStage || "").toUpperCase().trim() === "IDENTITY_REQUIRED"
+    ) {
+      router.replace(`${APP_BASE}/onboarding/identity`);
       return;
     }
 
-    if (status.onboardingStage === "TRIAL_ACTIVE") {
-      router.replace("/app");
+    const stage = String(status.onboardingStage || "").toUpperCase().trim();
+
+    if (stage === "TRIAL_ACTIVE") {
+      router.replace(APP_BASE);
       return;
     }
 
-    if (status.subscriptionActive !== true) {
-      router.replace("/app/billing/plan");
+    if (stage === "PAYMENT_PENDING") {
+      router.replace(`${APP_BASE}/billing/pending`);
       return;
     }
 
-    if (status.tutorialCompleted !== true) {
-      router.replace("/app/tutorial");
+    if (stage === "PAYMENT_FAILED") {
+      router.replace(`${APP_BASE}/billing/failed`);
       return;
     }
 
-    router.replace("/app");
+    if (stage === "PAYMENT_REQUIRED" || stage === "PLAN_SELECTION_REQUIRED") {
+      router.replace(`${APP_BASE}/billing/plan`);
+      return;
+    }
+
+    if (stage === "TUTORIAL_REQUIRED") {
+      router.replace(`${APP_BASE}/tutorial`);
+      return;
+    }
+
+    router.replace(APP_BASE);
   }, [loading, status, router]);
 
   return (
@@ -68,7 +85,7 @@ export default function StartPage() {
           </button>
 
           <Link
-            href="/app/account"
+            href={`${APP_BASE}/conta`}
             className="text-center text-xs text-zinc-400 hover:text-zinc-200 transition"
           >
             Acessar conta

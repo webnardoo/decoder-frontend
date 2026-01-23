@@ -15,12 +15,6 @@ type PublicPlan = {
   billingCycles: BillingCycle[];
 };
 
-type RegisterExistsResponse = {
-  exists: boolean;
-  shouldStartOnboarding: boolean;
-  shouldLogin: boolean;
-};
-
 type BillingMeResponse = {
   ok?: boolean;
   subscriptionActive?: boolean;
@@ -123,10 +117,6 @@ function extractMessage(data: any): string | null {
   );
 }
 
-function normalizeEmail(input: string): string {
-  return (input || "").trim().toLowerCase();
-}
-
 function codeKey(code: string) {
   const c = (code || "").trim().toLowerCase();
   if (c === "standart") return "standard";
@@ -134,17 +124,25 @@ function codeKey(code: string) {
   return c;
 }
 
-export default function PublicPlansClient() {
+/**
+ * /app/app/billing/plan = PLANO LOGADO
+ * - NUNCA pede e-mail
+ * - Autenticado -> checkout
+ * - Edge (sem sessão) -> login com next
+ */
+function buildCheckout(planId: string, cycle: BillingCycle) {
+  const qs = new URLSearchParams({ planId, billingCycle: cycle });
+  return `/app/app/checkout?${qs.toString()}`;
+}
+export default function BillingPlanPage() {
   const router = useRouter();
 
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [choosingPlanId, setChoosingPlanId] = useState<string | null>(null);
-
   const [err, setErr] = useState<string | null>(null);
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
   const [plans, setPlans] = useState<PublicPlan[]>([]);
 
-  // ✅ para desabilitar plano atual e mostrar mensagem
   const [loadingMe, setLoadingMe] = useState(true);
   const [me, setMe] = useState<BillingMeResponse | null>(null);
 
@@ -164,6 +162,8 @@ export default function PublicPlansClient() {
     return me?.plan?.name ? String(me.plan.name) : null;
   }, [me]);
 
+  const isAuthed = useMemo(() => !loadingMe && me != null, [loadingMe, me]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -171,17 +171,10 @@ export default function PublicPlansClient() {
       try {
         setLoadingPlans(true);
         setErr(null);
-
         const res = await fetch("/api/v1/billing/plans", { cache: "no-store" });
         const data = await res.json().catch(() => null);
-
-        if (!res.ok) {
-          const msg = extractMessage(data) || "Falha ao carregar planos.";
-          throw new Error(msg);
-        }
-
-        const list = Array.isArray(data?.plans) ? (data.plans as PublicPlan[]) : [];
-        if (!cancelled) setPlans(list);
+        if (!res.ok) throw new Error(extractMessage(data) || "Falha ao carregar planos.");
+        if (!cancelled) setPlans(Array.isArray(data?.plans) ? data.plans : []);
       } catch (e: any) {
         if (!cancelled) setErr(String(e?.message || "Erro ao carregar planos."));
       } finally {
@@ -193,12 +186,11 @@ export default function PublicPlansClient() {
       try {
         setLoadingMe(true);
         const res = await fetch("/api/v1/billing/me", { cache: "no-store" });
-        const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          // se não autenticado, só ignora (página pública também pode existir)
           if (!cancelled) setMe(null);
           return;
         }
+        const data = await res.json().catch(() => ({}));
         if (!cancelled) setMe(data as BillingMeResponse);
       } catch {
         if (!cancelled) setMe(null);
@@ -209,16 +201,14 @@ export default function PublicPlansClient() {
 
     void loadPlans();
     void loadMe();
-
     return () => {
       cancelled = true;
     };
   }, []);
 
   async function onSubscribe(planId: string, planCode: string, planNameForMsg: string) {
-    // ✅ trava se já for o plano atual
     if (currentPlanKey && codeKey(planCode) === currentPlanKey) {
-      setErr(`Você já é assinante do plano ${planNameForMsg} selecione outro plano.`);
+      setErr(`Você já é assinante do plano ${planNameForMsg}. Selecione outro plano.`);
       return;
     }
 
@@ -226,49 +216,15 @@ export default function PublicPlansClient() {
     setErr(null);
 
     try {
-      const qs = new URLSearchParams({ planId, billingCycle: cycle });
-      const checkoutNext = `/app/checkout?${qs.toString()}`;
+      const nextCheckout = buildCheckout(planId, cycle);
 
-      const email = window.prompt("Digite seu e-mail para continuar:");
-      const eMail = normalizeEmail(String(email || ""));
-      if (!eMail) return;
-
-      const existsRes = await fetch("/api/auth/register/exists", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        body: JSON.stringify({ email: eMail }),
-      });
-
-      const existsData =
-        (await existsRes.json().catch(() => ({}))) as Partial<RegisterExistsResponse>;
-
-      if (!existsRes.ok) {
-        const msg = extractMessage(existsData) || "Falha ao validar e-mail.";
-        throw new Error(msg);
-      }
-
-      const exists = existsData?.exists === true;
-      const shouldStartOnboarding = existsData?.shouldStartOnboarding === true;
-      const shouldLogin = existsData?.shouldLogin === true;
-
-      if (!exists) {
-        router.push(
-          `/register-otp?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent("/planos")}`,
-        );
+      if (!isAuthed) {
+        // Edge case defensivo: nunca prompta e-mail aqui
+        router.push(`/app/login?next=${encodeURIComponent(nextCheckout)}`);
         return;
       }
 
-      if (shouldStartOnboarding && !shouldLogin) {
-        router.push(
-          `/register-otp?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent("/planos")}`,
-        );
-        return;
-      }
-
-      router.push(
-        `/app/login?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(checkoutNext)}`,
-      );
+      router.push(nextCheckout);
     } catch (e: any) {
       setErr(String(e?.message || "Falha ao iniciar assinatura."));
     } finally {
@@ -372,9 +328,7 @@ export default function PublicPlansClient() {
                         }}
                       />
 
-                      {/* ✅ layout travado para ficar igual em DEV e PRD */}
                       <div className="relative p-5 md:p-6 flex flex-col min-h-[420px]">
-                        {/* pill */}
                         <div className="mb-3">
                           <div
                             className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] text-zinc-200 border ${ui.topPillBorder} ${ui.topPillBg}`}
@@ -383,28 +337,22 @@ export default function PublicPlansClient() {
                           </div>
                         </div>
 
-                        {/* conteúdo */}
                         <div className="flex-1 min-w-0 space-y-2">
                           <div className="text-sm font-semibold tracking-wide text-zinc-200">
                             {ui.title}
                           </div>
-
                           <div className="text-3xl font-semibold tracking-tight text-zinc-100">
                             {ui.price}
                           </div>
-
                           <div className="text-sm text-zinc-200/90">{ui.midLine}</div>
-
                           <div className="text-sm text-zinc-400 leading-relaxed md:hidden">
                             {ui.bodyShort}
                           </div>
-
                           <div className="hidden md:block text-sm text-zinc-400 leading-relaxed">
                             {ui.bodyLong}
                           </div>
                         </div>
 
-                        {/* CTA preso no rodapé */}
                         <div className="mt-5">
                           <button
                             className="w-full rounded-full px-4 py-3 text-sm font-semibold transition-transform active:scale-[0.99] disabled:opacity-60"
@@ -421,9 +369,7 @@ export default function PublicPlansClient() {
                             {isCurrentPlan ? "Plano atual" : isChoosingThis ? "Abrindo…" : ui.cta}
                           </button>
 
-                          <div className="mt-2 text-xs text-zinc-400 text-center">
-                            {ui.hint}
-                          </div>
+                          <div className="mt-2 text-xs text-zinc-400 text-center">{ui.hint}</div>
 
                           <div className="mt-2 text-[11px] text-zinc-500 text-center">
                             Modalidade: <span className="text-zinc-300">{cycleLabel}</span>
@@ -432,7 +378,6 @@ export default function PublicPlansClient() {
                             )}
                           </div>
 
-                          {/* ✅ mensagem maior para assinante */}
                           {isCurrentPlan && (
                             <div className="mt-2 text-sm text-zinc-200/80 text-center">
                               Você já é assinante do plano{" "}

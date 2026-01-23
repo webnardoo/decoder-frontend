@@ -13,16 +13,20 @@ function extractMessage(data: any): string | null {
   );
 }
 
-function sanitizeNext(nextParam: string | null): string {
+// ✅ mantém o funil “público” pós-OTP apontando para /planos (não para /app/billing...)
+// e evita qualquer forma de next relativo quebrar roteamento.
+function sanitizePublicNext(nextParam: string | null): string {
   const raw = typeof nextParam === "string" ? nextParam.trim() : "";
   if (!raw) return "/planos";
 
-  // bloqueia home mkt
-  if (raw === "/" || raw === "/app") return "/planos";
+  // se vierem caminhos errados (ou tentarem empurrar /app/app) colapsa para /planos
+  if (raw.startsWith("/app/app")) return "/planos";
 
-  // aqui aceitamos apenas rotas públicas seguras desta jornada
-  // (planos e checkout do app serão re-roteados depois de login)
+  // permitido: /planos (com ou sem query)
   if (raw.startsWith("/planos")) return raw;
+
+  // compat: "/" ou "/app" não são destinos do funil público
+  if (raw === "/" || raw === "/app") return "/planos";
 
   return "/planos";
 }
@@ -52,11 +56,10 @@ function RegisterOtpInner() {
   const sp = useSearchParams();
 
   const nextParam = sp?.get("next") ?? null;
-  const redirectNext = sanitizeNext(nextParam);
-
+  const redirectNext = sanitizePublicNext(nextParam);
   const presetEmail = (sp?.get("email") ?? "").trim();
 
-  const [step, setStep] = useState<RegisterStep>(presetEmail ? "FORM" : "FORM");
+  const [step, setStep] = useState<RegisterStep>("FORM");
   const [email, setEmail] = useState(presetEmail);
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
@@ -69,7 +72,6 @@ function RegisterOtpInner() {
   const authApi = useMemo(() => "/api/auth", []);
 
   useEffect(() => {
-    // mantém email preenchido quando vindo de /planos
     if (presetEmail && !email) setEmail(presetEmail);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -87,13 +89,6 @@ function RegisterOtpInner() {
 
     setLoading(true);
     try {
-      // persistir para o verify (se usuário der refresh)
-      try {
-        sessionStorage.setItem("decoder_pending_verify_email", eMail);
-        sessionStorage.setItem("decoder_pending_verify_password", password);
-        sessionStorage.setItem("decoder_pending_verify_next", redirectNext);
-      } catch {}
-
       const res = await fetch(`${authApi}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -131,6 +126,7 @@ function RegisterOtpInner() {
 
     setLoading(true);
     try {
+      // 1) Verifica OTP (backend cria sessão/cookie)
       const res = await fetch(`${authApi}/verify-email-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -147,59 +143,24 @@ function RegisterOtpInner() {
 
       setInfo("E-mail verificado. Entrando…");
 
-      // login automático para ganhar cookie e seguir pra checkout depois
-      const pass =
-        password ||
-        ((): string => {
-          try {
-            return sessionStorage.getItem("decoder_pending_verify_password") || "";
-          } catch {
-            return "";
-          }
-        })();
+      // 2) Checa sessão
+      const sessionRes = await fetch(`${authApi}/session`, {
+        method: "GET",
+        cache: "no-store",
+      });
 
-      if (pass && pass.length >= 6) {
-        const loginRes = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          cache: "no-store",
-          body: JSON.stringify({ email: eMail, password: pass }),
-        });
-
-        const loginData = await loginRes.json().catch(() => ({}));
-        if (!loginRes.ok) {
-          const msg =
-            extractMessage(loginData) ||
-            "E-mail verificado, mas falha ao entrar. Faça login.";
-          try {
-            sessionStorage.setItem("decoder_login_error", msg);
-          } catch {}
-
-          router.replace(
-            `/app/login?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(
-              "/planos",
-            )}`,
-          );
-          return;
-        }
-
-        try {
-          sessionStorage.removeItem("decoder_pending_verify_email");
-          sessionStorage.removeItem("decoder_pending_verify_password");
-          sessionStorage.removeItem("decoder_pending_verify_next");
-        } catch {}
-
+      if (sessionRes.ok) {
         setStep("DONE");
 
-        // ✅ regra desta jornada: após verify -> voltar para /planos
-        router.replace(redirectNext || "/planos");
+        // ✅ ponto neutro: entra no /app e o guard decide (nickname → identity → /planos)
+        router.replace("/app");
         return;
       }
 
-      // fallback seguro
+      // 3) Fallback explícito (sem loops)
       router.replace(
         `/app/login?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(
-          "/planos",
+          redirectNext,
         )}`,
       );
     } catch {
@@ -222,7 +183,7 @@ function RegisterOtpInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
-        body: JSON.stringify({ email: eMail }),
+        body: JSON.stringify({ email: eMail, password }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -252,7 +213,7 @@ function RegisterOtpInner() {
             <p className="mt-1 text-sm text-zinc-300/80">
               {step === "CODE"
                 ? "Digite o código que enviamos para seu e-mail."
-                : "Crie sua conta para continuar com a assinatura."}
+                : "Crie sua conta para continuar."}
             </p>
           </div>
 
@@ -395,8 +356,8 @@ function RegisterOtpInner() {
               <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
                 Conta confirmada. Redirecionando…
               </div>
-              <button className="btn-cta w-full" onClick={() => router.replace("/planos")}>
-                Ir para planos
+              <button className="btn-cta w-full" onClick={() => router.replace("/app")}>
+                Ir para o app
               </button>
             </div>
           )}

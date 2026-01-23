@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import PublicPlansClient from "./PublicPlansClient";
 
 export default function Page() {
-  redirect("/app/plans");
+  return <PublicPlansClient />;
 }

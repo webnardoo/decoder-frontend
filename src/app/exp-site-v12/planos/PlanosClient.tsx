@@ -41,7 +41,7 @@ export default function PlanosClient({ isAuthed }: { isAuthed: boolean }) {
         setErr(null);
 
         // ✅ público-capaz (proxy vai tentar sem token se não tiver cookie)
-        const res = await fetch("/api/v1/billing/plans", { cache: "no-store" });
+        const res = await fetch("/planos", { cache: "no-store" });
         const data = await res.json().catch(() => null);
 
         if (!res.ok) {

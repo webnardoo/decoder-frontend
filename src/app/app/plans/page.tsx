@@ -1,5 +1,6 @@
-"use client";
+// src/app/app/plans/page.tsx
+import { redirect } from "next/navigation";
 
-import BillingPlanPage from "../billing/plan/page";
-
-export { default } from "../billing/plan/page";
+export default function Page() {
+  redirect("/planos");
+}

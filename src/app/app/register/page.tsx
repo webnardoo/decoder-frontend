@@ -13,14 +13,25 @@ function extractMessage(data: any): string | null {
   );
 }
 
-function routeForStage(stage: string): string {
+/**
+ * ✅ REGRA DE NEGÓCIO (confirmada por você):
+ * Entradas:
+ * 1) Assinar (Home MKT) => jornada PAID => Planos públicos (/planos)
+ * 2) /signup => jornada PAID => Planos públicos (/planos)
+ * 3) /register => jornada TRIAL
+ */
+function routeForStage(stage: string, journey?: string | null): string {
   const s = String(stage || "").toUpperCase().trim();
+  const j = String(journey || "").toUpperCase().trim();
 
   if (s === "READY") return "/app";
 
   // Billing
-  if (s === "PAYMENT_REQUIRED") return "/app/billing/plan";
-  if (s === "PLAN_SELECTION_REQUIRED") return "/app/billing/plan";
+  // ✅ PAID + PLAN_SELECTION_REQUIRED => página pública de planos
+  if (s === "PLAN_SELECTION_REQUIRED") return j === "PAID" ? "/planos" : "/app/billing/plan";
+
+  // (mantém compat)
+  if (s === "PAYMENT_REQUIRED") return j === "PAID" ? "/planos" : "/app/billing/plan";
   if (s === "PAYMENT_PENDING") return "/app/billing/pending";
   if (s === "PAYMENT_FAILED") return "/app/billing/failed";
 
@@ -31,7 +42,7 @@ function routeForStage(stage: string): string {
   // Tutorial
   if (s === "TUTORIAL_REQUIRED") return "/app/tutorial";
 
-  // Fallback seguro: /app (evita /app/start)
+  // Fallback seguro
   return "/app";
 }
 
@@ -50,7 +61,9 @@ async function safeGetOnboardingTarget(): Promise<string | null> {
     if (!res.ok || !data) return "/app";
 
     const stage = String(data?.onboardingStage || "").trim();
-    return routeForStage(stage);
+    const journey = typeof data?.journey === "string" ? data.journey : null;
+
+    return routeForStage(stage, journey);
   } catch {
     return "/app";
   }
@@ -67,6 +80,19 @@ function sanitizeNext(nextParam: string | null): string {
   if (!raw.startsWith("/app")) return "/app";
 
   return raw;
+}
+
+async function markJourneyPaid() {
+  try {
+    await fetch("/api/journey/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify({ journey: "PAID" }),
+    }).catch(() => null);
+  } catch {
+    // silencioso
+  }
 }
 
 export default function RegisterPage() {
@@ -92,6 +118,11 @@ export default function RegisterPage() {
 function RegisterPageInner() {
   const router = useRouter();
   const sp = useSearchParams();
+
+  // ✅ /app/register é PAID (sempre)
+  useEffect(() => {
+    void markJourneyPaid();
+  }, []);
 
   const verifyMode = (sp?.get("verify") ?? "") === "1";
   const nextParam = sp?.get("next") ?? null;
@@ -125,7 +156,6 @@ function RegisterPageInner() {
         if (!email && pendingEmail) setEmail(pendingEmail);
         if (!password && pendingPass) setPassword(pendingPass);
 
-        // se a sessão tinha next, prioriza ele (mas sem sobrescrever URL)
         void pendingNext;
       } catch {}
     }
@@ -241,6 +271,7 @@ function RegisterPageInner() {
 
         const target = await safeGetOnboardingTarget();
 
+        // ✅ aqui agora pode retornar /planos quando journey=PAID
         if (target && target !== "/app") {
           router.replace(target);
           return;

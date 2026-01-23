@@ -2,8 +2,22 @@
 
 // src/app/exp-site-v12/page.tsx
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const PURPLE = "#220D54";
+
+async function startJourney(journey: "PAID" | "TRIAL") {
+  try {
+    await fetch("/api/journey/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify({ journey }),
+    });
+  } catch {
+    // silêncio: não bloqueia navegação
+  }
+}
 
 function HeroImageOverlay() {
   return (
@@ -17,8 +31,6 @@ function HeroImageOverlay() {
         left: "38%",
         zIndex: 1,
         pointerEvents: "none",
-
-        // 4 fades + 2 vinhetas (uma suave + uma mais “cinema”)
         backgroundImage: `
           /* TOP */
           linear-gradient(to bottom,
@@ -62,9 +74,7 @@ function HeroImageOverlay() {
         backgroundSize: "cover",
         backgroundPosition: "left center",
         backgroundRepeat: "no-repeat",
-
         opacity: 0.99,
-        // realça sem estourar (o que estava faltando)
         filter: "saturate(1.10) contrast(1.10) brightness(1.05)",
         transform: "translateZ(0)",
       }}
@@ -73,64 +83,60 @@ function HeroImageOverlay() {
 }
 
 export default function ExpSiteV12Page() {
+  const router = useRouter();
+
+  async function goPaidPlans(e: React.MouseEvent) {
+    e.preventDefault();
+    await startJourney("PAID");
+    router.push("/planos");
+  }
+
+  async function goTrialRegister(e: React.MouseEvent) {
+    e.preventDefault();
+    await startJourney("TRIAL");
+    // ✅ REGRA OFICIAL: /register = TRIAL
+    router.push("/register?journey=TRIAL&next=%2Fapp");
+  }
+
   return (
     <main className="page h-fixed-radial-bg">
-      {/* OVERRIDES — remove overlays que geram “faixa” nos heros + FIX NAV MOBILE */}
       <style jsx global>{`
-        /* remove a faixa/retângulo aplicado via pseudo-elemento no HERO 1 */
         .hero1::after {
           content: none !important;
         }
-
-        /* corta qualquer “ponte”/seam herdada do HERO 1 → HERO 2 */
         .hero2FromHero {
           background: transparent !important;
         }
-
-        /* garante transparência das seções para o radial base aparecer por baixo */
         .hero1,
         .hero2,
         .section {
           background: transparent !important;
         }
-
-        /* =========================
-           FIX: NAV LINKS NO MOBILE
-           ========================= */
         .navInner {
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 12px;
         }
-
-        /* força exibição do bloco da direita mesmo se houver "hidden" via CSS externo */
         .navRight {
           display: flex !important;
           align-items: center;
           gap: 16px;
           flex: 0 0 auto;
         }
-
-        /* garante que links não sejam escondidos por media query externa */
         .navRight .navLink {
           display: inline-flex !important;
           align-items: center;
           white-space: nowrap;
         }
-
-        /* Mobile: encaixar links ao lado do botão */
         @media (max-width: 640px) {
           .navRight {
             gap: 10px;
           }
-
           .navRight .navLink {
             font-size: 13px;
             opacity: 0.9;
           }
-
-          /* deixa o botão caber sem esmagar os links */
           .navRight .btnPrimary {
             padding: 10px 12px;
             font-size: 13px;
@@ -175,42 +181,32 @@ export default function ExpSiteV12Page() {
             </Link>
 
             <nav className="navRight" aria-label="Navegação principal">
-              <Link className="navLink" href="/planos">
+              {/* ✅ PAID */}
+              <a className="navLink" href="/planos" onClick={goPaidPlans}>
                 Assinar
-              </Link>
+              </a>
+
               <Link className="navLink" href="/app/login">
                 Entrar
               </Link>
-              <Link className="btn btnPrimary" href="/app/register">
+
+              {/* ✅ TRIAL */}
+              <a className="btn btnPrimary" href="/register" onClick={goTrialRegister}>
                 Começar a degustação
-              </Link>
+              </a>
             </nav>
           </div>
         </div>
       </header>
 
-      {/* WRAPPER (HERO1 + HERO2) — sem fundo próprio, deixa o radial base aparecer */}
-      <div
-        style={{
-          position: "relative",
-          overflow: "hidden",
-          background: "transparent",
-        }}
-      >
+      {/* WRAPPER */}
+      <div style={{ position: "relative", overflow: "hidden", background: "transparent" }}>
         {/* HERO 1 */}
-        <section
-          id="top"
-          className="section hero1"
-          style={{ position: "relative", zIndex: 2 }}
-        >
+        <section id="top" className="section hero1" style={{ position: "relative", zIndex: 2 }}>
           <div className="container">
             <div
               className="heroGrid"
-              style={{
-                position: "relative",
-                overflow: "hidden",
-                background: "transparent",
-              }}
+              style={{ position: "relative", overflow: "hidden", background: "transparent" }}
             >
               <HeroImageOverlay />
 
@@ -228,9 +224,9 @@ export default function ExpSiteV12Page() {
                 </p>
 
                 <div className="heroCtaRow">
-                  <Link className="btn btnPrimary" href="/exp-site-v12/register">
+                  <a className="btn btnPrimary" href="/register" onClick={goTrialRegister}>
                     Analisar uma conversa
-                  </Link>
+                  </a>
                 </div>
               </div>
 
@@ -277,12 +273,8 @@ export default function ExpSiteV12Page() {
         </section>
       </div>
 
-      {/* RESTANTE DA PÁGINA — tudo transparente para deixar o radial base “por baixo” */}
-      <section
-        id="por-que-funciona"
-        className="section"
-        style={{ position: "relative", background: "transparent" }}
-      >
+      {/* RESTANTE */}
+      <section id="por-que-funciona" className="section" style={{ position: "relative", background: "transparent" }}>
         <div className="container">
           <div className="blockText">
             <div className="kicker">COMO O HITCH.AI FUNCIONA</div>
@@ -293,9 +285,9 @@ export default function ExpSiteV12Page() {
             </p>
 
             <div style={{ marginTop: 18 }}>
-              <Link className="btn" href="/exp-site-v12/register">
+              <a className="btn" href="/register" onClick={goTrialRegister}>
                 Começar a degustação
-              </Link>
+              </a>
             </div>
           </div>
         </div>
@@ -319,30 +311,22 @@ export default function ExpSiteV12Page() {
           <div className="blockText">
             <div className="kicker">FEATURES</div>
             <h2 className="h2">O essencial, do jeito certo.</h2>
-            <p className="bodyText">
-              Quatro pilares para reduzir ruído, aumentar clareza e manter controle.
-            </p>
+            <p className="bodyText">Quatro pilares para reduzir ruído, aumentar clareza e manter controle.</p>
           </div>
 
           <div className="featuresWrap">
             <div className="featuresGrid">
               <div className="featureCard">
-                <div className="featureIcon" aria-hidden>
-                  ▢
-                </div>
+                <div className="featureIcon" aria-hidden>▢</div>
                 <div>
                   <p className="featureLabel">INTENÇÃO</p>
                   <p className="featureTitle">Entenda o que está por trás das palavras</p>
-                  <p className="featureBody">
-                    Contexto e subtexto organizados pra você responder com clareza.
-                  </p>
+                  <p className="featureBody">Contexto e subtexto organizados pra você responder com clareza.</p>
                 </div>
               </div>
 
               <div className="featureCard">
-                <div className="featureIcon" aria-hidden>
-                  ○
-                </div>
+                <div className="featureIcon" aria-hidden>○</div>
                 <div>
                   <p className="featureLabel">VELOCIDADE</p>
                   <p className="featureTitle">Análise clara em segundos</p>
@@ -351,22 +335,16 @@ export default function ExpSiteV12Page() {
               </div>
 
               <div className="featureCard">
-                <div className="featureIcon" aria-hidden>
-                  △
-                </div>
+                <div className="featureIcon" aria-hidden>△</div>
                 <div>
                   <p className="featureLabel">SEGURANÇA</p>
                   <p className="featureTitle">Responda com contexto, não no impulso</p>
-                  <p className="featureBody">
-                    Evite escaladas e reduza risco de conflito com respostas mais estratégicas.
-                  </p>
+                  <p className="featureBody">Evite escaladas e reduza risco de conflito com respostas mais estratégicas.</p>
                 </div>
               </div>
 
               <div className="featureCard">
-                <div className="featureIcon" aria-hidden>
-                  🔒
-                </div>
+                <div className="featureIcon" aria-hidden>🔒</div>
                 <div>
                   <p className="featureLabel">PRIVACIDADE</p>
                   <p className="featureTitle">Privacidade</p>
@@ -389,9 +367,9 @@ export default function ExpSiteV12Page() {
             <p className="bodyText">Veja os detalhes na página de planos.</p>
 
             <div style={{ marginTop: 18 }}>
-              <Link className="btn" href="/exp-site-v12/planos">
+              <a className="btn" href="/planos" onClick={goPaidPlans}>
                 Ver planos
-              </Link>
+              </a>
             </div>
 
             <div

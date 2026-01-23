@@ -308,7 +308,7 @@ export default function HomePage() {
       setShowTrialEnd(false);
       setStepId(null);
       refreshOnboarding();
-      window.location.href = "/billing/plan";
+window.location.href = "/app/billing/plan";
     }
   }
 

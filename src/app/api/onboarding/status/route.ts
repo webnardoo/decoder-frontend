@@ -1,3 +1,4 @@
+// src/app/api/onboarding/status/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
@@ -43,6 +44,13 @@ function pickJourney(data: any): string | undefined {
   return undefined;
 }
 
+function normalizeJourney(v: any): string | null {
+  const s = String(v ?? "").trim().toUpperCase();
+  if (s === "PAID") return "PAID";
+  if (s === "TRIAL") return "TRIAL";
+  return null;
+}
+
 export async function GET() {
   try {
     const backendBaseUrl = getBackendBaseUrl();
@@ -52,6 +60,12 @@ export async function GET() {
       return NextResponse.json({ message: "Não autenticado." }, { status: 401 });
     }
 
+    // ✅ fonte de verdade pro proxy: cookie hitch_journey
+    // - se existir (PAID/TRIAL), enviamos pro backend via header
+    // - isso permite o backend derivar stage corretamente sem depender de campo no banco
+    const jar = await cookies();
+    const cookieJourney = normalizeJourney(jar.get("hitch_journey")?.value);
+
     const upstream = await fetch(`${backendBaseUrl}/api/v1/onboarding/status`, {
       method: "GET",
       headers: {
@@ -59,6 +73,7 @@ export async function GET() {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
         Cookie: `decoder_auth=${token}`,
+        ...(cookieJourney ? { "x-journey": cookieJourney } : {}),
       },
       cache: "no-store",
     });
@@ -71,14 +86,19 @@ export async function GET() {
     } catch {
       return NextResponse.json(
         { message: "Resposta inválida do backend (não-JSON).", raw: text || null },
-        { status: 502 }
+        { status: 502 },
       );
     }
 
-    // ✅ Normaliza journey sem inventar: só promove pra raiz se existir em algum lugar
-    const journey = pickJourney(data);
-    if (journey && data && typeof data === "object" && typeof data.journey !== "string") {
-      data = { ...data, journey };
+    // 1) tenta usar journey do backend (sem inventar)
+    const backendJourney = pickJourney(data);
+
+    // 2) finalJourney: backend > cookie
+    const finalJourney = normalizeJourney(backendJourney) || cookieJourney;
+
+    // promove/corrige na raiz SEM inventar (só se tivermos PAID/TRIAL)
+    if (finalJourney && data && typeof data === "object") {
+      data = { ...data, journey: finalJourney };
     }
 
     return NextResponse.json(data, { status: upstream.status });
@@ -88,7 +108,7 @@ export async function GET() {
         message: "Falha ao consultar onboarding status (proxy).",
         hint: "Verifique DECODER_BACKEND_BASE_URL / NEXT_PUBLIC_DECODER_BACKEND_BASE_URL.",
       },
-      { status: 502 }
+      { status: 502 },
     );
   }
 }

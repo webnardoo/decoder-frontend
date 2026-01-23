@@ -5,35 +5,41 @@ import { useRouter } from "next/navigation";
 
 type OnboardingStatus = {
   onboardingStage: string;
-  tutorialPopupsPending?: boolean;
 };
+
+const APP_BASE = "/app";
 
 function routeFromStage(stage: string) {
   const s = String(stage || "").toUpperCase().trim();
-  if (s === "PAYMENT_PENDING") return "/billing/pending";
-  if (s === "PAYMENT_FAILED") return "/billing/failed";
-  if (s === "PAYMENT_REQUIRED") return "/billing/plan";
-  if (s === "IDENTITY_REQUIRED") return "/onboarding/identity";
-  if (s === "TUTORIAL_REQUIRED") return "/tutorial";
-  if (s === "READY") return "/";
-  return "/start";
+
+  // Billing
+  if (s === "PAYMENT_PENDING") return `${APP_BASE}/billing/pending`;
+  if (s === "PAYMENT_FAILED") return `${APP_BASE}/billing/failed`;
+  if (s === "PAYMENT_REQUIRED") return `${APP_BASE}/billing/plan`;
+  if (s === "PLAN_SELECTION_REQUIRED") return `${APP_BASE}/billing/plan`;
+
+  // Identity / Tutorial
+  if (s === "NICKNAME_REQUIRED") return `${APP_BASE}/onboarding/identity`;
+  if (s === "IDENTITY_REQUIRED") return `${APP_BASE}/onboarding/identity`;
+  if (s === "TUTORIAL_REQUIRED") return `${APP_BASE}/tutorial`;
+
+  // Ready => home do app logado
+  if (s === "READY") return `${APP_BASE}`;
+
+  // Fallback seguro: start DO APP (não existe /start)
+  return `${APP_BASE}/start`;
 }
 
 async function fetchStatusOnce(): Promise<OnboardingStatus> {
   const res = await fetch("/api/onboarding/status", {
     method: "GET",
-    // ✅ cookie httpOnly (decoder_auth) é enviado automaticamente
     credentials: "include",
     cache: "no-store",
   });
 
   const text = await res.text().catch(() => "");
 
-  if (res.status === 401) {
-    // não logado / cookie expirou
-    throw new Error("UNAUTHORIZED");
-  }
-
+  if (res.status === 401) throw new Error("UNAUTHORIZED");
   if (!res.ok) throw new Error(text || `STATUS_FAILED_${res.status}`);
 
   return JSON.parse(text) as OnboardingStatus;
@@ -61,7 +67,8 @@ export default function BillingPendingPage() {
       setError(null);
       setLoading(false);
 
-      if (next !== "/billing/pending") {
+      // Se mudou de stage, sai do pending
+      if (next !== `${APP_BASE}/billing/pending`) {
         stopPolling();
         router.replace(next);
         return;
@@ -71,7 +78,7 @@ export default function BillingPendingPage() {
 
       if (String(e?.message || "") === "UNAUTHORIZED") {
         stopPolling();
-        router.replace("/login");
+        router.replace(`${APP_BASE}/login`);
         return;
       }
 
@@ -104,10 +111,14 @@ export default function BillingPendingPage() {
     <div className="space-y-6">
       <div className="card p-5">
         <div className="font-medium">Aguardando confirmação do pagamento…</div>
-        <div className="text-sm text-zinc-400">Vamos checar automaticamente e avançar assim que confirmar.</div>
+        <div className="text-sm text-zinc-400">
+          Vamos checar automaticamente e avançar assim que confirmar.
+        </div>
       </div>
 
-      {loading && <div className="text-sm text-zinc-400">Configurando sua conta…</div>}
+      {loading && (
+        <div className="text-sm text-zinc-400">Configurando sua conta…</div>
+      )}
 
       {!loading && (
         <div className="card p-5 text-sm text-zinc-400">

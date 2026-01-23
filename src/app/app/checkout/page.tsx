@@ -56,6 +56,12 @@ function buildCheckoutSessionEndpoint(base: string) {
     : `${base}/api/v1/billing/stripe/checkout-session`;
 }
 
+function buildSelfCheckoutUrl(planId: string, billingCycle: "monthly" | "annual") {
+  return `/app/app/checkout?planId=${encodeURIComponent(planId)}&billingCycle=${encodeURIComponent(
+    billingCycle,
+  )}`;
+}
+
 export default async function CheckoutPage({
   searchParams,
 }: {
@@ -67,14 +73,10 @@ export default async function CheckoutPage({
 
   const token = await getTokenFromCookies();
 
-  // ✅ Correto: login do app é /app/login e a própria rota é /app/checkout
+  // ✅ Login do APP é /app/login (NÃO /app/app/login)
   if (!token) {
     redirect(
-      `/app/login?next=${encodeURIComponent(
-        `/app/checkout?planId=${encodeURIComponent(planId)}&billingCycle=${encodeURIComponent(
-          billingCycle,
-        )}`,
-      )}`,
+      `/app/login?next=${encodeURIComponent(buildSelfCheckoutUrl(planId, billingCycle))}`,
     );
   }
 
@@ -100,7 +102,7 @@ export default async function CheckoutPage({
         : payload?.message || payload?.error || JSON.stringify(payload);
 
     redirect(
-      `/app/checkout/result?ok=0&msg=${encodeURIComponent(
+      `/app/app/checkout/result?ok=0&msg=${encodeURIComponent(
         String(msg).slice(0, 180),
       )}`,
     );
@@ -109,7 +111,7 @@ export default async function CheckoutPage({
   const checkoutUrl = extractCheckoutUrl(payload);
   if (!checkoutUrl) {
     redirect(
-      `/app/checkout/result?ok=0&msg=${encodeURIComponent(
+      `/app/app/checkout/result?ok=0&msg=${encodeURIComponent(
         "Backend não retornou checkout URL.",
       )}`,
     );

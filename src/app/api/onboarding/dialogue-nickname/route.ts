@@ -17,10 +17,27 @@ function getBackendBaseUrl() {
   return "http://localhost:4100";
 }
 
+function normalizeBody(bodyText: string, contentType: string) {
+  const ct = (contentType || "").toLowerCase();
+  if (!ct.includes("application/json")) return bodyText;
+
+  try {
+    const obj = JSON.parse(bodyText || "{}");
+
+    // Aceita ambos e normaliza para o contrato do BACK (onboarding)
+    const dialogueNickname =
+      (typeof obj?.dialogueNickname === "string" ? obj.dialogueNickname : "") ||
+      (typeof obj?.nickname === "string" ? obj.nickname : "");
+
+    return JSON.stringify({ dialogueNickname });
+  } catch {
+    return bodyText;
+  }
+}
+
 async function forward(
-  req: NextRequest,
   url: string,
-  method: "PATCH" | "PUT",
+  method: "PATCH" | "POST",
   body: string,
   contentType: string,
   authorization: string,
@@ -38,26 +55,20 @@ async function forward(
   });
 }
 
-async function proxy(req: NextRequest, _method: "POST" | "PATCH") {
+async function proxy(req: NextRequest, method: "POST" | "PATCH") {
   const backendBase = ensureApiV1(getBackendBaseUrl());
 
-  // ✅ FIX: endpoint correto no backend é profile/dialogue-nickname (não onboarding/dialogue-nickname)
-  const url = `${backendBase}/profile/dialogue-nickname`;
+  // ✅ Endpoint correto para a jornada
+  const url = `${backendBase}/onboarding/dialogue-nickname`;
 
   const contentType = req.headers.get("content-type") ?? "application/json";
   const authorization = req.headers.get("authorization") ?? "";
   const cookie = req.headers.get("cookie") ?? "";
 
-  const body = await req.text();
+  const rawBody = await req.text();
+  const body = normalizeBody(rawBody, contentType);
 
-  // O front antigo chama POST/PATCH; o backend pode estar em PATCH ou PUT.
-  // Fazemos tentativa PATCH primeiro e, se 404/405, tentamos PUT.
-  let upstream = await forward(req, url, "PATCH", body, contentType, authorization, cookie);
-
-  if (upstream.status === 404 || upstream.status === 405) {
-    upstream = await forward(req, url, "PUT", body, contentType, authorization, cookie);
-  }
-
+  const upstream = await forward(url, method, body, contentType, authorization, cookie);
   const text = await upstream.text();
 
   return new NextResponse(text, {

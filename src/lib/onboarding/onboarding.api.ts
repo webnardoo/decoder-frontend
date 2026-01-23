@@ -14,9 +14,22 @@ function normalizeStatus(raw: OnboardingStatusResponse): OnboardingStatus {
     ? (raw as any).paymentStatus
     : "pending";
 
+  const dialogueNicknameRaw =
+    typeof (raw as any)?.dialogueNickname === "string" ? (raw as any).dialogueNickname : "";
+
+  const dialogueNickname = String(dialogueNicknameRaw || "").trim();
+
+  const nicknameDefinedRaw = (raw as any)?.nicknameDefined;
+  const nicknameDefined =
+    nicknameDefinedRaw === true || (dialogueNickname.length > 0);
+
   return {
     ...(raw as any),
     paymentStatus,
+    // ✅ garante consistência pro Guard
+    nicknameDefined,
+    // ✅ mantém o valor normalizado (evita " " virar truthy em algum lugar)
+    dialogueNickname: dialogueNickname.length > 0 ? dialogueNickname : null,
   } as OnboardingStatus;
 }
 
@@ -85,7 +98,12 @@ export async function ackTutorialPopups() {
 }
 
 export async function completeTutorial() {
-  return { ok: true, tutorialCompleted: true, tutorialPopupsPending: false, tutorialRemoved: true };
+  return {
+    ok: true,
+    tutorialCompleted: true,
+    tutorialPopupsPending: false,
+    tutorialRemoved: true,
+  };
 }
 
 export async function runQuickTutorial(_text: string) {

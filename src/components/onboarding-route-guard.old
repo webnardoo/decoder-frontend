@@ -1,0 +1,145 @@
+"use client";
+
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useOnboardingStatus } from "@/lib/onboarding/OnboardingStore";
+
+function getHttpStatusFromError(err: any): number | null {
+  if (!err) return null;
+  if (typeof err?.status === "number") return err.status;
+  if (typeof err?.statusCode === "number") return err.statusCode;
+  if (typeof err?.body?.statusCode === "number") return err.body.statusCode;
+  if (typeof err?.body?.status === "number") return err.body.status;
+  if (typeof err?.backendStatus === "number") return err.backendStatus;
+  if (typeof err?.backendBody?.statusCode === "number")
+    return err.backendBody.statusCode;
+  return null;
+}
+
+function isPaidJourney(status: any): boolean {
+  return String(status?.journey ?? "").toUpperCase().trim() === "PAID";
+}
+
+export function OnboardingRouteGuard({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const safePathname = pathname ?? "";
+
+  const { status, loading, error, refreshStatus } = useOnboardingStatus();
+
+  useEffect(() => {
+    if (loading) return;
+
+    // Sessão inválida → login
+    const http = getHttpStatusFromError(error);
+    if (http === 401 || http === 403) {
+      if (safePathname !== "/app/login") {
+        router.replace("/app/login");
+      }
+      return;
+    }
+
+    if (error) return;
+
+    if (!status) {
+      router.replace("/app/start");
+      return;
+    }
+
+    const paid = isPaidJourney(status);
+
+    /**
+     * ============================
+     * FUNIL PAID (NÃO ASSINANTE)
+     * ============================
+     */
+    if (paid && status.subscriptionActive !== true) {
+      // 1) Identidade é BINÁRIA
+      if (!status.nicknameDefined) {
+        if (!safePathname.startsWith("/app/onboarding/identity")) {
+          router.replace("/app/onboarding/identity?next=%2Fplanos");
+        }
+        return;
+      }
+
+      // 2) Nickname definido → SEMPRE planos
+      if (safePathname !== "/planos") {
+        router.replace("/planos");
+      }
+      return;
+    }
+
+    /**
+     * ============================
+     * ASSINANTE ATIVO
+     * ============================
+     */
+    if (status.subscriptionActive === true) {
+      if (safePathname !== "/app") {
+        router.replace("/app");
+      }
+      return;
+    }
+
+    /**
+     * ============================
+     * OUTROS ESTÁGIOS (TRIAL / LEGADO)
+     * ============================
+     */
+    const stage = String(status.onboardingStage || "").toUpperCase().trim();
+
+    if (stage === "READY") {
+      if (safePathname !== "/app") router.replace("/app");
+      return;
+    }
+
+    if (stage === "PLAN_SELECTION_REQUIRED") {
+      if (safePathname !== "/planos") router.replace("/planos");
+      return;
+    }
+
+    // fallback seguro
+    if (safePathname !== "/app/start") {
+      router.replace("/app/start");
+    }
+  }, [loading, error, status, safePathname, router, refreshStatus]);
+
+  if (loading) {
+    return <div className="card p-5 text-sm text-zinc-400">Carregando…</div>;
+  }
+
+  const http = getHttpStatusFromError(error);
+
+  if (http === 401 || http === 403) {
+    return (
+      <div className="card p-5 space-y-2">
+        <div className="text-sm font-medium">
+          Sessão expirada. Faça login novamente.
+        </div>
+        <button
+          className="btn btn-primary"
+          onClick={() => router.replace("/app/login")}
+        >
+          Ir para login
+        </button>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="card p-5 space-y-2">
+        <div className="text-sm font-medium">Falha ao carregar seu status.</div>
+        <button className="btn btn-primary" onClick={() => void refreshStatus()}>
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}

@@ -1,3 +1,4 @@
+// src/app/login/page.tsx
 import { redirect } from "next/navigation";
 
 export default function Page({
@@ -13,5 +14,9 @@ export default function Page({
   }
 
   const suffix = qs.toString();
+
+  // ✅ FIX DEFINITIVO:
+  // login REAL é /app/login
+  // nunca deve virar /app/app/login
   redirect(`/app/login${suffix ? `?${suffix}` : ""}`);
 }
