@@ -26,12 +26,24 @@ function routeForStage(stage: string, journey?: string | null): string {
 
   if (s === "READY") return "/app";
 
-  // Billing
+  // =========================
+  // BILLING
+  // =========================
   // ✅ PAID + PLAN_SELECTION_REQUIRED => página pública de planos
-  if (s === "PLAN_SELECTION_REQUIRED") return j === "PAID" ? "/planos" : "/app/billing/plan";
+  // ✅ TRIAL nunca deve cair em billing; volta pro app (degustação guiada mora no /app)
+  if (s === "PLAN_SELECTION_REQUIRED") {
+    if (j === "PAID") return "/planos";
+    if (j === "TRIAL") return "/app";
+    return "/app/billing/plan";
+  }
 
   // (mantém compat)
-  if (s === "PAYMENT_REQUIRED") return j === "PAID" ? "/planos" : "/app/billing/plan";
+  if (s === "PAYMENT_REQUIRED") {
+    if (j === "PAID") return "/planos";
+    if (j === "TRIAL") return "/app";
+    return "/app/billing/plan";
+  }
+
   if (s === "PAYMENT_PENDING") return "/app/billing/pending";
   if (s === "PAYMENT_FAILED") return "/app/billing/failed";
 
@@ -82,16 +94,27 @@ function sanitizeNext(nextParam: string | null): string {
   return raw;
 }
 
-async function markJourneyPaid() {
+async function markJourneyTrial() {
   try {
     await fetch("/api/journey/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       cache: "no-store",
-      body: JSON.stringify({ journey: "PAID" }),
+      body: JSON.stringify({ journey: "TRIAL" }),
     }).catch(() => null);
   } catch {
     // silencioso
+  }
+}
+
+function readPendingFromSessionStorage() {
+  try {
+    const pendingEmail = sessionStorage.getItem("decoder_pending_verify_email") || "";
+    const pendingPass = sessionStorage.getItem("decoder_pending_verify_password") || "";
+    const pendingNext = sessionStorage.getItem("decoder_pending_verify_next") || "";
+    return { pendingEmail, pendingPass, pendingNext };
+  } catch {
+    return { pendingEmail: "", pendingPass: "", pendingNext: "" };
   }
 }
 
@@ -119,9 +142,9 @@ function RegisterPageInner() {
   const router = useRouter();
   const sp = useSearchParams();
 
-  // ✅ /app/register é PAID (sempre)
+  // ✅ /register é TRIAL (sempre)
   useEffect(() => {
-    void markJourneyPaid();
+    void markJourneyTrial();
   }, []);
 
   const verifyMode = (sp?.get("verify") ?? "") === "1";
@@ -144,21 +167,15 @@ function RegisterPageInner() {
   const authApi = useMemo(() => "/api/auth", []);
 
   useEffect(() => {
-    if (verifyMode) {
-      try {
-        const pendingEmail =
-          sessionStorage.getItem("decoder_pending_verify_email") || "";
-        const pendingPass =
-          sessionStorage.getItem("decoder_pending_verify_password") || "";
-        const pendingNext =
-          sessionStorage.getItem("decoder_pending_verify_next") || "";
+    if (!verifyMode) return;
 
-        if (!email && pendingEmail) setEmail(pendingEmail);
-        if (!password && pendingPass) setPassword(pendingPass);
+    const { pendingEmail, pendingPass } = readPendingFromSessionStorage();
 
-        void pendingNext;
-      } catch {}
-    }
+    if (!email && pendingEmail) setEmail(pendingEmail);
+
+    // ✅ CRÍTICO: garante password no state para permitir auto-login após OTP
+    if (!password && pendingPass) setPassword(pendingPass);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -176,6 +193,7 @@ function RegisterPageInner() {
     setLoading(true);
     try {
       try {
+        // ✅ persiste para auto-login no passo OTP (mesmo em verifyMode/refresh)
         sessionStorage.setItem("decoder_pending_verify_email", eMail);
         sessionStorage.setItem("decoder_pending_verify_password", password);
         sessionStorage.setItem("decoder_pending_verify_next", redirectNext);
@@ -211,7 +229,10 @@ function RegisterPageInner() {
     setError("");
     setInfo("");
 
-    const eMail = (email || "").trim();
+    // ✅ sempre tenta resgatar do sessionStorage para não perder no verifyMode
+    const { pendingEmail, pendingPass, pendingNext } = readPendingFromSessionStorage();
+
+    const eMail = ((email || "").trim() || pendingEmail || "").trim();
     const otp = (code || "").trim();
 
     if (!eMail) return setError("E-mail é obrigatório.");
@@ -235,7 +256,10 @@ function RegisterPageInner() {
 
       setInfo("E-mail verificado. Entrando…");
 
-      const pass = password || "";
+      // ✅ CRÍTICO: força auto-login usando pendingPass quando necessário
+      const pass = (password || pendingPass || "").trim();
+      const nextToUse = sanitizeNext(pendingNext || redirectNext);
+
       if (pass && pass.length >= 6) {
         const loginRes = await fetch("/api/auth/login", {
           method: "POST",
@@ -255,7 +279,7 @@ function RegisterPageInner() {
 
           router.replace(
             `/app/login?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(
-              redirectNext,
+              nextToUse,
             )}`,
           );
           return;
@@ -269,21 +293,22 @@ function RegisterPageInner() {
 
         setStep("DONE");
 
+        // ✅ Com sessão válida, agora decide onboarding corretamente (nickname primeiro)
         const target = await safeGetOnboardingTarget();
 
-        // ✅ aqui agora pode retornar /planos quando journey=PAID
         if (target && target !== "/app") {
           router.replace(target);
           return;
         }
 
-        router.replace(redirectNext || "/app");
+        router.replace(nextToUse || "/app");
         return;
       }
 
+      // Se não temos senha suficiente, cai pra login (mas agora isso só ocorre em caso extremo)
       router.replace(
         `/app/login?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(
-          redirectNext,
+          nextToUse,
         )}`,
       );
     } catch {
@@ -293,37 +318,46 @@ function RegisterPageInner() {
     }
   }
 
-  async function resendCode() {
-    setError("");
-    setInfo("");
+async function resendCode() {
+  setError("");
+  setInfo("");
 
-    const eMail = (email || "").trim();
-    if (!eMail) return setError("E-mail é obrigatório.");
+  const { pendingPass } = readPendingFromSessionStorage();
 
-    setLoading(true);
-    try {
-      const res = await fetch(`${authApi}/resend-email-code`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        body: JSON.stringify({ email: eMail }),
-      });
+  const eMail = (email || "").trim();
+  const pass = (password || pendingPass || "").trim();
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const msg =
-          extractMessage(data) || "Não foi possível reenviar. Tente novamente.";
-        setError(msg);
-        return;
-      }
+  if (!eMail) return setError("E-mail é obrigatório.");
 
-      setInfo("Novo código enviado. Verifique seu e-mail.");
-    } catch {
-      setError("Falha de conexão. Tente novamente.");
-    } finally {
-      setLoading(false);
-    }
+  // se backend exige password, não tenta sem
+  if (!pass || pass.length < 6) {
+    return setError("Para reenviar o código, informe a senha novamente.");
   }
+
+  setLoading(true);
+  try {
+    const res = await fetch(`${authApi}/resend-email-code`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify({ email: eMail, password: pass }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg =
+        extractMessage(data) || "Não foi possível reenviar. Tente novamente.";
+      setError(msg);
+      return;
+    }
+
+    setInfo("Novo código enviado. Verifique seu e-mail.");
+  } catch {
+    setError("Falha de conexão. Tente novamente.");
+  } finally {
+    setLoading(false);
+  }
+}
 
   return (
     <main className="flex-1 flex items-center justify-center px-4 py-10">

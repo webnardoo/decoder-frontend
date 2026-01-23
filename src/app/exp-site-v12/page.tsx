@@ -94,8 +94,8 @@ export default function ExpSiteV12Page() {
   async function goTrialRegister(e: React.MouseEvent) {
     e.preventDefault();
     await startJourney("TRIAL");
-    // ✅ REGRA OFICIAL: /register = TRIAL
-    router.push("/register?journey=TRIAL&next=%2Fapp");
+    // ✅ /app/register existe; /register pode não existir
+    router.push("/app/register?next=%2Fapp");
   }
 
   return (
@@ -191,7 +191,7 @@ export default function ExpSiteV12Page() {
               </Link>
 
               {/* ✅ TRIAL */}
-              <a className="btn btnPrimary" href="/register" onClick={goTrialRegister}>
+              <a className="btn btnPrimary" href="/app/register" onClick={goTrialRegister}>
                 Começar a degustação
               </a>
             </nav>
@@ -224,7 +224,7 @@ export default function ExpSiteV12Page() {
                 </p>
 
                 <div className="heroCtaRow">
-                  <a className="btn btnPrimary" href="/register" onClick={goTrialRegister}>
+                  <a className="btn btnPrimary" href="/app/register" onClick={goTrialRegister}>
                     Analisar uma conversa
                   </a>
                 </div>
@@ -274,7 +274,11 @@ export default function ExpSiteV12Page() {
       </div>
 
       {/* RESTANTE */}
-      <section id="por-que-funciona" className="section" style={{ position: "relative", background: "transparent" }}>
+      <section
+        id="por-que-funciona"
+        className="section"
+        style={{ position: "relative", background: "transparent" }}
+      >
         <div className="container">
           <div className="blockText">
             <div className="kicker">COMO O HITCH.AI FUNCIONA</div>
@@ -285,7 +289,7 @@ export default function ExpSiteV12Page() {
             </p>
 
             <div style={{ marginTop: 18 }}>
-              <a className="btn" href="/register" onClick={goTrialRegister}>
+              <a className="btn" href="/app/register" onClick={goTrialRegister}>
                 Começar a degustação
               </a>
             </div>
@@ -311,22 +315,30 @@ export default function ExpSiteV12Page() {
           <div className="blockText">
             <div className="kicker">FEATURES</div>
             <h2 className="h2">O essencial, do jeito certo.</h2>
-            <p className="bodyText">Quatro pilares para reduzir ruído, aumentar clareza e manter controle.</p>
+            <p className="bodyText">
+              Quatro pilares para reduzir ruído, aumentar clareza e manter controle.
+            </p>
           </div>
 
           <div className="featuresWrap">
             <div className="featuresGrid">
               <div className="featureCard">
-                <div className="featureIcon" aria-hidden>▢</div>
+                <div className="featureIcon" aria-hidden>
+                  ▢
+                </div>
                 <div>
                   <p className="featureLabel">INTENÇÃO</p>
                   <p className="featureTitle">Entenda o que está por trás das palavras</p>
-                  <p className="featureBody">Contexto e subtexto organizados pra você responder com clareza.</p>
+                  <p className="featureBody">
+                    Contexto e subtexto organizados pra você responder com clareza.
+                  </p>
                 </div>
               </div>
 
               <div className="featureCard">
-                <div className="featureIcon" aria-hidden>○</div>
+                <div className="featureIcon" aria-hidden>
+                  ○
+                </div>
                 <div>
                   <p className="featureLabel">VELOCIDADE</p>
                   <p className="featureTitle">Análise clara em segundos</p>
@@ -335,16 +347,22 @@ export default function ExpSiteV12Page() {
               </div>
 
               <div className="featureCard">
-                <div className="featureIcon" aria-hidden>△</div>
+                <div className="featureIcon" aria-hidden>
+                  △
+                </div>
                 <div>
                   <p className="featureLabel">SEGURANÇA</p>
                   <p className="featureTitle">Responda com contexto, não no impulso</p>
-                  <p className="featureBody">Evite escaladas e reduza risco de conflito com respostas mais estratégicas.</p>
+                  <p className="featureBody">
+                    Evite escaladas e reduza risco de conflito com respostas mais estratégicas.
+                  </p>
                 </div>
               </div>
 
               <div className="featureCard">
-                <div className="featureIcon" aria-hidden>🔒</div>
+                <div className="featureIcon" aria-hidden>
+                  🔒
+                </div>
                 <div>
                   <p className="featureLabel">PRIVACIDADE</p>
                   <p className="featureTitle">Privacidade</p>

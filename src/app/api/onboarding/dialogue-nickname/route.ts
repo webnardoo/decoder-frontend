@@ -1,3 +1,4 @@
+// src/app/api/onboarding/dialogue-nickname/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
 function ensureApiV1(baseUrl: string) {
@@ -24,9 +25,10 @@ function normalizeBody(bodyText: string, contentType: string) {
   try {
     const obj = JSON.parse(bodyText || "{}");
 
-    // Aceita ambos e normaliza para o contrato do BACK (onboarding)
     const dialogueNickname =
-      (typeof obj?.dialogueNickname === "string" ? obj.dialogueNickname : "") ||
+      (typeof obj?.dialogueNickname === "string"
+        ? obj.dialogueNickname
+        : "") ||
       (typeof obj?.nickname === "string" ? obj.nickname : "");
 
     return JSON.stringify({ dialogueNickname });
@@ -57,24 +59,33 @@ async function forward(
 
 async function proxy(req: NextRequest, method: "POST" | "PATCH") {
   const backendBase = ensureApiV1(getBackendBaseUrl());
-
-  // ✅ Endpoint correto para a jornada
   const url = `${backendBase}/onboarding/dialogue-nickname`;
 
-  const contentType = req.headers.get("content-type") ?? "application/json";
+  const contentType =
+    req.headers.get("content-type") ?? "application/json";
   const authorization = req.headers.get("authorization") ?? "";
   const cookie = req.headers.get("cookie") ?? "";
 
   const rawBody = await req.text();
   const body = normalizeBody(rawBody, contentType);
 
-  const upstream = await forward(url, method, body, contentType, authorization, cookie);
+  const upstream = await forward(
+    url,
+    method,
+    body,
+    contentType,
+    authorization,
+    cookie
+  );
+
   const text = await upstream.text();
 
   return new NextResponse(text, {
     status: upstream.status,
     headers: {
-      "content-type": upstream.headers.get("content-type") ?? "application/json",
+      "content-type":
+        upstream.headers.get("content-type") ??
+        "application/json",
     },
   });
 }
@@ -85,7 +96,8 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     return NextResponse.json(
       {
-        message: "Falha ao encaminhar dialogue-nickname para o backend (POST).",
+        message:
+          "Falha ao encaminhar dialogue-nickname para o backend (POST).",
         error: String(e?.message ?? e),
       },
       { status: 500 }
@@ -99,7 +111,8 @@ export async function PATCH(req: NextRequest) {
   } catch (e: any) {
     return NextResponse.json(
       {
-        message: "Falha ao encaminhar dialogue-nickname para o backend (PATCH).",
+        message:
+          "Falha ao encaminhar dialogue-nickname para o backend (PATCH).",
         error: String(e?.message ?? e),
       },
       { status: 500 }

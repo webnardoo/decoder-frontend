@@ -1,60 +1,65 @@
+// src/app/api/auth/resend-email-code/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+function getBackendBaseUrl() {
+  return (
+    process.env.DECODER_BACKEND_BASE_URL ||
+    process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL ||
+    process.env.BACKEND_URL ||
+    "http://localhost:4100"
+  );
+}
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:4100";
+function ensureApiV1(baseUrl: string) {
+  const cleaned = String(baseUrl || "").replace(/\/+$/, "");
+  if (cleaned.endsWith("/api/v1")) return cleaned;
+  return `${cleaned}/api/v1`;
+}
 
 export async function POST(req: NextRequest) {
-  // ✅ no OTP-first, "resend" é o próprio request-otp (gera novo código)
-  // ⚠️ backend exige password junto; se não vier, bloqueia aqui com erro claro.
-  const raw = await req.text();
-  let body: any = null;
   try {
-    body = raw ? JSON.parse(raw) : null;
-  } catch {
-    body = null;
-  }
+    const backend = ensureApiV1(getBackendBaseUrl());
+    const bodyText = await req.text();
 
-  const email = typeof body?.email === "string" ? body.email.trim() : "";
-  const password = typeof body?.password === "string" ? body.password : "";
+    let email = "";
+    let password = "";
 
-  if (!email) {
-    return NextResponse.json({ message: "E-mail é obrigatório." }, { status: 400 });
-  }
+    try {
+      const obj = JSON.parse(bodyText || "{}");
+      email = typeof obj?.email === "string" ? obj.email : "";
+      password = typeof obj?.password === "string" ? obj.password : "";
+    } catch {}
 
-  if (!password || password.length < 6) {
+    const upstream = await fetch(`${backend}/auth/signup/request-otp`, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": req.headers.get("content-type") ?? "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+      cache: "no-store",
+    });
+
+    const text = await upstream.text().catch(() => "");
+    let data: any = null;
+
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      return NextResponse.json(
+        { message: "Resposta inválida do backend (não-JSON).", raw: text || null },
+        { status: 502 },
+      );
+    }
+
+    return NextResponse.json(data ?? {}, { status: upstream.status });
+  } catch (e: any) {
     return NextResponse.json(
-      { message: "PASSWORD_REQUIRED" },
-      { status: 400 },
+      {
+        message: "Falha ao reenviar OTP (proxy).",
+        error: String(e?.message ?? e),
+      },
+      { status: 502 },
     );
   }
-
-  const url = `${BACKEND_URL}/api/v1/auth/signup/request-otp`;
-
-  const upstream = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({ email, password }),
-    cache: "no-store",
-  });
-
-  const contentType = upstream.headers.get("content-type") ?? "";
-  const payload: any = contentType.includes("application/json")
-    ? await upstream.json().catch(() => null)
-    : await upstream.text().catch(() => "");
-
-  if (!upstream.ok) {
-    return NextResponse.json(
-      typeof payload === "string"
-        ? { message: payload }
-        : payload ?? { message: "request-otp (resend) falhou" },
-      { status: upstream.status },
-    );
-  }
-
-  return NextResponse.json(payload, { status: upstream.status });
 }

@@ -1,30 +1,9 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useOnboardingStatus } from "@/lib/onboarding/OnboardingStore";
 
-const LOGGED_PLAN = "/app/app/billing/plan";
-
-function sanitizeNext(nextParam: string | null) {
-  const raw = typeof nextParam === "string" ? nextParam.trim() : "";
-
-  if (!raw) return LOGGED_PLAN;
-
-  // Nunca mandar para fluxo público após autenticado
-  if (raw === "/planos" || raw.startsWith("/planos?")) return LOGGED_PLAN;
-
-  // Se alguém ainda estiver passando a rota antiga, normaliza
-  if (raw === "/app/billing/plan" || raw.startsWith("/app/billing/plan?")) return LOGGED_PLAN;
-
-  // Protege loops antigos
-  if (raw.startsWith("/app/app")) return LOGGED_PLAN;
-
-  // Aceita apenas rotas internas
-  if (!raw.startsWith("/")) return LOGGED_PLAN;
-
-  return raw;
-}
+const APP_HOME = "/app";
 
 function extractMessage(data: any): string | null {
   return (
@@ -34,35 +13,127 @@ function extractMessage(data: any): string | null {
   );
 }
 
+function normalizeJourney(v: any): "PAID" | "TRIAL" | null {
+  const s = String(v ?? "").trim().toUpperCase();
+  if (s === "PAID") return "PAID";
+  if (s === "TRIAL") return "TRIAL";
+  return null;
+}
+
+function hasNickname(status: any): boolean {
+  const byFlag = status?.nicknameDefined === true;
+  const byValue =
+    typeof status?.dialogueNickname === "string" && status.dialogueNickname.trim().length > 0;
+  return byFlag || byValue;
+}
+
+function resolveNextAfterNickname(status: any, nextParam: string | null): string {
+  const journey = normalizeJourney(status?.journey);
+  const stage = String(status?.onboardingStage || "").toUpperCase().trim();
+
+  // TRIAL: planos só depois da análise guiada, não aqui
+  if (journey === "TRIAL") return APP_HOME;
+
+  const raw = (nextParam || "").trim();
+  if (raw && raw.startsWith("/app") && !raw.startsWith("/app/onboarding/identity")) return raw;
+
+  if (stage === "PLAN_SELECTION_REQUIRED") return "/planos";
+
+  return APP_HOME;
+}
+
+async function fetchOnboardingStatus(): Promise<any | null> {
+  try {
+    const res = await fetch("/api/onboarding/status", { method: "GET", cache: "no-store" });
+    if (!res.ok) return { __httpStatus: res.status };
+
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.includes("application/json")) return null;
+
+    const data = await res.json().catch(() => null);
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 export default function IdentityClient() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex flex-1 items-center justify-center px-4">
+          <div className="w-full max-w-md">
+            <div className="card card-premium p-6 md:p-7">
+              <div className="text-sm text-zinc-300/80">Carregando…</div>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <IdentityInner />
+    </Suspense>
+  );
+}
+
+function IdentityInner() {
   const router = useRouter();
   const sp = useSearchParams();
 
-  const { refreshStatus } = useOnboardingStatus();
-
   const nextParam = sp?.get("next") ?? null;
-  const next = sanitizeNext(nextParam);
 
   const [nickname, setNickname] = useState("");
   const [loading, setLoading] = useState(false);
+  const [bootLoading, setBootLoading] = useState(true);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
 
-  // ✅ endpoint local (Next route) que faz proxy pro backend
-  const endpoint = useMemo(() => "/api/onboarding/dialogue-nickname", []);
+  // proxy do Next → backend
+  const apiUrl = useMemo(() => "/api/onboarding/dialogue-nickname", []);
 
-  async function submit(e: FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    let alive = true;
+
+    (async () => {
+      setBootLoading(true);
+      const status = await fetchOnboardingStatus();
+      if (!alive) return;
+
+      const http = Number(status?.__httpStatus || 0);
+      if (http === 401 || http === 403) {
+        setBootLoading(false);
+        router.replace("/app/login");
+        return;
+      }
+
+      if (status && hasNickname(status)) {
+        const target = resolveNextAfterNickname(status, nextParam);
+        router.replace(target);
+        return;
+      }
+
+      setBootLoading(false);
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [router, nextParam]);
+
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setInfo("");
 
-    const value = nickname.trim();
+    const value = (nickname || "").trim();
     if (!value) {
-      setError("Digite seu nickname (como você quer aparecer nas análises).");
+      setError("Informe seu nome/apelido.");
       return;
     }
 
     setLoading(true);
     try {
-      const res = await fetch(endpoint, {
+      // backend aceita PATCH (POST pode dar 404)
+      const res = await fetch(apiUrl, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
@@ -71,20 +142,35 @@ export default function IdentityClient() {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(extractMessage(data) || "Não foi possível salvar seu nickname.");
+        const msg = extractMessage(data) || "Não foi possível salvar seu nome. Tente novamente.";
+        setError(msg);
         return;
       }
 
-      // ✅ Ponto crítico: garante que o guard veja nicknameDefined=true antes do redirect
-      await refreshStatus();
+      setInfo("Salvo. Continuando…");
 
-      router.replace(next);
-      router.refresh();
+      // ✅ evita loop por store/stale: navegação HARD para o destino final
+      const status = await fetchOnboardingStatus();
+      const target = resolveNextAfterNickname(status, nextParam);
+
+      window.location.assign(target);
     } catch {
       setError("Falha de conexão. Tente novamente.");
     } finally {
       setLoading(false);
     }
+  }
+
+  if (bootLoading) {
+    return (
+      <div className="flex flex-1 items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md">
+          <div className="card card-premium p-6 md:p-7">
+            <div className="text-sm text-zinc-300/80">Carregando…</div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -93,12 +179,18 @@ export default function IdentityClient() {
         <div className="card card-premium p-6 md:p-7">
           <div className="mb-6">
             <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
-              Escolha seu nickname
+              Como você quer aparecer nas análises?
             </h1>
             <p className="mt-1 text-sm text-zinc-300/80">
-              Esse nome aparece no app e ajuda a personalizar suas análises.
+              Esse nome entra no diálogo como “VOCÊ (seu nome)”.
             </p>
           </div>
+
+          {info && (
+            <div className="mb-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+              {info}
+            </div>
+          )}
 
           {error && (
             <div className="mb-4 rounded-2xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-200">
@@ -109,7 +201,7 @@ export default function IdentityClient() {
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-2">
               <label className="label" htmlFor="nickname">
-                Nickname
+                Seu nome/apelido
               </label>
               <input
                 id="nickname"
@@ -118,21 +210,11 @@ export default function IdentityClient() {
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 disabled={loading}
-                autoFocus
               />
             </div>
 
             <button type="submit" className="btn-cta w-full" disabled={loading}>
               {loading ? "Salvando..." : "Continuar"}
-            </button>
-
-            <button
-              type="button"
-              className="btn w-full"
-              onClick={() => router.replace(LOGGED_PLAN)}
-              disabled={loading}
-            >
-              Voltar
             </button>
           </form>
         </div>

@@ -152,8 +152,8 @@ function RegisterOtpInner() {
       if (sessionRes.ok) {
         setStep("DONE");
 
-        // ✅ ponto neutro: entra no /app e o guard decide (nickname → identity → /planos)
-        router.replace("/app");
+        // ✅ CORREÇÃO: depois do OTP, entra no APP REAL (onde existe guard)
+        router.replace("/app/app");
         return;
       }
 
@@ -356,7 +356,7 @@ function RegisterOtpInner() {
               <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
                 Conta confirmada. Redirecionando…
               </div>
-              <button className="btn-cta w-full" onClick={() => router.replace("/app")}>
+              <button className="btn-cta w-full" onClick={() => router.replace("/app/app")}>
                 Ir para o app
               </button>
             </div>

@@ -1,52 +1,107 @@
+// src/app/api/auth/verify-email-code/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+function getBackendBaseUrl() {
+  return (
+    process.env.DECODER_BACKEND_BASE_URL ||
+    process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL ||
+    process.env.BACKEND_URL ||
+    "http://localhost:4100"
+  );
+}
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:4100";
+function ensureApiV1(baseUrl: string) {
+  const cleaned = String(baseUrl || "").replace(/\/+$/, "");
+  if (cleaned.endsWith("/api/v1")) return cleaned;
+  return `${cleaned}/api/v1`;
+}
+
+function isProd() {
+  return process.env.NODE_ENV === "production";
+}
 
 export async function POST(req: NextRequest) {
-  // ✅ novo fluxo: verify otp (cria user + retorna accessToken)
-  const url = `${BACKEND_URL}/api/v1/auth/signup/verify-otp`;
+  try {
+    const backend = ensureApiV1(getBackendBaseUrl());
+    const bodyText = await req.text();
 
-  const upstream = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": req.headers.get("content-type") ?? "application/json",
-      Accept: "application/json",
-    },
-    body: await req.text(),
-    cache: "no-store",
-  });
+    // Mantém compat com payload { email, code }
+    let email = "";
+    let code = "";
 
-  const contentType = upstream.headers.get("content-type") ?? "";
-  const payload: any = contentType.includes("application/json")
-    ? await upstream.json().catch(() => null)
-    : await upstream.text().catch(() => "");
+    try {
+      const obj = JSON.parse(bodyText || "{}");
+      email = typeof obj?.email === "string" ? obj.email : "";
+      code = typeof obj?.code === "string" ? obj.code : "";
+    } catch {
+      // Se não for JSON, deixa upstream validar
+    }
 
-  if (!upstream.ok) {
+    const upstream = await fetch(`${backend}/auth/signup/verify-otp`, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": req.headers.get("content-type") ?? "application/json",
+      },
+      body: JSON.stringify({ email, code }),
+      cache: "no-store",
+    });
+
+    const text = await upstream.text().catch(() => "");
+    let data: any = null;
+
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      return NextResponse.json(
+        { message: "Resposta inválida do backend (não-JSON).", raw: text || null },
+        { status: 502 },
+      );
+    }
+
+    if (!upstream.ok) {
+      return NextResponse.json(data ?? { message: "Falha ao validar código." }, {
+        status: upstream.status,
+      });
+    }
+
+    // Backend retorna accessToken
+    const token =
+      (typeof data?.accessToken === "string" && data.accessToken.trim()) ? data.accessToken.trim() :
+      (typeof data?.token === "string" && data.token.trim()) ? data.token.trim() :
+      "";
+
+    if (!token) {
+      return NextResponse.json(
+        { ...data, message: data?.message ?? "Código validado, mas token ausente." },
+        { status: 200 },
+      );
+    }
+
+    const jar = await cookies();
+
+    const cookieBase = {
+      httpOnly: true as const,
+      secure: isProd(),
+      sameSite: "lax" as const,
+      path: "/",
+    };
+
+    jar.set("decoder_auth", token, cookieBase);
+    jar.set("accessToken", token, cookieBase);
+
     return NextResponse.json(
-      typeof payload === "string"
-        ? { message: payload }
-        : payload ?? { message: "verify-otp falhou" },
-      { status: upstream.status },
+      { ...data, accessToken: undefined, token: undefined },
+      { status: 200 },
+    );
+  } catch (e: any) {
+    return NextResponse.json(
+      {
+        message: "Falha ao validar OTP (proxy).",
+        error: String(e?.message ?? e),
+      },
+      { status: 502 },
     );
   }
-
-  // ✅ se o backend retornou token, já seta cookie (evita depender de /login)
-  const accessToken = typeof payload?.accessToken === "string" ? payload.accessToken : null;
-
-  const res = NextResponse.json(payload, { status: upstream.status });
-
-  if (accessToken) {
-    const isProd = process.env.NODE_ENV === "production";
-    res.cookies.set("decoder_auth", accessToken, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: isProd,
-      path: "/",
-    });
-  }
-
-  return res;
 }
