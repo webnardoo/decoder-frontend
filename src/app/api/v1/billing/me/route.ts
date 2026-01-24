@@ -1,22 +1,35 @@
 import { NextResponse } from "next/server";
 
-function getBackendBaseUrl(): string {
-  // ✅ Prioridade 1 (Vercel/PRD atual): BACKEND_URL
-  const backendUrl = (process.env.BACKEND_URL || "").trim();
-  if (backendUrl) return backendUrl;
+export const runtime = "nodejs";
 
-  // ✅ Prioridade 2 (se você preferir separar no futuro): BACKEND_URL_PRD
-  const prd = (process.env.BACKEND_URL_PRD || "").trim();
+function normalizeBaseUrl(raw: string): string {
+  return String(raw || "").trim().replace(/\/+$/, "");
+}
+
+function buildBillingMeUrl(backendBaseRaw: string): string {
+  const base = normalizeBaseUrl(backendBaseRaw);
+
+  // Se o BACKEND_URL já vier com /api/v1 no final, NÃO duplica.
+  if (base.endsWith("/api/v1")) return `${base}/billing/me`;
+
+  // Se vier com /api (sem /v1), completa.
+  if (base.endsWith("/api")) return `${base}/v1/billing/me`;
+
+  // Caso normal: base raiz
+  return `${base}/api/v1/billing/me`;
+}
+
+function getBackendBaseUrl(): string {
+  // ✅ PRD (Vercel) geralmente usa BACKEND_URL
+  const prdGeneric = normalizeBaseUrl(process.env.BACKEND_URL || "");
+  if (prdGeneric) return prdGeneric;
+
+  // fallback legado
+  const prd = normalizeBaseUrl(process.env.BACKEND_URL_PRD || "");
   if (prd) return prd;
 
-  // ✅ Dev local
-  const local = (process.env.BACKEND_URL_LOCAL || "http://127.0.0.1:4100").trim();
-
-  // ✅ Evita PRD cair em localhost e mascarar o erro com 502
-  if (process.env.VERCEL === "1") {
-    throw new Error("Missing BACKEND_URL (or BACKEND_URL_PRD) in Vercel environment");
-  }
-
+  // local
+  const local = normalizeBaseUrl(process.env.BACKEND_URL_LOCAL || "http://127.0.0.1:4100");
   return local;
 }
 
@@ -30,7 +43,7 @@ function extractMessage(data: any): string | null {
 
 export async function GET(req: Request) {
   const backendBase = getBackendBaseUrl();
-  const url = `${backendBase}/api/v1/billing/me`;
+  const url = buildBillingMeUrl(backendBase);
 
   try {
     const cookie = req.headers.get("cookie") ?? "";
