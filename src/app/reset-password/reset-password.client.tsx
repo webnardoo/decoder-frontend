@@ -9,6 +9,31 @@ function getParam(params: URLSearchParams | null, key: string): string | null {
   return v && v.trim() ? v.trim() : null;
 }
 
+// Normaliza para evitar:
+// - double slash
+// - /api/v1 duplicado
+function joinApi(base: string, path: string): string {
+  const b = String(base || '').trim();
+  const p = String(path || '').trim();
+
+  // se não vier base, mantém relativo (ok em dev com proxy/middleware, se existir)
+  if (!b) return p.startsWith('/') ? p : `/${p}`;
+
+  const baseNoSlashEnd = b.replace(/\/+$/, '');
+  const pathWithSlash = p.startsWith('/') ? p : `/${p}`;
+
+  // remove /api/v1 duplicado caso base já contenha
+  const baseHasApiV1 = /\/api\/v1$/i.test(baseNoSlashEnd) || /\/api\/v1\//i.test(baseNoSlashEnd + '/');
+  const pathHasApiV1 = /^\/api\/v1(\/|$)/i.test(pathWithSlash);
+
+  if (baseHasApiV1 && pathHasApiV1) {
+    // corta o prefixo /api/v1 do path
+    return `${baseNoSlashEnd}${pathWithSlash.replace(/^\/api\/v1/i, '') || ''}`;
+  }
+
+  return `${baseNoSlashEnd}${pathWithSlash}`;
+}
+
 export default function ResetPasswordClient() {
   const router = useRouter();
   const params = useSearchParams();
@@ -43,7 +68,11 @@ export default function ResetPasswordClient() {
     setLoading(true);
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
-      const res = await fetch(`${apiBase}/api/v1/auth/reset-password`, {
+
+      // ✅ aqui é o fix: path SEM duplicar /api/v1
+      const url = joinApi(apiBase, '/auth/reset-password');
+
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, newPassword: password }),
