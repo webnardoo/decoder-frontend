@@ -1,11 +1,22 @@
 import { NextResponse } from "next/server";
 
 function getBackendBaseUrl(): string {
-  // Preferência: PRD se existir (Vercel), senão local (dev)
+  // ✅ Prioridade 1 (Vercel/PRD atual): BACKEND_URL
+  const backendUrl = (process.env.BACKEND_URL || "").trim();
+  if (backendUrl) return backendUrl;
+
+  // ✅ Prioridade 2 (se você preferir separar no futuro): BACKEND_URL_PRD
   const prd = (process.env.BACKEND_URL_PRD || "").trim();
   if (prd) return prd;
 
+  // ✅ Dev local
   const local = (process.env.BACKEND_URL_LOCAL || "http://127.0.0.1:4100").trim();
+
+  // ✅ Evita PRD cair em localhost e mascarar o erro com 502
+  if (process.env.VERCEL === "1") {
+    throw new Error("Missing BACKEND_URL (or BACKEND_URL_PRD) in Vercel environment");
+  }
+
   return local;
 }
 
