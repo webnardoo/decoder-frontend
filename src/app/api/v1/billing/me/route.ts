@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 
 function getBackendBaseUrl(): string {
-  const env = (process.env.APP_ENV || "local").toLowerCase().trim();
+  // Preferência: PRD se existir (Vercel), senão local (dev)
+  const prd = (process.env.BACKEND_URL_PRD || "").trim();
+  if (prd) return prd;
 
-  const local = process.env.BACKEND_URL_LOCAL || "http://127.0.0.1:4100";
-  const prd = process.env.BACKEND_URL_PRD || "";
-
-  if (env === "prd" && prd) return prd;
+  const local = (process.env.BACKEND_URL_LOCAL || "http://127.0.0.1:4100").trim();
   return local;
 }
 
@@ -23,7 +22,6 @@ export async function GET(req: Request) {
   const url = `${backendBase}/api/v1/billing/me`;
 
   try {
-    // encaminha cookie + authorization (caso o backend use Bearer)
     const cookie = req.headers.get("cookie") ?? "";
     const authorization = req.headers.get("authorization") ?? "";
 
@@ -42,7 +40,6 @@ export async function GET(req: Request) {
       ? await upstream.json().catch(() => ({}))
       : await upstream.text().catch(() => "");
 
-    // se for 401, devolve 401 com mensagem limpa (não “endpoint inexistente”)
     if (upstream.status === 401) {
       const msg =
         (typeof data === "object" && data ? extractMessage(data) : null) ||
@@ -51,7 +48,12 @@ export async function GET(req: Request) {
         {
           ok: false,
           message: msg,
-          __debug: { backendBase, url, hasCookie: Boolean(cookie), hasAuthorization: Boolean(authorization) },
+          __debug: {
+            backendBase,
+            url,
+            hasCookie: Boolean(cookie),
+            hasAuthorization: Boolean(authorization),
+          },
         },
         { status: 401 },
       );
@@ -68,7 +70,6 @@ export async function GET(req: Request) {
       );
     }
 
-    // passa o payload do backend como está
     return NextResponse.json(data, { status: 200 });
   } catch (e: any) {
     return NextResponse.json(
