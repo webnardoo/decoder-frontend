@@ -105,7 +105,10 @@ export default function ContaPage() {
     setPlanMsg(null);
 
     try {
-      const res = await fetch("/api/v1/billing/me", { cache: "no-store" });
+      const res = await fetch("/api/v1/billing/me", {
+        cache: "no-store",
+        credentials: "include",
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message || "Falha ao carregar plano.");
       setBillingMe(data);
@@ -150,6 +153,7 @@ export default function ContaPage() {
           "decoder_token",
           "hitch_token",
           "hitch_access_token",
+          "hitch_refresh_token",
           "hitch_refresh_token",
         ];
         for (const k of keys) localStorage.removeItem(k);
@@ -220,8 +224,7 @@ export default function ContaPage() {
     return raw ? formatDate(raw) : "—";
   }, [billingMe, status]);
 
-  const disableAll =
-    loadingProfile || savingNickname || loadingPlan || loggingOut;
+  const disableAll = loadingProfile || savingNickname || loadingPlan || loggingOut;
 
   return (
     <div className="app-main">
@@ -246,37 +249,37 @@ export default function ContaPage() {
           </div>
 
           <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-[260px_1fr]">
-{/* Sidebar */}
-<div className="card p-3">
-  <div className="mt-3 flex flex-col gap-2">
-    <button
-      className={tab === "profile" ? "btn btn-primary" : "btn"}
-      onClick={() => setTab("profile")}
-      type="button"
-    >
-      Profile
-    </button>
+            {/* Sidebar */}
+            <div className="card p-3">
+              <div className="mt-3 flex flex-col gap-2">
+                <button
+                  className={tab === "profile" ? "btn btn-primary" : "btn"}
+                  onClick={() => setTab("profile")}
+                  type="button"
+                >
+                  Profile
+                </button>
 
-    <button
-      className={tab === "plano" ? "btn btn-primary" : "btn"}
-      onClick={() => setTab("plano")}
-      type="button"
-    >
-      Plano
-    </button>
+                <button
+                  className={tab === "plano" ? "btn btn-primary" : "btn"}
+                  onClick={() => setTab("plano")}
+                  type="button"
+                >
+                  Plano
+                </button>
 
-    {/* 🔹 Separador visual */}
-    <div className="my-2 h-px w-full bg-white/10" />
+                {/* 🔹 Separador visual */}
+                <div className="my-2 h-px w-full bg-white/10" />
 
-    <button
-      className="btn text-red-300 hover:text-red-200 hover:border-red-400/40"
-      onClick={handleLogout}
-      type="button"
-    >
-      Sair
-    </button>
-  </div>
-</div>
+                <button
+                  className="btn text-red-300 hover:text-red-200 hover:border-red-400/40"
+                  onClick={handleLogout}
+                  type="button"
+                >
+                  Sair
+                </button>
+              </div>
+            </div>
 
             {/* Content */}
             <div className="card p-4 md:p-5">

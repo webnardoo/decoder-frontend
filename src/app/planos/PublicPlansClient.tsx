@@ -199,7 +199,10 @@ export default function PublicPlansClient() {
     async function loadMe() {
       try {
         setLoadingMe(true);
-        const res = await fetch("/api/v1/billing/me", { cache: "no-store" });
+        const res = await fetch("/api/v1/billing/me", {
+          cache: "no-store",
+          credentials: "include",
+        });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           if (!cancelled) setMe(null);
