@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import GuardSelectionModal from "@/components/ui/GuardSelectionModal";
 
 type TabKey = "profile" | "plano";
 
@@ -51,6 +52,15 @@ export default function ContaPage() {
   const [nickname, setNickname] = useState("");
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
 
+  // ✅ Nickname: read-only por default; editar habilita
+  const [isEditingNickname, setIsEditingNickname] = useState(false);
+
+  // ✅ snapshot do nickname carregado (para cancelar)
+  const [nicknameSnapshot, setNicknameSnapshot] = useState("");
+
+  // ✅ Modal de sucesso (nickname atualizado)
+  const [nicknameSavedOpen, setNicknameSavedOpen] = useState(false);
+
   // Plano
   const [loadingPlan, setLoadingPlan] = useState(true);
   const [billingMe, setBillingMe] = useState<BillingMeResponse | null>(null);
@@ -66,18 +76,25 @@ export default function ContaPage() {
       const res = await fetch("/api/onboarding/status", { cache: "no-store" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message || "Falha ao carregar perfil.");
+
+      const nn = String(data?.dialogueNickname ?? "");
+
       setStatus(data);
-      setNickname(String(data?.dialogueNickname ?? ""));
+      setNickname(nn);
+      setNicknameSnapshot(nn);
     } catch (e: any) {
       setProfileMsg(e?.message || "Erro ao carregar perfil.");
       setStatus(null);
       setNickname("");
+      setNicknameSnapshot("");
     } finally {
       setLoadingProfile(false);
     }
   }
 
   async function saveNickname() {
+    if (!isEditingNickname) return;
+
     setSavingNickname(true);
     setProfileMsg(null);
 
@@ -91,13 +108,31 @@ export default function ContaPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message || "Falha ao salvar nickname.");
 
-      setProfileMsg("Nickname atualizado.");
+      // ✅ refresh do perfil + volta a read-only após salvar
       await loadOnboardingStatus();
+      setIsEditingNickname(false);
+      setNicknameSavedOpen(true);
     } catch (e: any) {
       setProfileMsg(e?.message || "Erro ao salvar nickname.");
     } finally {
       setSavingNickname(false);
     }
+  }
+
+  function startEditNickname() {
+    if (savingNickname || loggingOut || loadingProfile) return;
+    setProfileMsg(null);
+
+    // garante snapshot atual antes de editar
+    setNicknameSnapshot(String(nickname ?? ""));
+    setIsEditingNickname(true);
+  }
+
+  function cancelEditNickname() {
+    // desfaz mudança local e volta read-only
+    setProfileMsg(null);
+    setNickname(nicknameSnapshot);
+    setIsEditingNickname(false);
   }
 
   async function loadBillingMe() {
@@ -177,6 +212,11 @@ export default function ContaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ✅ se sair do tab profile, garante read-only
+  useEffect(() => {
+    if (tab !== "profile") setIsEditingNickname(false);
+  }, [tab]);
+
   // --------- labels defensivos ---------
 
   const planName = useMemo(
@@ -185,7 +225,7 @@ export default function ContaPage() {
       status?.subscription?.planName ||
       status?.planName ||
       "—",
-    [billingMe, status],
+    [billingMe, status]
   );
 
   const billingCycleLabel = useMemo(() => {
@@ -228,6 +268,15 @@ export default function ContaPage() {
 
   return (
     <div className="app-main">
+      {/* ✅ Pop-up de sucesso do nickname */}
+      <GuardSelectionModal
+        open={nicknameSavedOpen}
+        title="Atualizado com sucesso"
+        message={"Seu nickname foi atualizado com sucesso."}
+        fix={undefined}
+        onClose={() => setNicknameSavedOpen(false)}
+      />
+
       <div className="mx-auto w-full max-w-6xl px-4 py-6">
         <div className="card card-premium p-5 md:p-6">
           <div className="flex items-center justify-between gap-4">
@@ -287,9 +336,12 @@ export default function ContaPage() {
                 <>
                   <label className="label">Nickname</label>
                   <input
-                    className="input"
+                    className={`input ${
+                      !isEditingNickname ? "text-white/20 cursor-default" : "text-white"
+                    }`}
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
+                    readOnly={!isEditingNickname}
                     disabled={loadingProfile || savingNickname || loggingOut}
                   />
 
@@ -297,25 +349,35 @@ export default function ContaPage() {
                     <button
                       className="btn-cta"
                       onClick={saveNickname}
-                      disabled={savingNickname || loggingOut}
+                      disabled={!isEditingNickname || savingNickname || loggingOut}
                       type="button"
                     >
                       Salvar
                     </button>
-                    <button
-                      className="btn"
-                      onClick={loadOnboardingStatus}
-                      disabled={savingNickname || loggingOut}
-                      type="button"
-                    >
-                      Atualizar
-                    </button>
+
+                    {!isEditingNickname ? (
+                      <button
+                        className="btn"
+                        onClick={startEditNickname}
+                        disabled={savingNickname || loggingOut || loadingProfile}
+                        type="button"
+                      >
+                        Editar
+                      </button>
+                    ) : (
+                      <button
+                        className="btn"
+                        onClick={cancelEditNickname}
+                        disabled={savingNickname || loggingOut}
+                        type="button"
+                      >
+                        Cancelar
+                      </button>
+                    )}
                   </div>
 
                   {profileMsg && (
-                    <div className="mt-3 text-sm text-white/60">
-                      {profileMsg}
-                    </div>
+                    <div className="mt-3 text-sm text-white/60">{profileMsg}</div>
                   )}
                 </>
               ) : (
@@ -323,10 +385,7 @@ export default function ContaPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <InfoRow label="Plano atual" value={planName} />
                     <InfoRow label="Ciclo" value={billingCycleLabel} />
-                    <InfoRow
-                      label="Créditos do plano"
-                      value={planMonthlyCreditsLabel}
-                    />
+                    <InfoRow label="Créditos do plano" value={planMonthlyCreditsLabel} />
                     <InfoRow label="Saldo atual" value={creditsBalanceLabel} />
                     <InfoRow label="Renovação" value={renewalLabel} />
                   </div>

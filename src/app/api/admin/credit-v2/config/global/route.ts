@@ -5,13 +5,17 @@ const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:4100";
 
 async function getAuthTokenFromCookies(): Promise<string | null> {
   const jar = await cookies();
+
   const token =
+    // ✅ cookie real do app (confirmado no Network)
+    jar.get("decoder_auth")?.value ||
+    // fallbacks legados
     jar.get("accessToken")?.value ||
     jar.get("token")?.value ||
     jar.get("hint_access_token")?.value ||
     null;
 
-  return token;
+  return token ? String(token).trim() : null;
 }
 
 export async function GET() {

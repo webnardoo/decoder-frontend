@@ -7,6 +7,9 @@ type AnalyzeRequestBody = {
   text?: string;
   relationshipType?: string;
   quickMode?: QuickMode;
+
+  // ✅ opcional: usado para o backend logar a etapa "ANALYZE" do pipeline OCR
+  pipelineId?: string;
 };
 
 function normalizeQuickMode(mode?: QuickMode) {
@@ -29,12 +32,6 @@ function extractJwtFromCookieValue(v: string) {
   return raw;
 }
 
-/**
- * Base CANÔNICA (PRD):
- * - usa NEXT_PUBLIC_API_BASE_URL quando existir (normalmente termina em /api/v1)
- * - senão cai nos fallbacks legados
- * - garante que SEMPRE termina em /api/v1 (uma vez só)
- */
 function getBackendApiV1BaseUrl() {
   const raw =
     process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -46,7 +43,6 @@ function getBackendApiV1BaseUrl() {
   const base = String(raw || "").trim().replace(/\/+$/, "");
   if (!base) throw new Error("Backend base URL não definido");
 
-  // Se já termina com /api/v1, ok. Se não, adiciona.
   return base.endsWith("/api/v1") ? base : `${base}/api/v1`;
 }
 
@@ -55,10 +51,6 @@ function join(base: string, path: string) {
   return `${base}/${clean}`;
 }
 
-/**
- * MVP RULE (HARD):
- * - QUICK REPLY (responder) NÃO pode devolver "analysis" para o front.
- */
 function stripAnalysisForResponder(payload: unknown, quickMode: "resumo" | "responder") {
   if (quickMode !== "responder") return payload;
   if (!payload || typeof payload !== "object") return payload;
@@ -76,6 +68,8 @@ export async function POST(req: Request) {
     const text = String(body?.text ?? "").trim();
     const relationshipType = String(body?.relationshipType ?? "").trim();
     const quickMode = normalizeQuickMode(body?.quickMode);
+
+    const pipelineId = String(body?.pipelineId ?? "").trim();
 
     if (!text) return NextResponse.json({ error: "Payload inválido: text é obrigatório." }, { status: 400 });
     if (!relationshipType)
@@ -99,11 +93,13 @@ export async function POST(req: Request) {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
+        ...(pipelineId ? { "x-ocr-pipeline-id": pipelineId } : {}),
       },
       body: JSON.stringify({
         conversation: text,
         relationshipType,
         quickMode,
+        ...(pipelineId ? { pipelineId } : {}),
       }),
       cache: "no-store",
     });

@@ -9,6 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@plasmicapp/host": "^1.0.234",
     "@plasmicapp/loader-nextjs": "^1.0.450",
     "@plasmicapp/react-web": "^0.2.413",

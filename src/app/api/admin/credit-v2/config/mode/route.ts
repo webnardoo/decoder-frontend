@@ -6,6 +6,9 @@ const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:4100";
 async function getAuthTokenFromCookies(): Promise<string | null> {
   const jar = await cookies();
   const token =
+    // ✅ cookie real do app (confirmado no Network)
+    jar.get("decoder_auth")?.value ||
+    // fallbacks legados
     jar.get("accessToken")?.value ||
     jar.get("token")?.value ||
     jar.get("hint_access_token")?.value ||
@@ -21,14 +24,17 @@ export async function GET(req: Request) {
   const mode = (url.searchParams.get("mode") ?? "").trim();
   const qs = mode ? `?mode=${encodeURIComponent(mode)}` : "";
 
-  const res = await fetch(`${BACKEND_URL}/api/v1/admin/credit-v2/config/mode${qs}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  const res = await fetch(
+    `${BACKEND_URL}/api/v1/admin/credit-v2/config/mode${qs}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      cache: "no-store",
     },
-    cache: "no-store",
-  });
+  );
 
   const text = await res.text();
   let data: any = null;
@@ -59,15 +65,18 @@ export async function PATCH(req: Request) {
     body = null;
   }
 
-  const res = await fetch(`${BACKEND_URL}/api/v1/admin/credit-v2/config/mode${qs}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  const res = await fetch(
+    `${BACKEND_URL}/api/v1/admin/credit-v2/config/mode${qs}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      cache: "no-store",
+      body: JSON.stringify(body ?? {}),
     },
-    cache: "no-store",
-    body: JSON.stringify(body ?? {}),
-  });
+  );
 
   const text = await res.text();
   let data: any = null;

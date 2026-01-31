@@ -25,6 +25,11 @@ type BillingMeResponse = {
   [k: string]: any;
 };
 
+type OnboardingStatus = {
+  onboardingStage?: string;
+  [k: string]: any;
+};
+
 const PRICE_MAP: Record<string, string> = {
   standard: "R$ 29,90",
   pro: "R$ 49,90",
@@ -134,6 +139,7 @@ function buildCheckout(planId: string, cycle: BillingCycle) {
   const qs = new URLSearchParams({ planId, billingCycle: cycle });
   return `/app/app/checkout?${qs.toString()}`;
 }
+
 export default function BillingPlanPage() {
   const router = useRouter();
 
@@ -145,6 +151,10 @@ export default function BillingPlanPage() {
 
   const [loadingMe, setLoadingMe] = useState(true);
   const [me, setMe] = useState<BillingMeResponse | null>(null);
+
+  // ✅ novo: onboardingStage para controlar botão "Voltar para conta"
+  const [loadingStatus, setLoadingStatus] = useState(true);
+  const [onboardingStage, setOnboardingStage] = useState<string | null>(null);
 
   const cycleLabel = useMemo(
     () => (cycle === "monthly" ? "Mensal" : "Anual"),
@@ -163,6 +173,11 @@ export default function BillingPlanPage() {
   }, [me]);
 
   const isAuthed = useMemo(() => !loadingMe && me != null, [loadingMe, me]);
+
+  const canShowBackToAccount = useMemo(() => {
+    if (loadingStatus) return false;
+    return String(onboardingStage ?? "").toUpperCase() === "READY";
+  }, [loadingStatus, onboardingStage]);
 
   useEffect(() => {
     let cancelled = false;
@@ -202,8 +217,27 @@ export default function BillingPlanPage() {
       }
     }
 
+    async function loadStatus() {
+      try {
+        setLoadingStatus(true);
+        const res = await fetch("/api/onboarding/status", { cache: "no-store" });
+        if (!res.ok) {
+          if (!cancelled) setOnboardingStage(null);
+          return;
+        }
+        const data = (await res.json().catch(() => ({}))) as OnboardingStatus;
+        if (!cancelled) setOnboardingStage(String(data?.onboardingStage ?? "").trim() || null);
+      } catch {
+        if (!cancelled) setOnboardingStage(null);
+      } finally {
+        if (!cancelled) setLoadingStatus(false);
+      }
+    }
+
     void loadPlans();
     void loadMe();
+    void loadStatus();
+
     return () => {
       cancelled = true;
     };
@@ -238,6 +272,20 @@ export default function BillingPlanPage() {
   return (
     <main className="flex-1 px-4 py-10 md:py-12">
       <div className="mx-auto w-full max-w-6xl">
+        {/* ✅ novo: botão Voltar para conta (só se onboardingStage === READY) */}
+        {canShowBackToAccount && (
+          <div className="mb-6 flex items-center justify-end">
+            <button
+              type="button"
+              className="btn"
+              onClick={() => router.push("/app/conta")}
+              disabled={isBusy}
+            >
+              Voltar para conta
+            </button>
+          </div>
+        )}
+
         <div className="text-center space-y-4">
           <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-zinc-100">
             Escolha quanto controle você quer
