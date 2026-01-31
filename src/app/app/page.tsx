@@ -321,9 +321,8 @@ export default function HomePage() {
       setOnboarding(data);
 
       if (typeof data?.creditsBalance === "number") {
-        setCreditsBalance((cur) =>
-          typeof cur === "number" ? cur : data.creditsBalance!
-        );
+  setCreditsBalance(data.creditsBalance);
+        
       }
 
       if (skipOnboardingOnce) {
