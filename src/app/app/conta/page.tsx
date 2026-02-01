@@ -66,6 +66,9 @@ export default function ContaPage() {
   const [billingMe, setBillingMe] = useState<BillingMeResponse | null>(null);
   const [planMsg, setPlanMsg] = useState<string | null>(null);
 
+  // ✅ UI: alterna card de plano -> instruções de cancelamento
+  const [showCancelPlanCard, setShowCancelPlanCard] = useState(false);
+
   const [loggingOut, setLoggingOut] = useState(false);
 
   async function loadOnboardingStatus() {
@@ -217,6 +220,11 @@ export default function ContaPage() {
     if (tab !== "profile") setIsEditingNickname(false);
   }, [tab]);
 
+  // ✅ ao entrar/sair do tab plano, reseta card de cancelamento
+  useEffect(() => {
+    if (tab !== "plano") setShowCancelPlanCard(false);
+  }, [tab]);
+
   // --------- labels defensivos ---------
 
   const planName = useMemo(
@@ -265,6 +273,10 @@ export default function ContaPage() {
   }, [billingMe, status]);
 
   const disableAll = loadingProfile || savingNickname || loadingPlan || loggingOut;
+
+  // ✅ Texto revisado (gramática/ortografia)
+  const cancelPlanText =
+    'Para cancelar seu plano, envie um e-mail para hitchai@hitchai.online, com o assunto "Cancelamento de Plano". No corpo do e-mail, informe o e-mail cadastrado (o mesmo que você usa para entrar no Hitch.ai).';
 
   return (
     <div className="app-main">
@@ -382,13 +394,24 @@ export default function ContaPage() {
                 </>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <InfoRow label="Plano atual" value={planName} />
-                    <InfoRow label="Ciclo" value={billingCycleLabel} />
-                    <InfoRow label="Créditos do plano" value={planMonthlyCreditsLabel} />
-                    <InfoRow label="Saldo atual" value={creditsBalanceLabel} />
-                    <InfoRow label="Renovação" value={renewalLabel} />
-                  </div>
+                  {!showCancelPlanCard ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <InfoRow label="Plano atual" value={planName} />
+                      <InfoRow label="Ciclo" value={billingCycleLabel} />
+                      <InfoRow label="Créditos do plano" value={planMonthlyCreditsLabel} />
+                      <InfoRow label="Saldo atual" value={creditsBalanceLabel} />
+                      <InfoRow label="Renovação" value={renewalLabel} />
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-4">
+                      <div className="text-xs font-semibold tracking-wide text-white/45">
+                        CANCELAMENTO DE PLANO
+                      </div>
+                      <div className="mt-2 text-sm text-white/85 leading-relaxed">
+                        {cancelPlanText}
+                      </div>
+                    </div>
+                  )}
 
                   {planMsg && (
                     <div className="mt-3 text-sm text-white/60">{planMsg}</div>
@@ -402,6 +425,15 @@ export default function ContaPage() {
                       type="button"
                     >
                       Atualizar
+                    </button>
+
+                    <button
+                      className="btn"
+                      onClick={() => setShowCancelPlanCard(true)}
+                      type="button"
+                      disabled={loggingOut}
+                    >
+                      Cancelar plano
                     </button>
 
                     <button
