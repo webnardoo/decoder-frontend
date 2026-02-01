@@ -212,6 +212,9 @@ export default function HomePage() {
     null
   );
 
+  // ✅ NOVO: modo usado para renderizar o resultado (não depende do quickMode atual)
+  const [resultQuickMode, setResultQuickMode] = useState<QuickMode>("RESUMO");
+
   const [conversaId, setConversaId] = useState<string>("");
 
   const [conversation, setConversation] = useState("");
@@ -321,8 +324,7 @@ export default function HomePage() {
       setOnboarding(data);
 
       if (typeof data?.creditsBalance === "number") {
-  setCreditsBalance(data.creditsBalance);
-        
+        setCreditsBalance(data.creditsBalance);
       }
 
       if (skipOnboardingOnce) {
@@ -503,6 +505,9 @@ export default function HomePage() {
       return;
     }
 
+    // ✅ snapshot do modo usado nesta execução (para render do resultado)
+    const usedQuickMode = quickMode as QuickMode;
+
     const validation = validateConversationText(textToAnalyze);
     if (!validation.ok) {
       const ux = getConversationValidationMessage(validation.code, validation.stats);
@@ -608,6 +613,10 @@ export default function HomePage() {
       }
 
       const data = r as QuickAnalysisResponseV11;
+
+      // ✅ IMPORTANTÍSSIMO: fixa o modo do resultado ANTES do reset de seleção
+      setResultQuickMode(usedQuickMode);
+
       setResult(data);
 
       if (typeof data?.creditsBalanceAfter === "number") {
@@ -626,7 +635,8 @@ export default function HomePage() {
 
       await refreshOnboarding();
 
-      // ✅ requisito: após concluir análise, modo/tipo voltam pra null
+      // ✅ requisito: após concluir análise, modo/tipo voltam pra null (UI),
+      // mas o resultado continua renderizando com resultQuickMode.
       resetSelectionsToNull();
 
       // ✅ finaliza steps (só no MANUAL)
@@ -1367,7 +1377,8 @@ export default function HomePage() {
         )}
       </div>
 
-      {result && <ResultView data={result} quickMode={(quickMode ?? "RESUMO") as any} />}
+      {/* ✅ usa o modo do resultado, não o quickMode atual (que é resetado) */}
+      {result && <ResultView data={result} quickMode={resultQuickMode as any} />}
     </div>
   );
 }
