@@ -4,21 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Você está DESTRUINDO seus relacionamentos e nem PERCEBE | Hitch.ai</title>
+
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root{
-      --bg0:#0a0a0a;
-      --bg1:#1a1a1a;
-      --red:#ff0000;
-      --red2:#ff4444;
-      --green:#00ff88;
-      --card: rgba(255,255,255,0.05);
-      --cardBorder: rgba(255,255,255,0.10);
-      --textMuted: #cccccc;
+      --bg0:#ffffff;
+      --bg1:#f5f5f5;
+
+      --red:#e60000;
+      --red2:#ff3333;
+      --green:#00a862;
+
+      --card:#ffffff;
+      --cardBorder: rgba(0,0,0,0.08);
+
+      --textMain:#111111;
+      --textMuted:#555555;
     }
 
-    /* ✅ Mobile/UX base (sem mexer em tamanhos de texto) */
     html{
       -webkit-text-size-adjust: 100%;
       text-size-adjust: 100%;
@@ -27,27 +31,21 @@
 
     body{
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: linear-gradient(135deg, var(--bg0) 0%, var(--bg1) 100%);
-      color:#fff;
+      background: linear-gradient(135deg, var(--bg0), var(--bg1));
+      color: var(--textMain);
       min-height: 100dvh;
       display:flex;
       justify-content:center;
       align-items:center;
       padding: 20px;
-      overscroll-behavior: none;
     }
 
-    /* ✅ Quebra segura (sem alterar tamanho do texto) */
-    h1, h2, h3, p, .option, .message, .scenario-label, .analysis-section p, .insight, .impact{
+    h1, h2, h3, p, .option, .message{
       overflow-wrap: anywhere;
-      word-break: normal;
       hyphens: auto;
     }
 
-    /* ✅ FIX: não hifenizar nem quebrar palavras em headings (evita "CONEC-TAR" e ponto órfão) */
     h1, h2, h3{
-      overflow-wrap: normal;
-      word-break: normal;
       hyphens: none;
     }
 
@@ -61,17 +59,14 @@
       to{ opacity:1; transform: translateY(0); }
     }
 
-    /* TELA INICIAL */
+    /* INTRO */
     .intro-screen{ text-align:center; }
 
     .logo{
       font-size: clamp(1.75rem, 4.2vw, 2.5rem);
       font-weight:900;
       margin-bottom: 1.4rem;
-      background: linear-gradient(135deg, var(--red), var(--red2));
-      -webkit-background-clip:text;
-      -webkit-text-fill-color:transparent;
-      background-clip:text;
+      color: var(--red);
     }
 
     h1{
@@ -79,23 +74,15 @@
       font-weight:900;
       line-height:1.15;
       margin-bottom: 1.1rem;
-      color:#fff;
       letter-spacing: -0.02em;
     }
 
     .highlight{
       color: var(--red);
       text-decoration: underline;
-      text-decoration-color: var(--red);
-      text-decoration-thickness: 4px;
+      text-decoration-thickness: 3px;
       text-underline-offset: 3px;
-
-      /* ✅ FIX: nunca quebrar "DESTRUINDO/CONECTAR" no meio */
       white-space: nowrap;
-      display: inline;
-      overflow-wrap: normal;
-      word-break: keep-all;
-      hyphens: none;
     }
 
     .subheadline{
@@ -106,14 +93,15 @@
     }
 
     .hook{
-      background: rgba(255,0,0,0.10);
+      background: #fff5f5;
       border-left: 4px solid var(--red);
       padding: 1.25rem;
       margin: 1.6rem 0;
-      font-size: clamp(1rem, 2.5vw, 1.1rem);
-      line-height:1.75;
+      font-size: 1.05rem;
+      line-height:1.7;
       font-style: italic;
       border-radius: 10px;
+      color: var(--textMain);
     }
 
     .btn{
@@ -121,68 +109,48 @@
       color:#fff;
       border:none;
       padding: 1.2rem 2.2rem;
-      font-size: clamp(1.05rem, 2.8vw, 1.3rem);
+      font-size: 1.15rem;
       font-weight:800;
       border-radius: 12px;
       cursor:pointer;
-      transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
       text-transform: uppercase;
       letter-spacing: 1px;
-      box-shadow: 0 10px 30px rgba(255,0,0,0.30);
-      width: auto;
-      max-width: 100%;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
+      box-shadow: 0 10px 25px rgba(230,0,0,0.25);
+      display: inline-block;
     }
 
-    /* Hover só quando existir hover (evita “pulo” no mobile) */
-    @media (hover:hover) and (pointer:fine){
-      .btn:hover{
-        background:#cc0000;
-        transform: translateY(-2px);
-        box-shadow: 0 15px 40px rgba(255,0,0,0.45);
-      }
-      .option:hover{
-        background: rgba(255,255,255,0.10);
-        border-color: var(--red);
-        transform: translateX(5px);
-      }
-    }
-
-    /* PERGUNTAS */
+    /* CARD */
     .question-screen{
       background: var(--card);
       border-radius: 16px;
       padding: 2.25rem;
       border: 1px solid var(--cardBorder);
-      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
     }
 
     .progress-bar{
-      background: rgba(255,255,255,0.10);
+      background: #e5e5e5;
       height: 8px;
       border-radius: 999px;
       margin-bottom: 1.6rem;
-      overflow:hidden;
     }
 
     .progress-fill{
       background: linear-gradient(90deg, var(--red), var(--red2));
       height:100%;
-      transition: width .45s ease;
     }
 
     .question-number{
       color: var(--red);
       font-weight:800;
-      font-size: .95rem;
+      font-size: .9rem;
       margin-bottom: .9rem;
       text-transform: uppercase;
       letter-spacing: 2px;
     }
 
     .scenario{
-      background: rgba(0,0,0,0.32);
+      background: #f7f7f7;
       padding: 1.15rem;
       border-radius: 12px;
       margin: 1.25rem 0;
@@ -190,23 +158,21 @@
     }
 
     .scenario-label{
-      color: var(--red2);
+      color: var(--red);
       font-weight:700;
       margin-bottom: .45rem;
       font-size: .85rem;
       text-transform: uppercase;
-      letter-spacing: 1px;
     }
 
     .message{
-      font-size: clamp(1.05rem, 2.8vw, 1.2rem);
+      font-size: 1.15rem;
       font-style: italic;
-      color:#fff;
-      line-height:1.55;
+      color: var(--textMain);
     }
 
     .question-title{
-      font-size: clamp(1.2rem, 3.4vw, 1.5rem);
+      font-size: 1.35rem;
       margin: 1.6rem 0 1.1rem;
       font-weight:800;
     }
@@ -218,26 +184,22 @@
     }
 
     .option{
-      background: rgba(255,255,255,0.05);
-      border: 2px solid rgba(255,255,255,0.10);
+      background: #fafafa;
+      border: 2px solid #e0e0e0;
       padding: 1rem;
       border-radius: 12px;
       cursor:pointer;
-      transition: transform .18s ease, background .18s ease, border-color .18s ease;
-      font-size: clamp(1rem, 2.7vw, 1.1rem);
-      line-height: 1.35;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
+      font-size: 1.05rem;
     }
 
     .option.selected{
-      background: rgba(255,0,0,0.20);
+      background: #ffecec;
       border-color: var(--red);
     }
 
     /* ANÁLISE */
     .analysis{
-      background: rgba(255,0,0,0.10);
+      background: #fff5f5;
       border: 2px solid var(--red);
       border-radius: 14px;
       padding: 1.6rem;
@@ -245,71 +207,55 @@
     }
 
     .analysis-title{
-      font-size: clamp(1.35rem, 3.6vw, 1.8rem);
+      font-size: 1.6rem;
       color: var(--red);
       margin-bottom: 1.1rem;
-      display:flex;
-      align-items:center;
-      gap:.5rem;
       font-weight:900;
     }
 
-    .analysis-section{ margin: 1.1rem 0; }
-
     .analysis-section h4{
-      color: var(--red2);
-      font-size: .95rem;
+      color: var(--red);
+      font-size: .9rem;
       margin-bottom: .45rem;
       text-transform: uppercase;
-      letter-spacing: 1px;
       font-weight:800;
     }
 
     .analysis-section p{
       color: var(--textMuted);
       line-height: 1.75;
-      font-size: clamp(0.98rem, 2.6vw, 1.05rem);
     }
 
     .insight{
-      background: rgba(0,255,136,0.10);
+      background: #ecfff6;
       border-left: 4px solid var(--green);
       padding: 1rem;
       margin: 1rem 0;
-      font-size: clamp(1.02rem, 2.7vw, 1.1rem);
       font-weight:800;
       color: var(--green);
       border-radius: 10px;
     }
 
     .impact{
-      background: rgba(0,0,0,0.32);
+      background: #f0f0f0;
       padding: 1.15rem;
       border-radius: 12px;
       margin-top: 1.15rem;
       text-align:center;
-      font-size: clamp(1.05rem, 2.8vw, 1.2rem);
       font-weight:900;
-      color:#fff;
     }
 
-    .btn-next{
-      margin-top: 1.4rem;
-      width: 100%;
-    }
-
-    /* RESULTADO */
+    /* RESULTADO (faltavam estilos no arquivo atual) */
     .result-screen{ text-align:center; }
 
     .result-title{
-      font-size: clamp(2rem, 5vw, 2.5rem);
       color: var(--red);
       margin-bottom: 1.6rem;
       font-weight: 900;
     }
 
     .problem-list{
-      background: rgba(255,0,0,0.10);
+      background: #fff5f5;
       border: 2px solid var(--red);
       border-radius: 14px;
       padding: 1.5rem;
@@ -322,7 +268,6 @@
       align-items:flex-start;
       gap: .85rem;
       margin: .85rem 0;
-      font-size: clamp(1rem, 2.8vw, 1.2rem);
       line-height: 1.35;
     }
 
@@ -330,27 +275,29 @@
     .check-mark{ color: var(--green); font-size: 1.45rem; font-weight: 900; line-height:1; }
 
     .solution-list{
-      background: rgba(0,255,136,0.10);
+      background: #ecfff6;
       border: 2px solid var(--green);
       border-radius: 14px;
       padding: 1.5rem;
-      margin: 1.6rem 0;
+      margin: 1.2rem 0 0;
       text-align:left;
     }
 
     .brutal-truth{
-      background: rgba(0,0,0,0.52);
-      border: 3px solid var(--red);
+      background: #ffffff;
+      border: 2px solid rgba(0,0,0,0.10);
       padding: 1.5rem;
       margin: 2.2rem 0;
       border-radius: 14px;
+      text-align:left;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
     }
 
     .brutal-truth h2{
-      font-size: clamp(1.45rem, 4vw, 2rem);
-      margin-bottom: 1.1rem;
-      color: var(--red);
+      color: var(--textMain);
       font-weight: 900;
+      text-align:center; /* ✅ centralizado */
+      margin-bottom: 1.1rem;
     }
 
     .options-box{
@@ -368,69 +315,70 @@
       line-height: 1.55;
     }
 
-    .option-1{ background: rgba(255,0,0,0.10); border-color: var(--red); }
-    .option-2{ background: rgba(0,255,136,0.10); border-color: var(--green); }
+    .option-1{ background: #fff5f5; border-color: var(--red); }
+    .option-2{ background: #ecfff6; border-color: var(--green); }
 
     .option-label{
-      font-size: clamp(1.15rem, 3.2vw, 1.5rem);
       font-weight: 900;
       margin-bottom: .6rem;
     }
 
     .choice-text{
-      font-size: clamp(1.1rem, 3.2vw, 1.3rem);
       font-weight: 800;
       margin: 1.6rem 0;
       line-height: 1.55;
+      text-align:center;
     }
 
     .cta-final{
-      background: var(--red);
+      background: #fff5f5;
       padding: 1.4rem;
       border-radius: 14px;
       margin: 1.6rem 0;
+      border: 1px solid rgba(230,0,0,0.18);
+      text-align:center;
     }
 
     .cta-final h3{
-      font-size: clamp(1.3rem, 4vw, 2rem);
       margin-bottom: .65rem;
       font-weight: 900;
+      color: var(--textMain);
+    }
+
+    .cta-final .btn{
+      margin-left:auto;  /* ✅ centralizado */
+      margin-right:auto; /* ✅ centralizado */
+      display:block;     /* ✅ centralizado */
     }
 
     .testimonials{
-      background: rgba(255,255,255,0.05);
+      background: #ffffff;
       padding: 1.4rem;
       border-radius: 14px;
       margin-top: 1.6rem;
       text-align:left;
+      border: 1px solid rgba(0,0,0,0.08);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
     }
 
     .testimonial{ margin: 1rem 0; font-style: italic; color: var(--textMuted); line-height: 1.65; }
-    .testimonial-author{ color: var(--red2); font-weight: 700; margin-top: .45rem; }
+    .testimonial-author{ color: var(--red); font-weight: 700; margin-top: .45rem; }
 
-    /* Mobile (mantém seu bloco + refinamentos de layout) */
     @media (max-width: 768px){
       body{
-        align-items: flex-start; /* evita centralizar e “cortar” conteúdo */
+        align-items: flex-start;
         padding:
           calc(14px + env(safe-area-inset-top))
           calc(14px + env(safe-area-inset-right))
           calc(18px + env(safe-area-inset-bottom))
           calc(14px + env(safe-area-inset-left));
       }
-
       .question-screen{ padding: 1.25rem; }
-
       .options-box{ grid-template-columns: 1fr; }
-
       .btn{ width: 100%; padding: 1.15rem 1.4rem; border-radius: 14px; }
-
-      .hook{ padding: 1.05rem; }
-      .analysis{ padding: 1.25rem; }
-      .problem-list, .solution-list, .brutal-truth, .cta-final, .testimonials{ padding: 1.25rem; }
+      .cta-final .btn{ width: 100%; } /* mantém padrão mobile */
     }
 
-    /* ✅ Mobile refinado para telas menores (sem mexer em font-size) */
     @media (max-width: 520px){
       body{
         padding:
@@ -439,75 +387,29 @@
           calc(14px + env(safe-area-inset-bottom))
           calc(10px + env(safe-area-inset-left));
       }
-
-      .container{
-        max-width: 520px;
-        width: 100%;
-      }
-
-      .question-screen{
-        padding: 1.05rem;
-        border-radius: 16px;
-      }
-
+      .container{ max-width: 520px; width: 100%; }
+      .question-screen{ padding: 1.05rem; border-radius: 16px; }
       .progress-bar{ margin-bottom: 1.05rem; height: 8px; }
       .question-number{ margin-bottom: .65rem; }
-
-      .question-title{
-        margin: 1.05rem 0 .85rem;
-      }
-
-      .scenario{
-        padding: .95rem;
-        margin: 1rem 0;
-      }
-
+      .question-title{ margin: 1.05rem 0 .85rem; }
+      .scenario{ padding: .95rem; margin: 1rem 0; }
       .options{ gap: .7rem; }
-
-      .option{
-        padding: .95rem;
-        border-radius: 12px;
-      }
-
-      .analysis{
-        padding: 1.05rem;
-        margin-top: 1.15rem;
-      }
-
+      .option{ padding: .95rem; border-radius: 12px; }
+      .analysis{ padding: 1.05rem; margin-top: 1.15rem; }
       .analysis-section{ margin: .9rem 0; }
-
-      .insight{
-        padding: .95rem;
-        margin: .85rem 0;
-      }
-
-      .impact{
-        padding: 1rem;
-        margin-top: 1rem;
-      }
-
+      .insight{ padding: .95rem; margin: .85rem 0; }
+      .impact{ padding: 1rem; margin-top: 1rem; }
       .btn-next{ margin-top: 1.05rem; }
-
       .logo{ margin-bottom: 1.05rem; }
       h1{ margin-bottom: .85rem; }
       .subheadline{ margin-bottom: 1.1rem; }
       .hook{ margin: 1.15rem 0; }
-
-      .problem-list, .solution-list, .brutal-truth, .cta-final, .testimonials{
-        padding: 1.05rem;
-      }
-
+      .problem-list, .solution-list, .brutal-truth, .cta-final, .testimonials{ padding: 1.05rem; }
       .options-box{ gap: .9rem; }
-    }
-
-    @media (max-width: 360px){
-      .question-screen{ padding: .95rem; }
-      .option{ padding: .9rem; }
-      .scenario{ padding: .9rem; }
-      .analysis{ padding: .95rem; }
     }
   </style>
 </head>
+
 <body>
   <div class="container">
 
@@ -520,13 +422,6 @@
         <p class="subheadline">
           Cada vez que você responde errado. Cada vez que interpreta mal. Cada vez que não entende o que realmente querem dizer... você está MATANDO conexões que poderiam ser incríveis.
         </p>
-
-        <div class="hook">
-          "Tá tudo bem." — Mas você SENTE que não está.<br>
-          "Podemos conversar depois." — E você fica ansioso sem saber o porquê.<br>
-          "Não precisa se preocupar." — Mas algo ali não fecha.<br><br>
-          <strong>Você está cansado de ADIVINHAR o que as pessoas realmente querem dizer?</strong>
-        </div>
 
         <button class="btn" onclick="startQuiz()">QUERO DESCOBRIR AGORA</button>
       </div>
@@ -574,15 +469,6 @@
           <h3 class="analysis-title">💡 O QUE ESTÁ REALMENTE ACONTECENDO:</h3>
 
           <div class="analysis-section">
-            <h4>HITCH.AI REVELA A VERDADE:</h4>
-            <p>• Nível de interesse genuíno: 75%<br>
-              • Cansaço real vs. evasiva: 80% real / 20% evasiva<br>
-              • Abertura para alternativa: 65%<br>
-              • Desejo de intimidade caseira: 70%<br>
-              • Risco de conflito se você insistir: ALTO (85%)</p>
-          </div>
-
-          <div class="analysis-section">
             <h4>O que você NÃO está vendo:</h4>
             <p>• "Tô cansado(a)" = vulnerabilidade, não rejeição<br>
               • "Acho melhor" = ainda quer sua companhia, mas no ritmo dela<br>
@@ -592,12 +478,6 @@
 
           <div class="insight">
             Resposta que SALVA a noite: "Que tal pedirmos algo gostoso e assistirmos aquela série? Fica todo mundo confortável e a gente aproveita junto ❤️"
-          </div>
-
-          <div class="impact">
-            <strong>VOCÊ IA CRIAR UM CONFLITO DO NADA.</strong><br>
-            Quantas vezes você já fez isso sem perceber?<br>
-            Quantos relacionamentos você perdeu assim?
           </div>
         </div>
 
@@ -647,15 +527,6 @@
           <h3 class="analysis-title">💡 A VERDADE QUE VOCÊ NÃO VIU:</h3>
 
           <div class="analysis-section">
-            <h4>HITCH.AI ANALISA O PADRÃO:</h4>
-            <p>• Sinceridade da justificativa: 85%<br>
-              • Afastamento intencional: 25%<br>
-              • Sobrecarga emocional/vida pessoal: 90%<br>
-              • Ainda valoriza a amizade: 80%<br>
-              • "Outra hora a gente marca" = vontade real, timing ruim</p>
-          </div>
-
-          <div class="analysis-section">
             <h4>Sinais que você está ignorando:</h4>
             <p>• Não disse "não quero" — disse "não POSSO"<br>
               • "Outra hora a gente marca" = compromisso futuro<br>
@@ -666,12 +537,6 @@
 
           <div class="insight">
             Mensagem que SALVA a amizade: "Sem problema! Mas tá tudo bem contigo? Parece que tá uma correria aí. Se precisar conversar, tô aqui, beleza?"
-          </div>
-
-          <div class="impact">
-            <strong>VOCÊ IA DESISTIR DO SEU AMIGO NO PIOR MOMENTO.</strong><br>
-            Quando ele mais precisa de você.<br>
-            Por MÁ INTERPRETAÇÃO.
           </div>
         </div>
 
@@ -721,15 +586,6 @@
           <h3 class="analysis-title">💡 VOCÊ ESTÁ PRESTES A CRIAR UMA GUERRA:</h3>
 
           <div class="analysis-section">
-            <h4>O QUE O HITCH.AI DETECTA:</h4>
-            <p>• Tom: Preocupação, não ataque (75%)<br>
-              • Intenção de crítica destrutiva: 20%<br>
-              • Desejo de conexão/diálogo: 80%<br>
-              • Ansiedade dos pais sobre seu futuro: 95%<br>
-              • Medo disfarçado de controle: ALTO</p>
-          </div>
-
-          <div class="analysis-section">
             <h4>O que você NÃO percebeu:</h4>
             <p>• "Precisamos conversar" = quer incluir VOCÊ na conversa<br>
               • "Suas escolhas" = não disse "suas PÉSSIMAS escolhas"<br>
@@ -741,12 +597,6 @@
           <div class="insight">
             Resposta que EVITA O CONFLITO: "Claro! Amanhã de manhã funciona pra você? Quero conversar com calma sobre isso."
           </div>
-
-          <div class="impact">
-            <strong>VOCÊ IA TRANSFORMAR PREOCUPAÇÃO EM BRIGA.</strong><br>
-            Mais uma noite perdida em conflito familiar desnecessário.<br>
-            Quantas dessas brigas poderiam ter sido evitadas?
-          </div>
         </div>
 
         <button class="btn btn-next" onclick="showResults()">VER RESULTADO FINAL →</button>
@@ -757,8 +607,10 @@
     <div class="screen" id="result">
       <div class="result-screen">
         <div class="logo">HITCH.AI</div>
-        <h1 class="result-title">SEU RESULTADO:</h1>
-        <h2 style="font-size: clamp(1.6rem, 4.6vw, 2.5rem); margin-bottom: 1.6rem; line-height: 1.15;">
+        <h1 class="result-title" style="font-size: clamp(2rem, 5vw, 2.5rem);">SEU RESULTADO:</h1>
+
+        <!-- ✅ centralizado -->
+        <h2 style="text-align:center; font-size: clamp(1.6rem, 4.6vw, 2.5rem); margin-bottom: 1.6rem; line-height: 1.15;">
           Você está <span class="highlight">DESTRUINDO</span> relacionamentos que poderiam ser <span class="highlight">INCRÍVEIS</span>.
         </h2>
 
@@ -791,8 +643,8 @@
           </div>
         </div>
 
-        <!-- ✅ FIX: ponto dentro do highlight (evita ponto órfão em linha separada) -->
-        <h1 style="font-size: clamp(2rem, 5.2vw, 3rem); margin: 2rem 0; line-height: 1.15;">
+        <!-- ✅ centralizado -->
+        <h1 style="text-align:center; font-size: clamp(2rem, 5.2vw, 3rem); margin: 2rem 0; line-height: 1.15;">
           "Pare de <span class="highlight">DESTRUIR.</span><br>Comece a <span class="highlight">CONECTAR.</span>"
         </h1>
 
@@ -814,10 +666,13 @@
 
         <div class="cta-final">
           <h3>PARE DE DESTRUIR SEUS RELACIONAMENTOS</h3>
+
+          <!-- ✅ botão centralizado -->
           <button class="btn" style="background:#000; margin-top: .8rem;" onclick="window.location.href='https://www.hitchai.online/signup'">
             QUERO TER CLAREZA AGORA - COMEÇAR!
           </button>
-          <p style="margin-top: .8rem; font-size: .92rem; color: rgba(255,255,255,0.85);">
+
+          <p style="margin-top: .8rem; font-size: .92rem; color: var(--textMuted); text-align:center;">
             7 dias de degustação. Entenda TODAS as suas conversas.
           </p>
         </div>
