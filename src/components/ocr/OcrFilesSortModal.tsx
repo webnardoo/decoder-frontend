@@ -11,10 +11,10 @@ type Props = {
   onCancel: () => void;
   onSubmit: (orderedFiles: File[]) => void;
 
-  // ✅ opcional: permite o page.tsx receber a nova ordem em tempo real
+  // opcional: permite o page.tsx receber a nova ordem em tempo real
   onReorder?: (nextFiles: File[]) => void;
 
-  // ✅ opcionais: pra você não cair de novo em erro de Props
+  // opcional: bloquear ações enquanto envia
   sending?: boolean;
 };
 
@@ -33,6 +33,10 @@ function formatBytes(bytes: number) {
   const kb = bytes / 1024;
   if (kb < 1024) return `${Math.round(kb)} KB`;
   return `${(kb / 1024).toFixed(1)} MB`;
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
 }
 
 export default function OcrFilesSortModal({
@@ -92,21 +96,33 @@ export default function OcrFilesSortModal({
 
   const dragIdRef = useRef<string | null>(null);
 
+  function emitReorder(next: Array<{ id: string; file: File }>) {
+    try {
+      onReorder?.(next.map((x) => x.file));
+    } catch {}
+  }
+
   function moveItem(fromIdx: number, toIdx: number) {
     if (fromIdx === toIdx) return;
-
     setItems((cur) => {
       const next = [...cur];
-      const [picked] = next.splice(fromIdx, 1);
-      next.splice(toIdx, 0, picked);
+      const safeFrom = clamp(fromIdx, 0, next.length - 1);
+      const safeTo = clamp(toIdx, 0, next.length - 1);
 
-      // ✅ propaga a ordem atual (se o caller quiser)
-      try {
-        onReorder?.(next.map((x) => x.file));
-      } catch {}
+      const [picked] = next.splice(safeFrom, 1);
+      next.splice(safeTo, 0, picked);
 
+      emitReorder(next);
       return next;
     });
+  }
+
+  function moveUp(idx: number) {
+    moveItem(idx, idx - 1);
+  }
+
+  function moveDown(idx: number) {
+    moveItem(idx, idx + 1);
   }
 
   if (!open) return null;
@@ -122,11 +138,14 @@ export default function OcrFilesSortModal({
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-lg font-semibold text-zinc-100">
-              Organize os prints
-            </div>
+            <div className="text-lg font-semibold text-zinc-100">Organize os prints</div>
             <div className="text-xs text-zinc-300/80 mt-1">
               Coloque na mesma sequência em que as mensagens aconteceram na conversa.
+            </div>
+
+            {/* ✅ dica mobile */}
+            <div className="text-[11px] text-zinc-300/70 mt-2">
+              No celular, use as setas ↑ ↓ para ajustar a ordem. No desktop, você também pode arrastar.
             </div>
           </div>
 
@@ -152,9 +171,11 @@ export default function OcrFilesSortModal({
                 dragIdRef.current = null;
               }}
               onDragOver={(e) => {
+                // desktop only
                 e.preventDefault();
               }}
               onDrop={(e) => {
+                // desktop only
                 e.preventDefault();
                 if (sending) return;
                 const fromId = dragIdRef.current;
@@ -164,18 +185,16 @@ export default function OcrFilesSortModal({
                 moveItem(fromIdx, idx);
               }}
               className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/3 px-4 py-3"
-              title="Arraste para reorganizar"
+              title="No desktop: arraste para reorganizar. No celular: use as setas."
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-6 text-xs font-semibold text-zinc-200/70">
-                  {idx + 1}
-                </div>
+                <div className="w-6 text-xs font-semibold text-zinc-200/70">{idx + 1}</div>
 
-                {/* ✅ “3 tracinhos” (drag handle) */}
+                {/* “tracinhos” (drag handle visual) */}
                 <div
                   className="shrink-0 select-none text-zinc-200/60"
                   aria-hidden="true"
-                  title="Arraste para reorganizar"
+                  title="No desktop: arraste"
                 >
                   <svg
                     width="18"
@@ -195,22 +214,38 @@ export default function OcrFilesSortModal({
 
                 <div className="h-12 w-12 overflow-hidden rounded-xl border border-white/10 bg-black/40">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={p.url}
-                    alt={p.file.name}
-                    className="h-full w-full object-cover"
-                  />
+                  <img src={p.url} alt={p.file.name} className="h-full w-full object-cover" />
                 </div>
 
                 <div className="min-w-0">
                   <div className="text-sm text-zinc-100 truncate">{p.file.name}</div>
-                  <div className="text-xs text-zinc-300/70">
-                    {formatBytes(p.file.size)}
-                  </div>
+                  <div className="text-xs text-zinc-300/70">{formatBytes(p.file.size)}</div>
                 </div>
               </div>
 
-              <div className="text-xs text-zinc-300/60">Arraste</div>
+              {/* ✅ Controles mobile-first (funcionam em qualquer lugar) */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={sending || idx === 0}
+                  onClick={() => moveUp(idx)}
+                  aria-label="Mover para cima"
+                  title="Mover para cima"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={sending || idx === items.length - 1}
+                  onClick={() => moveDown(idx)}
+                  aria-label="Mover para baixo"
+                  title="Mover para baixo"
+                >
+                  ↓
+                </button>
+              </div>
             </div>
           ))}
         </div>
