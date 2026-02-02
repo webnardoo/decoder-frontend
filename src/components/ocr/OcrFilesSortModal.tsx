@@ -1,4 +1,3 @@
-// src/components/ocr/OcrFilesSortModal.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -58,10 +57,16 @@ export default function OcrFilesSortModal({
 
   const [items, setItems] = useState<Array<{ id: string; file: File }>>(initial);
 
+  // preview (lightbox)
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewIdx, setPreviewIdx] = useState<number>(0);
+
   // reset quando abre ou troca files
   useEffect(() => {
     if (!open) return;
     setItems(initial);
+    setPreviewOpen(false);
+    setPreviewIdx(0);
   }, [open, initial]);
 
   // foco inicial
@@ -125,7 +130,58 @@ export default function OcrFilesSortModal({
     moveItem(idx, idx + 1);
   }
 
+  function openPreviewAt(idx: number) {
+    if (sending) return;
+    const safe = clamp(idx, 0, Math.max(0, previews.length - 1));
+    setPreviewIdx(safe);
+    setPreviewOpen(true);
+  }
+
+  function closePreview() {
+    setPreviewOpen(false);
+  }
+
+  function nextPreview() {
+    setPreviewIdx((cur) => clamp(cur + 1, 0, Math.max(0, previews.length - 1)));
+  }
+
+  function prevPreview() {
+    setPreviewIdx((cur) => clamp(cur - 1, 0, Math.max(0, previews.length - 1)));
+  }
+
+  // atalhos teclado no preview: ESC / ← / →
+  useEffect(() => {
+    if (!open) return;
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (!previewOpen) return;
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closePreview();
+        return;
+      }
+
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        nextPreview();
+        return;
+      }
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        prevPreview();
+        return;
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, previewOpen, previews.length]);
+
   if (!open) return null;
+
+  const current = previews[clamp(previewIdx, 0, Math.max(0, previews.length - 1))];
 
   return (
     <div className="fixed inset-0 z-9998 flex items-center justify-center bg-black/70">
@@ -143,9 +199,8 @@ export default function OcrFilesSortModal({
               Coloque na mesma sequência em que as mensagens aconteceram na conversa.
             </div>
 
-            {/* ✅ dica mobile */}
             <div className="text-[11px] text-zinc-300/70 mt-2">
-              No celular, use as setas ↑ ↓ para ajustar a ordem. No desktop, você também pode arrastar.
+              No celular, use as setas ↑ ↓ para ajustar a ordem. Para conferir, toque na miniatura.
             </div>
           </div>
 
@@ -155,8 +210,7 @@ export default function OcrFilesSortModal({
         </div>
 
         <div className="mt-4 text-xs text-zinc-300/80">
-          Arquivos selecionados:{" "}
-          <span className="text-zinc-100 font-semibold">{items.length}</span>
+          Arquivos selecionados: <span className="text-zinc-100 font-semibold">{items.length}</span>
         </div>
 
         <div className="mt-3 space-y-3">
@@ -185,24 +239,13 @@ export default function OcrFilesSortModal({
                 moveItem(fromIdx, idx);
               }}
               className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/3 px-4 py-3"
-              title="No desktop: arraste para reorganizar. No celular: use as setas."
+              title="No desktop: arraste para reorganizar. Para ver em tamanho maior: toque na miniatura."
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-6 text-xs font-semibold text-zinc-200/70">{idx + 1}</div>
 
-                {/* “tracinhos” (drag handle visual) */}
-                <div
-                  className="shrink-0 select-none text-zinc-200/60"
-                  aria-hidden="true"
-                  title="No desktop: arraste"
-                >
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 18 18"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
+                <div className="shrink-0 select-none text-zinc-200/60" aria-hidden="true" title="No desktop: arraste">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path
                       d="M4 5.25H14M4 9H14M4 12.75H14"
                       stroke="currentColor"
@@ -212,10 +255,17 @@ export default function OcrFilesSortModal({
                   </svg>
                 </div>
 
-                <div className="h-12 w-12 overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                <button
+                  type="button"
+                  className="h-12 w-12 overflow-hidden rounded-xl border border-white/10 bg-black/40 focus:outline-none"
+                  onClick={() => openPreviewAt(idx)}
+                  disabled={sending}
+                  aria-label={`Abrir preview de ${p.file.name}`}
+                  title="Abrir preview"
+                >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={p.url} alt={p.file.name} className="h-full w-full object-cover" />
-                </div>
+                </button>
 
                 <div className="min-w-0">
                   <div className="text-sm text-zinc-100 truncate">{p.file.name}</div>
@@ -223,7 +273,6 @@ export default function OcrFilesSortModal({
                 </div>
               </div>
 
-              {/* ✅ Controles mobile-first (funcionam em qualquer lugar) */}
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
@@ -263,6 +312,72 @@ export default function OcrFilesSortModal({
             Enviar
           </button>
         </div>
+
+        {/* PREVIEW MODAL (lightbox interno) */}
+        {previewOpen && current ? (
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Preview do anexo"
+            onMouseDown={(e) => {
+              // clique fora fecha (sem abrir aba)
+              if (e.target === e.currentTarget) closePreview();
+            }}
+          >
+            <div className="w-[min(980px,calc(100%-24px))] rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_18px_55px_rgba(0,0,0,0.65)]">
+              <div className="flex items-center justify-between gap-3 p-4 border-b border-white/10">
+                <div className="min-w-0">
+                  <div className="text-sm text-zinc-100 truncate">{current.file.name}</div>
+                  <div className="text-xs text-zinc-300/70">
+                    {previewIdx + 1} de {previews.length} • {formatBytes(current.file.size)}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={prevPreview}
+                    disabled={sending || previewIdx === 0}
+                    aria-label="Anterior"
+                    title="Anterior"
+                  >
+                    ←
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={nextPreview}
+                    disabled={sending || previewIdx === previews.length - 1}
+                    aria-label="Próximo"
+                    title="Próximo"
+                  >
+                    →
+                  </button>
+                  <button type="button" className="btn" onClick={closePreview} disabled={sending} aria-label="Fechar preview">
+                    Fechar
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4">
+                <div className="max-h-[78vh] overflow-auto rounded-xl border border-white/10 bg-black/30">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={current.url}
+                    alt={current.file.name}
+                    className="block h-auto w-full object-contain"
+                  />
+                </div>
+
+                <div className="mt-3 text-[11px] text-zinc-300/70">
+                  Dica: no desktop, use ←/→ para navegar e ESC para fechar. No celular, use os botões.
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
