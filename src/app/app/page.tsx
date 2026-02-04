@@ -65,6 +65,9 @@ const MIN_CHARS_NORMAL = 60;
 const TRIAL_MIN = 60;
 const TRIAL_MAX = 200;
 
+// ✅ Mensagem neutra padrão (nunca mencionar IA)
+const GENERIC_ANALYZE_FAIL = "Não foi possível concluir sua análise. Tente novamente.";
+
 function sleep(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
@@ -185,7 +188,6 @@ function setStep(
   return steps.map((s) => (s.key === key ? { ...s, status } : s));
 }
 
-// ✅ steps do modal de análise manual
 function buildManualAnalysisSteps(): AnalysisStepView[] {
   return [
     { key: "SEND", label: "Enviando o diálogo", status: "PENDING" },
@@ -206,13 +208,11 @@ function setManualStep(
 export default function HomePage() {
   const [mode, setMode] = useState<Mode>("AVULSA");
 
-  // ✅ começam nulos
   const [quickMode, setQuickMode] = useState<QuickMode | null>(null);
   const [relationshipType, setRelationshipType] = useState<RelationshipType | null>(
     null
   );
 
-  // ✅ NOVO: modo usado para renderizar o resultado (não depende do quickMode atual)
   const [resultQuickMode, setResultQuickMode] = useState<QuickMode>("RESUMO");
 
   const [conversaId, setConversaId] = useState<string>("");
@@ -225,7 +225,6 @@ export default function HomePage() {
   const [conversas, setConversas] = useState<{ id: string; name: string }[]>([]);
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
 
-  // ---- TRIAL / ONBOARDING ----
   const [onboarding, setOnboarding] = useState<OnboardingStatus | null>(null);
   const [showTrialStart, setShowTrialStart] = useState(false);
   const [showTrialEnd, setShowTrialEnd] = useState(false);
@@ -241,9 +240,6 @@ export default function HomePage() {
   const inConversaMode = mode === "CONVERSA";
   const hasConversaSelected = !!conversaId;
 
-  // ---------------------------
-  // IMPORTAR PRINTS (FLUXO)
-  // ---------------------------
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [importFiles, setImportFiles] = useState<File[]>([]);
   const [importOpen, setImportOpen] = useState(false);
@@ -254,7 +250,6 @@ export default function HomePage() {
   const [progress, setProgress] = useState<ProgressStatus | null>(null);
   const [progressError, setProgressError] = useState<string | null>(null);
 
-  // ✅ modal de progresso da análise MANUAL (botão Analisar)
   const [analysisProgressOpen, setAnalysisProgressOpen] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgressStatus | null>(
     null
@@ -263,7 +258,6 @@ export default function HomePage() {
     null
   );
 
-  // ✅ modal (OK) para validação modo + relação (serve para Importar e Analisar)
   const [modeRelModalOpen, setModeRelModalOpen] = useState(false);
 
   function openModeRelModal() {
@@ -281,11 +275,9 @@ export default function HomePage() {
     setAnalysisProgressError(null);
   }
 
-  // textarea readOnly quando estiver no fluxo de prints
   const textReadOnly =
     importOpen || importFiles.length > 0 || progressOpen || importSending;
 
-  // ✅ bypass one-shot: se veio do pós-checkout, não deixa onboarding “invadir”
   const [skipOnboardingOnce, setSkipOnboardingOnce] = useState(false);
 
   function resetSelectionsToNull() {
@@ -294,7 +286,6 @@ export default function HomePage() {
   }
 
   useEffect(() => {
-    // ✅ requisito: quando a Home carrega, modo/tipo devem ser null
     resetSelectionsToNull();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -475,13 +466,25 @@ export default function HomePage() {
     };
   }, [isTrialGuided, showTrialEnd]);
 
-  // ✅ validação agora SEM banner: sempre abre pop-up (para Importar e Analisar)
   function validateModeAndRelationshipOrPopup(): boolean {
     if (!quickMode || !relationshipType) {
       openModeRelModal();
       return false;
     }
     return true;
+  }
+
+  // ✅ Sanitiza mensagem para nunca vazar detalhes de backend
+  function userFacingAnalyzeError(r: ApiError): string {
+    if (!r) return GENERIC_ANALYZE_FAIL;
+
+    if (r.code === "INSUFFICIENT_CREDITS") return "Créditos insuficientes.";
+    if (r.code === "UNAUTHORIZED") return "Sessão expirada. Faça login novamente.";
+    if (r.code === "RATE_LIMIT") return "Muitas tentativas. Tente novamente em instantes.";
+    if (r.code === "SERVER_ERROR") return "Erro temporário do sistema. Tente novamente.";
+
+    // ✅ qualquer falha de analyze → sempre neutro
+    return GENERIC_ANALYZE_FAIL;
   }
 
   async function runAnalyze(textToAnalyze: string, origin: "MANUAL" | "IMPORT") {
@@ -500,12 +503,10 @@ export default function HomePage() {
       return;
     }
 
-    // ✅ validação pop-up (sem banner)
     if (!validateModeAndRelationshipOrPopup()) {
       return;
     }
 
-    // ✅ snapshot do modo usado nesta execução (para render do resultado)
     const usedQuickMode = quickMode as QuickMode;
 
     const validation = validateConversationText(textToAnalyze);
@@ -526,7 +527,6 @@ export default function HomePage() {
       }
     }
 
-    // ✅ abre modal de progresso somente para análise MANUAL
     if (origin === "MANUAL") {
       setAnalysisProgressError(null);
       setAnalysisProgressOpen(true);
@@ -551,8 +551,10 @@ export default function HomePage() {
       });
 
       if (isApiError(r)) {
+        const msg = userFacingAnalyzeError(r);
+
         if (origin === "MANUAL") {
-          setAnalysisProgressError(r.message || "Falha ao analisar.");
+          setAnalysisProgressError(msg);
           const base = analysisProgress?.steps?.length
             ? analysisProgress.steps
             : buildManualAnalysisSteps();
@@ -565,18 +567,12 @@ export default function HomePage() {
         }
 
         if (r.status === 401) {
-          setBanner({
-            title: "Falha ao analisar",
-            reason: "Sessão expirada. Faça login novamente.",
-          });
+          setBanner({ title: "Falha ao analisar", reason: msg });
           return;
         }
 
         if (r.status === 403 && isInsufficientCreditsPayload(r.payload)) {
-          setBanner({
-            title: "Falha ao analisar",
-            reason: "Créditos insuficientes.",
-          });
+          setBanner({ title: "Falha ao analisar", reason: msg });
           return;
         }
 
@@ -587,7 +583,7 @@ export default function HomePage() {
         if (typeof r.status === "number" && r.status >= 500) {
           setBanner({
             title: "Falha ao analisar",
-            reason: "Erro temporário do sistema.",
+            reason: msg,
             fix: "Tente novamente em instantes.",
           });
           return;
@@ -595,13 +591,12 @@ export default function HomePage() {
 
         setBanner({
           title: "Falha ao analisar",
-          reason: r.message || "Não foi possível concluir a análise.",
-          fix: "Verifique os dados e tente novamente.",
+          reason: msg,
+          fix: "Tente novamente.",
         });
         return;
       }
 
-      // ✅ consolidando (só no MANUAL)
       if (origin === "MANUAL") {
         let mSteps = analysisProgress?.steps?.length
           ? analysisProgress.steps
@@ -614,9 +609,7 @@ export default function HomePage() {
 
       const data = r as QuickAnalysisResponseV11;
 
-      // ✅ IMPORTANTÍSSIMO: fixa o modo do resultado ANTES do reset de seleção
       setResultQuickMode(usedQuickMode);
-
       setResult(data);
 
       if (typeof data?.creditsBalanceAfter === "number") {
@@ -634,12 +627,8 @@ export default function HomePage() {
       });
 
       await refreshOnboarding();
-
-      // ✅ requisito: após concluir análise, modo/tipo voltam pra null (UI),
-      // mas o resultado continua renderizando com resultQuickMode.
       resetSelectionsToNull();
 
-      // ✅ finaliza steps (só no MANUAL)
       if (origin === "MANUAL") {
         let mSteps = analysisProgress?.steps?.length
           ? analysisProgress.steps
@@ -654,8 +643,7 @@ export default function HomePage() {
       }
     } catch (e: any) {
       if (origin === "MANUAL") {
-        const msg = String(e?.message ?? e ?? "Erro desconhecido");
-        setAnalysisProgressError(msg);
+        setAnalysisProgressError(GENERIC_ANALYZE_FAIL);
 
         const base = analysisProgress?.steps?.length
           ? analysisProgress.steps
@@ -678,14 +666,10 @@ export default function HomePage() {
     return runAnalyze(effectiveText, "MANUAL");
   }
 
-  // -----------------------
-  // IMPORTAR PRINTS handlers
-  // -----------------------
   function openNativePicker() {
     setBanner(null);
     setImportError(null);
 
-    // ✅ validação obrigatória: agora abre pop-up
     if (!validateModeAndRelationshipOrPopup()) return;
 
     try {
@@ -899,7 +883,6 @@ export default function HomePage() {
     setBanner(null);
     setImportError(null);
 
-    // ✅ validação obrigatória: agora abre pop-up (não banner nem texto na página)
     if (!validateModeAndRelationshipOrPopup()) return;
 
     if (!importFiles.length) {
@@ -919,9 +902,6 @@ export default function HomePage() {
     clearImportState();
   }
 
-  // -----------------------
-  // Guided overlay (mantido)
-  // -----------------------
   useEffect(() => {
     if (!isTrialGuided) return;
     if (showTrialStart) return;
@@ -1113,7 +1093,6 @@ export default function HomePage() {
         }}
       />
 
-      {/* ✅ Modal de validação modo + tipo (OK) */}
       <OkModal
         open={modeRelModalOpen}
         title="Selecione modo e tipo de relação"
@@ -1124,7 +1103,6 @@ export default function HomePage() {
         onClose={closeModeRelModal}
       />
 
-      {/* Modal: progresso da análise manual */}
       <AnalysisProgressModal
         open={analysisProgressOpen}
         status={analysisProgress}
@@ -1132,7 +1110,6 @@ export default function HomePage() {
         onClose={analysisProgressError ? closeManualAnalysisProgressOnError : null}
       />
 
-      {/* hidden input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -1142,7 +1119,6 @@ export default function HomePage() {
         onChange={onFilesSelected}
       />
 
-      {/* Modal: ordenar prints (drag & drop) */}
       <OcrFilesSortModal
         open={importOpen}
         files={importFiles}
@@ -1167,7 +1143,6 @@ export default function HomePage() {
         }}
       />
 
-      {/* Modal: progresso OCR */}
       <OcrProgressModal
         open={progressOpen}
         status={progress as any}
@@ -1232,7 +1207,6 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* HEADER */}
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-2">
           <h1 className="text-[28px] font-semibold tracking-[-0.02em]">Hitch.ai</h1>
@@ -1248,9 +1222,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* CARD QUICK */}
       <div className="card card-premium p-6 space-y-4">
-        {/* Identificação */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 rounded-2xl border border-[rgba(255,255,255,0.10)] bg-white/2 px-4 py-3">
           <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-200/80 min-w-0">
             <span className="whitespace-normal">Você será identificado nos diálogos como</span>
@@ -1281,7 +1253,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* ✅ Importar prints: remove texto à esquerda, mantém botão à direita */}
         <div className="flex justify-end">
           <button
             type="button"
@@ -1367,7 +1338,6 @@ export default function HomePage() {
           {loading ? "Analisando…" : "Analisar"}
         </button>
 
-        {/* mantém banner para erros reais (texto inválido, créditos, etc.) */}
         {banner && (
           <div className="rounded-2xl border border-zinc-800/70 bg-black/30 p-4 text-sm">
             <div className="font-medium">{banner.title}</div>
@@ -1377,16 +1347,11 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* ✅ usa o modo do resultado, não o quickMode atual (que é resetado) */}
       {result && <ResultView data={result} quickMode={resultQuickMode as any} />}
     </div>
   );
 }
 
-/**
- * ✅ Modal simples (OK) — não depende do OCR progress modal.
- * Mantém a regra: a mensagem de validação aparece em pop-up.
- */
 function OkModal({
   open,
   title,

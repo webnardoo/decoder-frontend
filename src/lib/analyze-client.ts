@@ -28,6 +28,9 @@ export function apiError(
   return { code, message, status, payload };
 }
 
+// ✅ Mensagem neutra (nunca mencionar IA, modelo, etc.)
+const GENERIC_ANALYZE_FAIL = "Não foi possível concluir sua análise. Tente novamente.";
+
 function normalizeMessage(payload: any, status: number) {
   return (
     payload?.message ??
@@ -50,7 +53,6 @@ function stripAnalysisForReply(
 ): QuickAnalysisResponseV11 {
   if (quickMode !== "RESPONDER") return payload;
 
-  // remove de forma segura (sem quebrar tipagem/serialização)
   const cloned: QuickAnalysisResponseV11 = { ...payload };
   delete (cloned as any).analysis;
   return cloned;
@@ -87,21 +89,23 @@ export async function analyzeConversation(input: AnalyzeConversationInput) {
       }
 
       if (res.status === 401) {
-        return apiError("UNAUTHORIZED", String(msg), 401, payload);
+        // ✅ sessão expirada pode aparecer
+        return apiError("UNAUTHORIZED", "Sessão expirada. Faça login novamente.", 401, payload);
       }
 
       if (res.status === 429) {
-        return apiError("RATE_LIMIT", String(msg), 429, payload);
+        return apiError("RATE_LIMIT", "Muitas tentativas. Tente novamente em instantes.", 429, payload);
       }
 
       if (res.status >= 500) {
-        return apiError("SERVER_ERROR", String(msg), res.status, payload);
+        // ✅ sempre genérico
+        return apiError("SERVER_ERROR", "Erro temporário do sistema. Tente novamente.", res.status, payload);
       }
 
-      return apiError("ANALYZE_FAILED", String(msg), res.status, payload);
+      // ✅ qualquer 4xx restante: nunca mostrar msg cru do backend
+      return apiError("ANALYZE_FAILED", GENERIC_ANALYZE_FAIL, res.status, payload);
     }
 
-    // payload OK
     const typed = payload as QuickAnalysisResponseV11;
 
     // MVP: RESPONDER não pode exibir análise (strip no client)
