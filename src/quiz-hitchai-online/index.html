@@ -5,6 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Você está DESTRUINDO seus relacionamentos e nem PERCEBE | Hitch.ai</title>
 
+  <!-- ✅ Meta Pixel (Base Code) -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '2045956942849531');
+    fbq('track', 'PageView');
+  </script>
+  <noscript>
+    <img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=2045956942849531&ev=PageView&noscript=1"
+    />
+  </noscript>
+
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -330,7 +349,7 @@
       text-align:center;
     }
 
-    /* ✅ NOVO: bloco do vídeo */
+    /* ✅ bloco do vídeo */
     .video-wrap{
       margin-top: 1rem;
       border-radius: 14px;
@@ -367,7 +386,7 @@
       display:block;
     }
 
-    /* ✅ NOVO: esconder CTA até liberar pelo timer do vídeo */
+    /* ✅ esconder CTA até liberar pelo timer do vídeo */
     .btn-hidden{
       display: none !important;
     }
@@ -682,9 +701,8 @@
           Quantas mais você vai perder antes de agir?
         </p>
 
-        <!-- ✅ VÍDEO: entra logo abaixo do texto acima -->
+        <!-- ✅ VÍDEO -->
         <div class="video-wrap" aria-label="Vídeo explicativo">
-          <!-- enablejsapi=1 é obrigatório pra detectar play e controlar timer -->
           <iframe
             id="ytplayer"
             src="https://www.youtube.com/embed/1bwMX-CW5go?rel=0&modestbranding=1&playsinline=1&enablejsapi=1"
@@ -697,12 +715,11 @@
         <div class="cta-final">
           <h3>PARE DE DESTRUIR SEUS RELACIONAMENTOS</h3>
 
-          <!-- ✅ botão começa invisível e aparece após 1:25 de play -->
+          <!-- ✅ CTA: evento Lead + redirect -->
           <button
             id="ctaBtn"
             class="btn btn-hidden"
             style="background:#2a742a; margin-top: .8rem;"
-            onclick="window.location.href='https://www.hitchai.online/signup'"
             type="button"
           >
             QUERO TER CLAREZA AGORA - COMEÇAR!
@@ -732,7 +749,7 @@
 
   </div>
 
-  <!-- ✅ YouTube IFrame API (pra detectar PLAY) -->
+  <!-- ✅ YouTube IFrame API -->
   <script src="https://www.youtube.com/iframe_api"></script>
 
   <script>
@@ -754,30 +771,26 @@
       document.getElementById(screenId).classList.add("active");
       window.scrollTo({ top: 0, behavior: "smooth" });
 
-      // ✅ se sair/entrar no resultado, não “bugar” timer: mantém estado e só libera 1x.
-      // (o timer em si só inicia quando o vídeo dá play)
       if (screenId === "result") {
         setupCtaGuardOnce();
       }
     }
 
     // -----------------------------
-    // ✅ LÓGICA: CTA após 1:25 de play
+    // ✅ CTA após 1:25 de play
     // -----------------------------
     const CTA_DELAY_SECONDS = 85; // 1m25s
+    const CTA_DEST = "https://www.hitchai.online/signup";
+
     let ytPlayer = null;
     let ctaTimer = null;
     let ctaUnlocked = false;
-    let apiReady = false;
 
     function setupCtaGuardOnce(){
       const btn = document.getElementById("ctaBtn");
       if (!btn) return;
-      if (ctaUnlocked) {
-        btn.classList.remove("btn-hidden");
-      } else {
-        btn.classList.add("btn-hidden");
-      }
+      if (ctaUnlocked) btn.classList.remove("btn-hidden");
+      else btn.classList.add("btn-hidden");
     }
 
     function showCta(){
@@ -785,13 +798,6 @@
       if (!btn) return;
       btn.classList.remove("btn-hidden");
       ctaUnlocked = true;
-    }
-
-    function clearCtaTimer(){
-      if (ctaTimer) {
-        clearTimeout(ctaTimer);
-        ctaTimer = null;
-      }
     }
 
     function startCtaTimer(){
@@ -802,11 +808,7 @@
       }, CTA_DELAY_SECONDS * 1000);
     }
 
-    // YouTube API callback
     function onYouTubeIframeAPIReady() {
-      apiReady = true;
-
-      // cria player quando o iframe existir (no DOM já existe)
       const el = document.getElementById("ytplayer");
       if (!el) return;
 
@@ -818,22 +820,41 @@
     }
 
     function onPlayerStateChange(event){
-      // 1 = PLAYING, 2 = PAUSED, 0 = ENDED
       if (ctaUnlocked) return;
 
       if (event.data === YT.PlayerState.PLAYING){
-        // ✅ começa contar quando apertar play (primeira vez)
         startCtaTimer();
       }
-
-      // ✅ Se pausar, NÃO reseta. Requisito: "aparecer após 1:25 que for dado play"
-      // (contagem contínua a partir do primeiro play)
+      // pausa NÃO reseta: conta a partir do primeiro play.
     }
 
-    // ✅ fallback: se o usuário entrar no resultado antes da API carregar
-    // (não inicia timer sem play; só garante estado do botão)
+    // -----------------------------
+    // ✅ EVENTO META: Lead no clique do CTA
+    // -----------------------------
+    function trackLeadAndGo(){
+      // dispara Lead (padrão Meta)
+      try {
+        if (typeof fbq === "function") {
+          fbq("track", "Lead");
+        }
+      } catch (e) {}
+
+      // garante que o evento tenha tempo de sair
+      setTimeout(() => {
+        window.location.href = CTA_DEST;
+      }, 250);
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
       setupCtaGuardOnce();
+
+      const btn = document.getElementById("ctaBtn");
+      if (btn) {
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          trackLeadAndGo();
+        });
+      }
     });
   </script>
 </body>
