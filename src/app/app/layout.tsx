@@ -1,6 +1,7 @@
 // src/app/app/layout.tsx
 import type { ReactNode } from "react";
 import { headers } from "next/headers";
+import Script from "next/script";
 import { OnboardingRouteGuard } from "@/components/onboarding/OnboardingRouteGuard";
 
 function stripQuery(nextUrl: string): string {
@@ -31,13 +32,47 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const pathname = stripQuery(nextUrl);
 
   const content = (
-    <div className="flex flex-col flex-1">
-      <main className="app-main w-full flex-1 flex">
-        <div className="mx-auto w-full max-w-6xl px-4 py-6 flex flex-1 flex-col">
-          {children}
-        </div>
-      </main>
-    </div>
+    <>
+      {/* Meta Pixel (base) */}
+      <Script
+        id="meta-pixel"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', '2045956942849531');
+            fbq('track', 'PageView');
+          `,
+        }}
+      />
+
+      {/* Meta Pixel (noscript fallback) */}
+      <noscript>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          height="1"
+          width="1"
+          style={{ display: "none" }}
+          src="https://www.facebook.com/tr?id=2045956942849531&ev=PageView&noscript=1"
+          alt=""
+        />
+      </noscript>
+
+      <div className="flex flex-col flex-1">
+        <main className="app-main w-full flex-1 flex">
+          <div className="mx-auto w-full max-w-6xl px-4 py-6 flex flex-1 flex-col">
+            {children}
+          </div>
+        </main>
+      </div>
+    </>
   );
 
   if (isPublicAuthPath(pathname)) return content;

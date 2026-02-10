@@ -255,6 +255,16 @@ export default function BillingPlanPage() {
     try {
       const nextCheckout = buildCheckout(planId, cycle);
 
+      // ✅ Meta Pixel: InitiateCheckout ao clicar em qualquer botão "Assinar"/CTA de plano
+      try {
+        const fbqFn = (globalThis as any)?.fbq;
+        if (typeof fbqFn === "function") {
+          fbqFn("track", "InitiateCheckout");
+          // dá um tempo curto pro browser enviar o request antes do redirect
+          await new Promise((r) => setTimeout(r, 200));
+        }
+      } catch {}
+
       if (!isAuthed) {
         // Edge case defensivo: nunca prompta e-mail aqui
         router.push(`/app/login?next=${encodeURIComponent(nextCheckout)}`);
