@@ -245,7 +245,7 @@
       font-weight:900;
     }
 
-    /* RESULTADO (faltavam estilos no arquivo atual) */
+    /* RESULTADO */
     .result-screen{ text-align:center; }
 
     .result-title{
@@ -296,7 +296,7 @@
     .brutal-truth h2{
       color: var(--textMain);
       font-weight: 900;
-      text-align:center; /* ✅ centralizado */
+      text-align:center;
       margin-bottom: 1.1rem;
     }
 
@@ -330,6 +330,22 @@
       text-align:center;
     }
 
+    /* ✅ NOVO: bloco do vídeo */
+    .video-wrap{
+      margin-top: 1rem;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(0,0,0,0.10);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+      background: #000;
+    }
+    .video-wrap iframe{
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border: 0;
+      display: block;
+    }
+
     .cta-final{
       background: #fff5f5;
       padding: 1.4rem;
@@ -346,9 +362,14 @@
     }
 
     .cta-final .btn{
-      margin-left:auto;  /* ✅ centralizado */
-      margin-right:auto; /* ✅ centralizado */
-      display:block;     /* ✅ centralizado */
+      margin-left:auto;
+      margin-right:auto;
+      display:block;
+    }
+
+    /* ✅ NOVO: esconder CTA até liberar pelo timer do vídeo */
+    .btn-hidden{
+      display: none !important;
     }
 
     .testimonials{
@@ -376,7 +397,7 @@
       .question-screen{ padding: 1.25rem; }
       .options-box{ grid-template-columns: 1fr; }
       .btn{ width: 100%; padding: 1.15rem 1.4rem; border-radius: 14px; }
-      .cta-final .btn{ width: 100%; } /* mantém padrão mobile */
+      .cta-final .btn{ width: 100%; }
     }
 
     @media (max-width: 520px){
@@ -403,7 +424,6 @@
       .logo{ margin-bottom: 1.05rem; }
       h1{ margin-bottom: .85rem; }
       .subheadline{ margin-bottom: 1.1rem; }
-      .hook{ margin: 1.15rem 0; }
       .problem-list, .solution-list, .brutal-truth, .cta-final, .testimonials{ padding: 1.05rem; }
       .options-box{ gap: .9rem; }
     }
@@ -609,7 +629,6 @@
         <div class="logo">HITCH.AI</div>
         <h1 class="result-title" style="font-size: clamp(2rem, 5vw, 2.5rem);">SEU RESULTADO:</h1>
 
-        <!-- ✅ centralizado -->
         <h2 style="text-align:center; font-size: clamp(1.6rem, 4.6vw, 2.5rem); margin-bottom: 1.6rem; line-height: 1.15;">
           Você está <span class="highlight">DESTRUINDO</span> relacionamentos que poderiam ser <span class="highlight">INCRÍVEIS</span>.
         </h2>
@@ -643,7 +662,6 @@
           </div>
         </div>
 
-        <!-- ✅ centralizado -->
         <h1 style="text-align:center; font-size: clamp(2rem, 5.2vw, 3rem); margin: 2rem 0; line-height: 1.15;">
           "Pare de <span class="highlight">DESTRUIR.</span><br>Comece a <span class="highlight">CONECTAR.</span>"
         </h1>
@@ -664,11 +682,29 @@
           Quantas mais você vai perder antes de agir?
         </p>
 
+        <!-- ✅ VÍDEO: entra logo abaixo do texto acima -->
+        <div class="video-wrap" aria-label="Vídeo explicativo">
+          <!-- enablejsapi=1 é obrigatório pra detectar play e controlar timer -->
+          <iframe
+            id="ytplayer"
+            src="https://www.youtube.com/embed/1bwMX-CW5go?rel=0&modestbranding=1&playsinline=1&enablejsapi=1"
+            title="Hitch.ai - Vídeo"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+          ></iframe>
+        </div>
+
         <div class="cta-final">
           <h3>PARE DE DESTRUIR SEUS RELACIONAMENTOS</h3>
 
-          <!-- ✅ botão centralizado -->
-          <button class="btn" style="background:#000; margin-top: .8rem;" onclick="window.location.href='https://www.hitchai.online/signup'">
+          <!-- ✅ botão começa invisível e aparece após 1:25 de play -->
+          <button
+            id="ctaBtn"
+            class="btn btn-hidden"
+            style="background:#2a742a; margin-top: .8rem;"
+            onclick="window.location.href='https://www.hitchai.online/signup'"
+            type="button"
+          >
             QUERO TER CLAREZA AGORA - COMEÇAR!
           </button>
 
@@ -696,6 +732,9 @@
 
   </div>
 
+  <!-- ✅ YouTube IFrame API (pra detectar PLAY) -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+
   <script>
     function startQuiz(){ showScreen("question1"); }
 
@@ -714,7 +753,88 @@
       screens.forEach(screen => screen.classList.remove("active"));
       document.getElementById(screenId).classList.add("active");
       window.scrollTo({ top: 0, behavior: "smooth" });
+
+      // ✅ se sair/entrar no resultado, não “bugar” timer: mantém estado e só libera 1x.
+      // (o timer em si só inicia quando o vídeo dá play)
+      if (screenId === "result") {
+        setupCtaGuardOnce();
+      }
     }
+
+    // -----------------------------
+    // ✅ LÓGICA: CTA após 1:25 de play
+    // -----------------------------
+    const CTA_DELAY_SECONDS = 85; // 1m25s
+    let ytPlayer = null;
+    let ctaTimer = null;
+    let ctaUnlocked = false;
+    let apiReady = false;
+
+    function setupCtaGuardOnce(){
+      const btn = document.getElementById("ctaBtn");
+      if (!btn) return;
+      if (ctaUnlocked) {
+        btn.classList.remove("btn-hidden");
+      } else {
+        btn.classList.add("btn-hidden");
+      }
+    }
+
+    function showCta(){
+      const btn = document.getElementById("ctaBtn");
+      if (!btn) return;
+      btn.classList.remove("btn-hidden");
+      ctaUnlocked = true;
+    }
+
+    function clearCtaTimer(){
+      if (ctaTimer) {
+        clearTimeout(ctaTimer);
+        ctaTimer = null;
+      }
+    }
+
+    function startCtaTimer(){
+      if (ctaUnlocked) return;
+      if (ctaTimer) return;
+      ctaTimer = setTimeout(() => {
+        showCta();
+      }, CTA_DELAY_SECONDS * 1000);
+    }
+
+    // YouTube API callback
+    function onYouTubeIframeAPIReady() {
+      apiReady = true;
+
+      // cria player quando o iframe existir (no DOM já existe)
+      const el = document.getElementById("ytplayer");
+      if (!el) return;
+
+      ytPlayer = new YT.Player("ytplayer", {
+        events: {
+          onStateChange: onPlayerStateChange
+        }
+      });
+    }
+
+    function onPlayerStateChange(event){
+      // 1 = PLAYING, 2 = PAUSED, 0 = ENDED
+      if (ctaUnlocked) return;
+
+      if (event.data === YT.PlayerState.PLAYING){
+        // ✅ começa contar quando apertar play (primeira vez)
+        startCtaTimer();
+      }
+
+      // ✅ Se pausar, NÃO reseta. Requisito: "aparecer após 1:25 que for dado play"
+      // (contagem contínua a partir do primeiro play)
+    }
+
+    // ✅ fallback: se o usuário entrar no resultado antes da API carregar
+    // (não inicia timer sem play; só garante estado do botão)
+    document.addEventListener("DOMContentLoaded", () => {
+      setupCtaGuardOnce();
+    });
   </script>
 </body>
 </html>
