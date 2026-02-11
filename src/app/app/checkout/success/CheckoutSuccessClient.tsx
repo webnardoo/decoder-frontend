@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +47,26 @@ export default function CheckoutSuccessClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
 
+  // ✅ Meta Pixel: dispara Subscribe 1x ao carregar a página de success
+  useEffect(() => {
+    try {
+      const key = "hitch_meta_subscribe_fired";
+      const fired = sessionStorage.getItem(key);
+      if (fired === "1") return;
+
+      const fbqFn = (globalThis as any)?.fbq;
+      if (typeof fbqFn === "function") {
+        const eventId = sessionId ? `stripe_${sessionId}` : `stripe_success_${Date.now()}`;
+        // 3º argumento: params; 4º argumento: options (eventID p/ dedupe)
+        fbqFn("track", "Subscribe", {}, { eventID: eventId });
+        sessionStorage.setItem(key, "1");
+      }
+    } catch {
+      // silencioso
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
+
   async function handleOk() {
     if (loading) return;
 
@@ -92,10 +112,7 @@ export default function CheckoutSuccessClient() {
         return;
       }
 
-      // ✅ decisão determinística (sem inferência por next)
       const target = computePostCheckoutTarget(body);
-
-      // ✅ replace elimina back para /success (sem loop/back)
       router.replace(target);
     } catch {
       setError("Falha de conexão ao validar sua assinatura. Tente novamente.");
