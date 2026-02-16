@@ -1,3 +1,4 @@
+// src/app/app/checkout/success/CheckoutSuccessClient.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -8,7 +9,8 @@ export const dynamic = "force-dynamic";
 function hasDialogueNickname(status: any): boolean {
   const byFlag = status?.nicknameDefined === true;
   const byValue =
-    typeof status?.dialogueNickname === "string" && status.dialogueNickname.trim().length > 0;
+    typeof status?.dialogueNickname === "string" &&
+    status.dialogueNickname.trim().length > 0;
   return byFlag || byValue;
 }
 
@@ -42,23 +44,33 @@ export default function CheckoutSuccessClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const sessionId = useMemo(() => searchParams?.get("session_id") ?? null, [searchParams]);
+  const sessionId = useMemo(
+    () => searchParams?.get("session_id") ?? null,
+    [searchParams]
+  );
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
 
-  // ✅ Meta Pixel: dispara Subscribe 1x ao carregar a página de success
+  // ✅ Meta Pixel: dispara Subscribe 1x por session_id (evita bloquear compras futuras na mesma sessão do browser)
   useEffect(() => {
     try {
-      const key = "hitch_meta_subscribe_fired";
+      const key = sessionId
+        ? `hitch_meta_subscribe_${sessionId}`
+        : "hitch_meta_subscribe_fired";
+
       const fired = sessionStorage.getItem(key);
       if (fired === "1") return;
 
       const fbqFn = (globalThis as any)?.fbq;
       if (typeof fbqFn === "function") {
-        const eventId = sessionId ? `stripe_${sessionId}` : `stripe_success_${Date.now()}`;
+        const eventId = sessionId
+          ? `stripe_${sessionId}`
+          : `stripe_success_${Date.now()}`;
+
         // 3º argumento: params; 4º argumento: options (eventID p/ dedupe)
         fbqFn("track", "Subscribe", {}, { eventID: eventId });
+
         sessionStorage.setItem(key, "1");
       }
     } catch {
