@@ -158,6 +158,49 @@ export default function ContaPage() {
     }
   }
 
+  function clearClientAuthStorage() {
+    // ✅ Remover exatamente as chaves que o app usa para autenticação
+    // (alinha com src/lib/api/auth.ts)
+    const localTokenKeys = [
+      "accessToken",
+      "token",
+      "decoder_access_token",
+      "decoder_accessToken",
+      "decoder_token",
+      "hint_jwt",
+      // (extras defensivos — não custa remover)
+      "refreshToken",
+      "jwt",
+      "session",
+      "hitch_token",
+      "hitch_access_token",
+      "hitch_refresh_token",
+    ];
+
+    const sessionKeys = [
+      // checkout success / journey flags
+      "hitch_last_stripe_session_id",
+      "hitch_skip_onboarding_once",
+      "hitch_journey",
+      // register/signup pending
+      "decoder_pending_verify_email",
+      "decoder_pending_verify_password",
+      "decoder_pending_verify_next",
+      "decoder_login_error",
+      "signup_pending_email",
+      "signup_pending_password",
+      "signup_pending_next",
+    ];
+
+    try {
+      for (const k of localTokenKeys) window.localStorage.removeItem(k);
+    } catch {}
+
+    try {
+      for (const k of sessionKeys) window.sessionStorage.removeItem(k);
+    } catch {}
+  }
+
   async function handleLogout() {
     if (loggingOut) return;
     setLoggingOut(true);
@@ -176,26 +219,8 @@ export default function ContaPage() {
         throw new Error(data?.message || "Falha ao sair.");
       }
 
-      // 2) limpa storages do client (seguro; evita tokens em localStorage/sessionStorage)
-      try {
-        sessionStorage.clear();
-      } catch {}
-      try {
-        // remove chaves comuns sem nukar tudo (mais conservador)
-        const keys = [
-          "token",
-          "accessToken",
-          "refreshToken",
-          "jwt",
-          "session",
-          "decoder_token",
-          "hitch_token",
-          "hitch_access_token",
-          "hitch_refresh_token",
-          "hitch_refresh_token",
-        ];
-        for (const k of keys) localStorage.removeItem(k);
-      } catch {}
+      // 2) limpa storages do client (evita “usuário fantasma” em localhost)
+      clearClientAuthStorage();
 
       // 3) vai para Home MKT (app/page => "/")
       router.replace("/");
@@ -336,6 +361,7 @@ export default function ContaPage() {
                   className="btn text-red-300 hover:text-red-200 hover:border-red-400/40"
                   onClick={handleLogout}
                   type="button"
+                  disabled={loggingOut}
                 >
                   Sair
                 </button>
