@@ -25,9 +25,10 @@ type BillingMeResponse = {
   [k: string]: any;
 };
 
-type OnboardingStatus = {
-  onboardingStage?: string;
-  [k: string]: any;
+const PRICE_NUMERIC_MAP: Record<string, number> = {
+  standard: 29.9,
+  pro: 49.9,
+  unlimited: 79.9,
 };
 
 const PRICE_MAP: Record<string, string> = {
@@ -129,15 +130,34 @@ function codeKey(code: string) {
   return c;
 }
 
-/**
- * /app/app/billing/plan = PLANO LOGADO
- * - NUNCA pede e-mail
- * - Autenticado -> checkout
- * - Edge (sem sessão) -> login com next
- */
 function buildCheckout(planId: string, cycle: BillingCycle) {
+  // ✅ Alinhado ao OnboardingRouteGuard (public route: /app/checkout)
   const qs = new URLSearchParams({ planId, billingCycle: cycle });
-  return `/app/app/checkout?${qs.toString()}`;
+  return `/app/checkout?${qs.toString()}`;
+}
+
+// ✅ helper seguro para disparo do Meta Pixel
+function fireInitiateCheckout(params: {
+  planId: string;
+  planCode: string; // normalizado (standard/pro/unlimited)
+  cycle: BillingCycle;
+}) {
+  try {
+    if (typeof window === "undefined") return;
+    const fbqFn = (window as any)?.fbq;
+    if (typeof fbqFn !== "function") return;
+
+    fbqFn("track", "InitiateCheckout", {
+      content_category: "subscription",
+      content_name: params.planCode,
+      content_ids: [params.planId],
+      currency: "BRL",
+      value: PRICE_NUMERIC_MAP[params.planCode] ?? 0,
+      billing_cycle: params.cycle,
+    });
+  } catch {
+    // silencioso: não bloquear navegação
+  }
 }
 
 export default function BillingPlanPage() {
@@ -145,16 +165,13 @@ export default function BillingPlanPage() {
 
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [choosingPlanId, setChoosingPlanId] = useState<string | null>(null);
+
   const [err, setErr] = useState<string | null>(null);
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
   const [plans, setPlans] = useState<PublicPlan[]>([]);
 
   const [loadingMe, setLoadingMe] = useState(true);
   const [me, setMe] = useState<BillingMeResponse | null>(null);
-
-  // ✅ novo: onboardingStage para controlar botão "Voltar para conta"
-  const [loadingStatus, setLoadingStatus] = useState(true);
-  const [onboardingStage, setOnboardingStage] = useState<string | null>(null);
 
   const cycleLabel = useMemo(
     () => (cycle === "monthly" ? "Mensal" : "Anual"),
@@ -174,11 +191,6 @@ export default function BillingPlanPage() {
 
   const isAuthed = useMemo(() => !loadingMe && me != null, [loadingMe, me]);
 
-  const canShowBackToAccount = useMemo(() => {
-    if (loadingStatus) return false;
-    return String(onboardingStage ?? "").toUpperCase() === "READY";
-  }, [loadingStatus, onboardingStage]);
-
   useEffect(() => {
     let cancelled = false;
 
@@ -186,10 +198,19 @@ export default function BillingPlanPage() {
       try {
         setLoadingPlans(true);
         setErr(null);
+
         const res = await fetch("/api/v1/billing/plans", { cache: "no-store" });
         const data = await res.json().catch(() => null);
-        if (!res.ok) throw new Error(extractMessage(data) || "Falha ao carregar planos.");
-        if (!cancelled) setPlans(Array.isArray(data?.plans) ? data.plans : []);
+
+        if (!res.ok) {
+          const msg = extractMessage(data) || "Falha ao carregar planos.";
+          throw new Error(msg);
+        }
+
+        const list = Array.isArray(data?.plans)
+          ? (data.plans as PublicPlan[])
+          : [];
+        if (!cancelled) setPlans(list);
       } catch (e: any) {
         if (!cancelled) setErr(String(e?.message || "Erro ao carregar planos."));
       } finally {
@@ -204,10 +225,12 @@ export default function BillingPlanPage() {
           cache: "no-store",
           credentials: "include",
         });
+
         if (!res.ok) {
           if (!cancelled) setMe(null);
           return;
         }
+
         const data = await res.json().catch(() => ({}));
         if (!cancelled) setMe(data as BillingMeResponse);
       } catch {
@@ -217,26 +240,8 @@ export default function BillingPlanPage() {
       }
     }
 
-    async function loadStatus() {
-      try {
-        setLoadingStatus(true);
-        const res = await fetch("/api/onboarding/status", { cache: "no-store" });
-        if (!res.ok) {
-          if (!cancelled) setOnboardingStage(null);
-          return;
-        }
-        const data = (await res.json().catch(() => ({}))) as OnboardingStatus;
-        if (!cancelled) setOnboardingStage(String(data?.onboardingStage ?? "").trim() || null);
-      } catch {
-        if (!cancelled) setOnboardingStage(null);
-      } finally {
-        if (!cancelled) setLoadingStatus(false);
-      }
-    }
-
     void loadPlans();
     void loadMe();
-    void loadStatus();
 
     return () => {
       cancelled = true;
@@ -253,13 +258,27 @@ export default function BillingPlanPage() {
     setErr(null);
 
     try {
+      const normalizedCode = codeKey(planCode);
       const nextCheckout = buildCheckout(planId, cycle);
 
+      // ✅ dispara InitiateCheckout no clique do plano
+      fireInitiateCheckout({ planId, planCode: normalizedCode, cycle });
+
       if (!isAuthed) {
-        // Edge case defensivo: nunca prompta e-mail aqui
         router.push(`/app/login?next=${encodeURIComponent(nextCheckout)}`);
         return;
       }
+      
+try {
+  sessionStorage.setItem("hitch_last_plan_id", planId);
+  sessionStorage.setItem("hitch_last_plan_code", normalizedCode);
+  sessionStorage.setItem("hitch_last_billing_cycle", cycle);
+  sessionStorage.setItem(
+    "hitch_last_plan_value",
+    String(PRICE_NUMERIC_MAP[normalizedCode] ?? 0)
+  );
+} catch {}
+
 
       router.push(nextCheckout);
     } catch (e: any) {
@@ -272,20 +291,6 @@ export default function BillingPlanPage() {
   return (
     <main className="flex-1 px-4 py-10 md:py-12">
       <div className="mx-auto w-full max-w-6xl">
-        {/* ✅ novo: botão Voltar para conta (só se onboardingStage === READY) */}
-        {canShowBackToAccount && (
-          <div className="mb-6 flex items-center justify-end">
-            <button
-              type="button"
-              className="btn"
-              onClick={() => router.push("/app/conta")}
-              disabled={isBusy}
-            >
-              Voltar para conta
-            </button>
-          </div>
-        )}
-
         <div className="text-center space-y-4">
           <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-zinc-100">
             Escolha quanto controle você quer
@@ -345,8 +350,10 @@ export default function BillingPlanPage() {
               {plans
                 .slice()
                 .sort((a, b) => {
-                  const oa = codeKey(a.code) === "pro" ? 2 : codeKey(a.code) === "unlimited" ? 3 : 1;
-                  const ob = codeKey(b.code) === "pro" ? 2 : codeKey(b.code) === "unlimited" ? 3 : 1;
+                  const oa =
+                    codeKey(a.code) === "pro" ? 2 : codeKey(a.code) === "unlimited" ? 3 : 1;
+                  const ob =
+                    codeKey(b.code) === "pro" ? 2 : codeKey(b.code) === "unlimited" ? 3 : 1;
                   return oa - ob;
                 })
                 .map((p) => {
@@ -392,13 +399,17 @@ export default function BillingPlanPage() {
                           <div className="text-sm font-semibold tracking-wide text-zinc-200">
                             {ui.title}
                           </div>
+
                           <div className="text-3xl font-semibold tracking-tight text-zinc-100">
                             {ui.price}
                           </div>
+
                           <div className="text-sm text-zinc-200/90">{ui.midLine}</div>
+
                           <div className="text-sm text-zinc-400 leading-relaxed md:hidden">
                             {ui.bodyShort}
                           </div>
+
                           <div className="hidden md:block text-sm text-zinc-400 leading-relaxed">
                             {ui.bodyLong}
                           </div>

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 type SearchParams = {
   planId?: string;
@@ -62,6 +62,13 @@ function buildSelfCheckoutUrl(planId: string, billingCycle: "monthly" | "annual"
   )}`;
 }
 
+function firstIpFromXff(xff: string | null): string | null {
+  const v = (xff ?? "").trim();
+  if (!v) return null;
+  const first = v.split(",")[0]?.trim();
+  return first || null;
+}
+
 export default async function CheckoutPage({
   searchParams,
 }: {
@@ -80,6 +87,21 @@ export default async function CheckoutPage({
     );
   }
 
+  // ✅ Captura match fields no request do usuário (browser -> Next server)
+  const cookieStore = await cookies();
+  const h = await headers();
+
+  const fbp = (cookieStore.get("_fbp")?.value ?? "").trim() || null;
+  const fbc = (cookieStore.get("_fbc")?.value ?? "").trim() || null;
+
+  const ua = (h.get("user-agent") ?? "").trim() || null;
+
+  // Em local geralmente vem vazio; em prod pode vir via proxy.
+  const ip =
+    firstIpFromXff(h.get("x-forwarded-for")) ||
+    (h.get("x-real-ip") ?? "").trim() ||
+    null;
+
   const base = getApiBaseUrl();
   const endpoint = buildCheckoutSessionEndpoint(base);
 
@@ -90,7 +112,16 @@ export default async function CheckoutPage({
       Authorization: `Bearer ${token}`,
     },
     cache: "no-store",
-    body: JSON.stringify({ planId, billingCycle }),
+    body: JSON.stringify({
+      planId,
+      billingCycle,
+
+      // ✅ match boosters (opcional)
+      fbp,
+      fbc,
+      clientIpAddress: ip,
+      clientUserAgent: ua,
+    }),
   });
 
   const payload = await fetchJsonOrText(res);

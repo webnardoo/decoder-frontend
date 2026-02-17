@@ -1,6 +1,7 @@
+// src/app/app/checkout/success/CheckoutSuccessClient.tsx
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +9,8 @@ export const dynamic = "force-dynamic";
 function hasDialogueNickname(status: any): boolean {
   const byFlag = status?.nicknameDefined === true;
   const byValue =
-    typeof status?.dialogueNickname === "string" && status.dialogueNickname.trim().length > 0;
+    typeof status?.dialogueNickname === "string" &&
+    status.dialogueNickname.trim().length > 0;
   return byFlag || byValue;
 }
 
@@ -38,14 +40,98 @@ function extractMessage(data: any): string | null {
   );
 }
 
+function safeNumber(v: any): number | null {
+  const n = typeof v === "number" ? v : Number(String(v ?? "").replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+}
+
 export default function CheckoutSuccessClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const sessionId = useMemo(() => searchParams?.get("session_id") ?? null, [searchParams]);
+  const sessionId = useMemo(
+    () => searchParams?.get("session_id") ?? null,
+    [searchParams]
+  );
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
+
+  /**
+   * ✅ B) Purchase via Browser no /checkout/success (Stripe é externa)
+   * - Dispara 1x por session_id (refresh não duplica)
+   * - eventID estável (baseado no session_id) para dedupe futuro, se você quiser alinhar no server
+   * - Params são "best-effort" via sessionStorage (não bloqueia se não existir)
+   */
+  useEffect(() => {
+    try {
+      const key = sessionId
+        ? `hitch_meta_purchase_${sessionId}`
+        : "hitch_meta_purchase_fired";
+
+      const fired = sessionStorage.getItem(key);
+      if (fired === "1") return;
+
+      const fbqFn = (globalThis as any)?.fbq;
+      if (typeof fbqFn !== "function") return;
+
+      // eventID determinístico por session_id (não use Date.now aqui)
+      const eventId = sessionId ? `stripe_cs_${sessionId}_purchase` : `stripe_cs_purchase`;
+
+      // Best-effort params (se existirem). Não depende disso.
+      const planId = sessionStorage.getItem("hitch_last_plan_id") || undefined;
+      const planCode = sessionStorage.getItem("hitch_last_plan_code") || undefined;
+      const billingCycle = sessionStorage.getItem("hitch_last_billing_cycle") || undefined;
+
+      const valueRaw = sessionStorage.getItem("hitch_last_plan_value");
+      const value = safeNumber(valueRaw);
+
+      const params: Record<string, any> = {
+        currency: "BRL",
+        content_category: "subscription",
+      };
+
+      if (typeof planCode === "string" && planCode.trim()) params.content_name = planCode.trim();
+      if (typeof planId === "string" && planId.trim()) params.content_ids = [planId.trim()];
+      if (typeof billingCycle === "string" && billingCycle.trim())
+        params.billing_cycle = billingCycle.trim();
+
+      // value é opcional; se não existir, não envia
+      if (value != null) params.value = value;
+
+      // 3º argumento: params; 4º argumento: options (eventID p/ dedupe)
+      fbqFn("track", "Purchase", params, { eventID: eventId });
+
+      sessionStorage.setItem(key, "1");
+    } catch {
+      // silencioso
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
+
+  // ✅ Meta Pixel: Subscribe 1x por session_id
+  useEffect(() => {
+    try {
+      const key = sessionId
+        ? `hitch_meta_subscribe_${sessionId}`
+        : "hitch_meta_subscribe_fired";
+
+      const fired = sessionStorage.getItem(key);
+      if (fired === "1") return;
+
+      const fbqFn = (globalThis as any)?.fbq;
+      if (typeof fbqFn === "function") {
+        const eventId = sessionId ? `stripe_cs_${sessionId}_subscribe` : `stripe_success_subscribe`;
+
+        fbqFn("track", "Subscribe", {}, { eventID: eventId });
+
+        sessionStorage.setItem(key, "1");
+      }
+    } catch {
+      // silencioso
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
 
   async function handleOk() {
     if (loading) return;
@@ -92,10 +178,7 @@ export default function CheckoutSuccessClient() {
         return;
       }
 
-      // ✅ decisão determinística (sem inferência por next)
       const target = computePostCheckoutTarget(body);
-
-      // ✅ replace elimina back para /success (sem loop/back)
       router.replace(target);
     } catch {
       setError("Falha de conexão ao validar sua assinatura. Tente novamente.");

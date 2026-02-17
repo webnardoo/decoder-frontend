@@ -140,6 +140,29 @@ function buildLoggedPlanNext(planId: string, cycle: BillingCycle) {
   return `/app/app/billing/plan?${qs.toString()}`;
 }
 
+// ✅ helper seguro para disparo do Meta Pixel (sem hardcode de valores)
+function fireInitiateCheckout(params: {
+  planId: string;
+  planCode: string; // normalizado (standard/pro/unlimited)
+  cycle: BillingCycle;
+}) {
+  try {
+    if (typeof window === "undefined") return;
+    const fbqFn = (window as any)?.fbq;
+    if (typeof fbqFn !== "function") return;
+
+    fbqFn("track", "InitiateCheckout", {
+      content_category: "subscription",
+      content_name: params.planCode,
+      content_ids: [params.planId],
+      currency: "BRL",
+      billing_cycle: params.cycle,
+    });
+  } catch {
+    // silencioso por segurança (não bloquear navegação)
+  }
+}
+
 export default function PublicPlansClient() {
   const router = useRouter();
 
@@ -234,7 +257,11 @@ export default function PublicPlansClient() {
     setErr(null);
 
     try {
+      const normalizedCode = codeKey(planCode);
       const nextLoggedPlan = buildLoggedPlanNext(planId, cycle);
+
+      // ✅ dispara InitiateCheckout no clique do plano (antes do prompt/navegação)
+      fireInitiateCheckout({ planId, planCode: normalizedCode, cycle });
 
       const email = window.prompt("Digite seu e-mail para continuar:");
       const eMail = normalizeEmail(String(email || ""));
