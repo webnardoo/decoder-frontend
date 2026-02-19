@@ -16,7 +16,41 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   const pixelId = String(process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "").trim();
 
   return (
-    <html lang="pt-BR">
+    <html
+  lang="pt-BR"
+  suppressHydrationWarning
+  data-theme="light"
+>
+      <head>
+        {/* ✅ Theme bootstrap (default = light). Define data-theme antes do app renderizar. */}
+        <Script
+          id="theme-bootstrap"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+(function () {
+  try {
+    var key = "hitch_theme";
+    var saved = null;
+    try { saved = localStorage.getItem(key); } catch (e) {}
+
+    // ✅ default: light (e só aceita "light"|"dark" quando salvo)
+    var theme = (saved === "dark" || saved === "light") ? saved : "light";
+
+    // Se quiser respeitar o sistema quando NÃO houver preferência salva, use:
+    // if (!saved) theme = (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+
+    document.documentElement.setAttribute("data-theme", theme);
+  } catch (e) {
+    // ✅ fallback seguro: light (NUNCA force dark aqui)
+    document.documentElement.setAttribute("data-theme", "light");
+  }
+})();
+            `,
+          }}
+        />
+      </head>
+
       <body className="min-h-dvh h-app-bg">
         {pixelId ? (
           <>
