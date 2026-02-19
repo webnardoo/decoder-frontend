@@ -4,13 +4,12 @@
 
 /* Base global do app (não mexe em layout do site exp-site-v12) */
 :root {
-  color-scheme: dark;
-
   /* Ajuste fino aqui se precisar */
   --h-topnav-h: 56px;
   --h-footer-h: 66px;
 }
 
+/* Base */
 html,
 body {
   height: 100%;
@@ -23,8 +22,9 @@ body {
 }
 
 ::selection {
-  background: rgba(168, 85, 247, 0.45);
-  color: #fff;
+  /* melhor no light e no dark */
+  background: rgba(15, 23, 42, 0.16);
+  color: var(--h-text);
 }
 
 a {
@@ -33,28 +33,34 @@ a {
 
 /* =========================================================
    FUNDO BASE FIXO (SÓ QUANDO A PÁGINA USAR A CLASSE)
-   - radial central: #240A61 com 67% -> preto
-   - FIXO na viewport (não rola)
+   - LIGHT: sem degradê (desliga a camada)
+   - DARK: mantém radial fixo
    ========================================================= */
 .h-fixed-radial-bg {
   position: relative;
-  isolation: isolate; /* garante empilhamento correto */
+  isolation: isolate;
 }
 
-.h-fixed-radial-bg::before {
+/* LIGHT: remove a camada do radial */
+html[data-theme="light"] .h-fixed-radial-bg::before {
+  content: none !important;
+}
+
+/* DARK: mantém o radial fixo */
+html[data-theme="dark"] .h-fixed-radial-bg::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
 
-  /* radial central fixo */
   background: radial-gradient(
-    1200px 700px at 50% 50%,
-    rgba(36, 10, 97, 0.67) 0%,
-    rgba(36, 10, 97, 0.35) 28%,
-    rgba(0, 0, 0, 1) 72%,
-    rgba(0, 0, 0, 1) 100%
+    var(--h-fixed-radial-size-x) var(--h-fixed-radial-size-y)
+      at var(--h-fixed-radial-x) var(--h-fixed-radial-y),
+    var(--h-radial-inner) 0%,
+    var(--h-radial-mid2, var(--h-radial-edge)) 28%,
+    var(--h-radial-edge) 72%,
+    var(--h-radial-edge) 100%
   );
 }
 
@@ -63,8 +69,7 @@ a {
   background: var(--h-app-bg);
 }
 
-/* Área útil do app (entre TopNav e Footer)
-   FIX: não usar calc com altura hardcoded do footer (gera overflow no /signup) */
+/* Área útil do app (entre TopNav e Footer) */
 .app-main {
   flex: 1;
   min-height: 0;
@@ -90,6 +95,103 @@ select:-webkit-autofill:focus {
   caret-color: var(--h-text);
 }
 
+/* =========================================================
+   CORREÇÃO DE LEGIBILIDADE (SÓ NO LIGHT)
+   - cobre Tailwind com opacidade tipo text-white/80 etc.
+   ========================================================= */
+html[data-theme="light"] .text-white,
+html[data-theme="light"] .text-zinc-50,
+html[data-theme="light"] .text-zinc-100,
+html[data-theme="light"] .text-zinc-200,
+html[data-theme="light"] .text-zinc-300,
+html[data-theme="light"] .text-slate-50,
+html[data-theme="light"] .text-slate-100,
+html[data-theme="light"] .text-slate-200,
+html[data-theme="light"] .text-gray-50,
+html[data-theme="light"] .text-gray-100,
+html[data-theme="light"] .text-gray-200 {
+  color: var(--h-text) !important;
+}
+
+html[data-theme="light"] [class*="text-white/"],
+html[data-theme="light"] [class*="text-zinc-50/"],
+html[data-theme="light"] [class*="text-zinc-100/"],
+html[data-theme="light"] [class*="text-zinc-200/"],
+html[data-theme="light"] [class*="text-zinc-300/"],
+html[data-theme="light"] [class*="text-slate-50/"],
+html[data-theme="light"] [class*="text-slate-100/"],
+html[data-theme="light"] [class*="text-slate-200/"],
+html[data-theme="light"] [class*="text-gray-50/"],
+html[data-theme="light"] [class*="text-gray-100/"],
+html[data-theme="light"] [class*="text-gray-200/"] {
+  color: var(--h-text) !important;
+}
+
+html[data-theme="light"] .text-zinc-400,
+html[data-theme="light"] .text-zinc-500,
+html[data-theme="light"] .text-slate-300,
+html[data-theme="light"] .text-slate-400,
+html[data-theme="light"] .text-gray-300,
+html[data-theme="light"] .text-gray-400,
+html[data-theme="light"] .text-neutral-300,
+html[data-theme="light"] .text-neutral-400 {
+  color: var(--h-muted) !important;
+}
+
+html[data-theme="light"] [class*="text-zinc-400/"],
+html[data-theme="light"] [class*="text-zinc-500/"],
+html[data-theme="light"] [class*="text-slate-300/"],
+html[data-theme="light"] [class*="text-slate-400/"],
+html[data-theme="light"] [class*="text-gray-300/"],
+html[data-theme="light"] [class*="text-gray-400/"],
+html[data-theme="light"] [class*="text-neutral-300/"],
+html[data-theme="light"] [class*="text-neutral-400/"] {
+  color: var(--h-muted) !important;
+}
+
+/* Ajustes pontuais */
+html[data-theme="light"] .label {
+  color: var(--h-subtle) !important;
+}
+
+html[data-theme="light"] .input::placeholder {
+  color: rgba(15, 23, 42, 0.45);
+}
+
+/* =========================================================
+   MARKETING HERO BANNER — MASK (fade real, sem “faixa branca”)
+   ========================================================= */
+.mkt .heroBanner {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  background: transparent;
+}
+
+/* aplica o fade como MÁSCARA na imagem */
+.mkt .heroBanner img {
+  width: 130% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: 70% center !important;
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(0,0,0,0.15) 8%,
+    rgba(0,0,0,0.35) 14%,
+    rgba(0,0,0,0.6) 20%,
+    rgba(0,0,0,1) 30%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(0,0,0,0.15) 8%,
+    rgba(0,0,0,0.35) 14%,
+    rgba(0,0,0,0.6) 20%,
+    rgba(0,0,0,1) 30%
+  );
+}
+
 /* =========================
    COMPONENTES (classes do app)
    ========================= */
@@ -98,48 +200,28 @@ select:-webkit-autofill:focus {
     @apply rounded-2xl border;
     background: var(--h-card);
     border-color: var(--h-border);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  }
-
-  .card-premium {
-    position: relative;
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.045) 0%,
-      rgba(255, 255, 255, 0.028) 65%,
-      rgba(255, 255, 255, 0.022) 100%
-    );
-    border-color: var(--h-border-strong);
-    box-shadow:
-      0 18px 55px rgba(0, 0, 0, 0.55),
-      0 0 0 1px rgba(255, 255, 255, 0.02) inset;
-  }
-
-  .card-premium::before {
-    content: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
   }
 
   .btn {
     @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition;
     border: 1px solid var(--h-border);
-    background: rgba(255, 255, 255, 0.035);
+    background: rgba(2, 6, 23, 0.03);
     color: var(--h-text);
   }
 
   .btn:hover {
-    background: linear-gradient(180deg, var(--h-hover-deep) 0%, var(--h-hover-deep-2) 100%);
+    background: rgba(2, 6, 23, 0.06);
     border-color: var(--h-hover-border);
-    box-shadow:
-      0 14px 30px rgba(0, 0, 0, 0.55),
-      0 0 0 1px rgba(255, 255, 255, 0.02) inset,
-      0 0 18px rgba(34, 13, 84, 0.18);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
   }
 
   .btn:focus-visible {
-    outline: 2px solid rgba(34, 13, 84, 0.55);
+    outline: 2px solid rgba(2, 6, 23, 0.22);
     outline-offset: 3px;
   }
 
+  /* CTA roxo mantém branding */
   .btn-cta {
     @apply inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition;
     border: 1px solid rgba(34, 13, 84, 0.75);
@@ -151,19 +233,13 @@ select:-webkit-autofill:focus {
       rgba(34, 13, 84, 0.92) 100%
     );
     box-shadow:
-      0 18px 46px rgba(0, 0, 0, 0.55),
+      0 18px 46px rgba(0, 0, 0, 0.22),
       0 0 0 1px rgba(255, 255, 255, 0.02) inset;
   }
 
   .btn-cta:hover {
-    background: linear-gradient(
-      90deg,
-      rgba(34, 13, 84, 0.98) 0%,
-      rgba(58, 20, 136, 0.98) 55%,
-      rgba(34, 13, 84, 0.98) 100%
-    );
     box-shadow:
-      0 22px 56px rgba(0, 0, 0, 0.62),
+      0 22px 56px rgba(0, 0, 0, 0.26),
       0 0 26px rgba(34, 13, 84, 0.20);
   }
 
@@ -175,86 +251,13 @@ select:-webkit-autofill:focus {
 
   .input {
     @apply w-full rounded-2xl px-3 py-3 text-sm outline-none transition;
-    background: rgba(255, 255, 255, 0.035);
-    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(2, 6, 23, 0.03);
+    border: 1px solid rgba(2, 6, 23, 0.10);
     color: var(--h-text);
-  }
-
-  .input:-webkit-autofill,
-  .input:-webkit-autofill:hover,
-  .input:-webkit-autofill:focus {
-    -webkit-text-fill-color: var(--h-text) !important;
-    box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.035) inset !important;
-    transition: background-color 9999s ease-out 0s;
-    caret-color: var(--h-text);
-  }
-
-  .input::placeholder {
-    color: rgba(255, 255, 255, 0.40);
-  }
-
-  .input:focus {
-    border-color: rgba(34, 13, 84, 0.55);
-    box-shadow: 0 0 0 4px rgba(34, 13, 84, 0.14);
   }
 
   .label {
     @apply text-xs font-medium tracking-wide;
-    color: rgba(154, 160, 181, 0.70);
-  }
-
-  .segmented {
-    @apply inline-flex rounded-2xl p-1;
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    background: rgba(255, 255, 255, 0.02);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  }
-
-  .btn-seg {
-    @apply rounded-xl px-4 py-2 text-sm font-semibold transition;
-    color: rgba(255, 255, 255, 0.78);
-    background: transparent;
-    border: 1px solid transparent;
-  }
-
-  .btn-seg:hover {
-    background: linear-gradient(180deg, var(--h-hover-deep) 0%, var(--h-hover-deep-2) 100%);
-    border-color: var(--h-hover-border);
-    color: rgba(255, 255, 255, 0.92);
-    box-shadow:
-      0 12px 26px rgba(0, 0, 0, 0.55),
-      0 0 14px rgba(34, 13, 84, 0.16);
-  }
-
-  .btn-seg-active {
-    background: rgba(34, 13, 84, 0.38);
-    border-color: rgba(34, 13, 84, 0.55);
-    color: rgba(255, 255, 255, 0.92);
-    box-shadow:
-      0 10px 24px rgba(0, 0, 0, 0.38),
-      0 0 0 1px rgba(255, 255, 255, 0.02) inset;
-  }
-
-  .chip {
-    @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition;
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    background: rgba(255, 255, 255, 0.03);
-    color: rgba(255, 255, 255, 0.80);
-  }
-
-  .chip:hover {
-    background: linear-gradient(180deg, var(--h-hover-deep) 0%, var(--h-hover-deep-2) 100%);
-    border-color: var(--h-hover-border);
-    color: rgba(255, 255, 255, 0.92);
-    box-shadow:
-      0 12px 26px rgba(0, 0, 0, 0.55),
-      0 0 14px rgba(34, 13, 84, 0.14);
-  }
-
-  .chip-active {
-    background: rgba(34, 13, 84, 0.32);
-    border-color: rgba(34, 13, 84, 0.55);
-    color: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+    color: var(--h-subtle);
   }
 }
