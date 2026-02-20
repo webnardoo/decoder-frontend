@@ -1,33 +1,98 @@
 /* FRONT — src/styles/hitch-theme.css */
-:root {
-  --h-bg: #000000;
-  --h-text: rgba(255, 255, 255, 0.9);
-  --h-muted: rgba(176, 179, 192, 0.7);
 
-  --h-card: rgba(255, 255, 255, 0.035);
-  --h-border: rgba(255, 255, 255, 0.10);
+/* =========================================================
+   HITCH THEME — Camada de mapeamento (compat)
+   - NÃO é mais “fonte de verdade”
+   - Mapeia --h-* para o Design System (--ds-*)
+   ========================================================= */
+
+html[data-theme="light"] {
+  /* Texto */
+  --h-text: var(--ds-text);
+  --h-muted: var(--ds-muted-2);
+  --h-subtle: var(--ds-muted);
+
+  /* Superfícies */
+  --h-bg: var(--ds-bg);
+  --h-app-bg: var(--ds-bg);
+
+  --h-card: var(--ds-card);
+  --h-border: var(--ds-stroke);
+  --h-border-strong: rgba(15, 23, 42, 0.16);
+
+  /* Brand (mantém por enquanto; na Fase 1 não vamos quebrar CTA existente) */
+  --h-purple: #220d54;
+
+  /* Hover */
+  --h-hover-deep: rgba(15, 23, 42, 0.03);
+  --h-hover-deep-2: rgba(15, 23, 42, 0.06);
+  --h-hover-border: rgba(15, 23, 42, 0.16);
+
+  /* TopNav (light) */
+  --h-topnav-bg: rgba(255, 255, 255, 0.82);
+  --h-brand: rgb(31, 14, 55);
+  --h-brand-contrast: #ffffff;
+
+  /* Tokens do radial fixo (light: desabilitado no globals via ::before content:none) */
+  --h-fixed-radial-size-x: 1200px;
+  --h-fixed-radial-size-y: 700px;
+  --h-fixed-radial-x: 50%;
+  --h-fixed-radial-y: 50%;
+  --h-radial-inner: rgba(0, 0, 0, 0);
+  --h-radial-mid2: rgba(0, 0, 0, 0);
+  --h-radial-edge: var(--ds-bg);
+}
+
+html[data-theme="dark"] {
+  /* Texto */
+  --h-bg: var(--ds-bg);
+  --h-text: var(--ds-text);
+  --h-muted: var(--ds-muted);
+  --h-subtle: var(--ds-muted-2);
+
+  /* Superfícies */
+  --h-card: var(--ds-card);
+  --h-border: var(--ds-stroke);
   --h-border-strong: rgba(255, 255, 255, 0.14);
 
+  /* Brand */
   --h-purple: #220D54;
 
+  /* Hover */
   --h-hover-deep: rgba(9, 7, 18, 0.94);
   --h-hover-deep-2: rgba(18, 10, 40, 0.82);
   --h-hover-border: rgba(34, 13, 84, 0.55);
 
+  /* ✅ App background (mantém por enquanto; Fase 2 vai alinhar com DS) */
   --h-app-bg:
     radial-gradient(
       1600px 1100px at 50% 40%,
       rgba(34, 13, 84, 0.20) 0%,
       rgba(34, 13, 84, 0.12) 18%,
       rgba(34, 13, 84, 0.07) 34%,
-      rgba(0, 0, 0, 0.90) 58%,
-      rgba(0, 0, 0, 1) 78%,
-      rgba(0, 0, 0, 1) 100%
+      rgba(0,  0,  0,  0.90) 58%,
+      rgba(0,  0,  0,  1) 78%,
+      rgba(0,  0,  0,  1) 100%
     ),
     radial-gradient(
       900px 620px at 50% 72%,
       rgba(72, 28, 168, 0.10) 0%,
       rgba(72, 28, 168, 0.05) 22%,
-      rgba(0, 0, 0, 0) 55%
+      rgba(0,  0,  0,  0) 55%
     );
+
+  /* tokens do radial fixo (dark) */
+  --h-fixed-radial-size-x: 1200px;
+  --h-fixed-radial-size-y: 700px;
+  --h-fixed-radial-x: 50%;
+  --h-fixed-radial-y: 50%;
+
+  --h-radial-inner: rgba(36, 10, 97, 0.67);
+  --h-radial-mid2: rgba(36, 10, 97, 0.35);
+  --h-radial-edge: rgba(0, 0, 0, 1);
+
+  /* TopNav (dark) */
+  --h-topnav-bg: rgba(10, 12, 16, 0.72);
+  --h-brand: rgb(31, 14, 55);
+  --h-brand-contrast: #ffffff;
 }

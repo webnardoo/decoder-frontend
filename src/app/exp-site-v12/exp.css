@@ -1,225 +1,77 @@
 /* src/app/exp-site-v12/exp.css */
 
-.page {
-  width: 100%;
-  min-height: 100vh;
-  background:
-    radial-gradient(1400px 760px at 52% 520px, rgba(124, 58, 237, 0.22) 0%, rgba(124, 58, 237, 0.10) 38%, rgba(0, 0, 0, 0) 72%),
-    radial-gradient(1200px 680px at 78% 220px, rgba(124, 58, 237, 0.10) 0%, rgba(0, 0, 0, 0) 62%),
-    #000;
-  color: #fff;
-}
+/* =========================================================
+   EXP SITE (exp-site-v12) — LAYOUT ONLY
+   - NÃO define tokens
+   - NÃO define resets
+   - NÃO define botões
+   - NÃO define header/nav/theme toggle
+   Fonte de verdade de tokens + botões + header: site.css
+   ========================================================= */
 
-/* Container */
-.container {
-  width: 100%;
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
+/* =========================================================
+   HERO (layout)
+   ========================================================= */
 
-/* Navbar */
-.navbar {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
+.mkt .heroWrap { padding: 44px 0 24px; }
 
-.navInner {
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: rgba(255, 255, 255, 0.88);
-}
-
-.navRight {
-  display: inline-flex;
-  align-items: center;
-  gap: 18px;
-}
-
-.navLink {
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 13px;
-  transition: color 180ms ease;
-}
-.navLink:hover {
-  color: rgba(255, 255, 255, 0.92);
-}
-
-/* Buttons */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.92);
-  font-size: 13px;
-  font-weight: 600;
-  transition: transform 120ms ease, background 180ms ease, border-color 180ms ease;
-}
-
-.btn:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.14);
-  transform: translateY(-1px);
-}
-
-.btnPrimary {
-  border: 1px solid rgba(124, 58, 237, 0.35);
-  background: linear-gradient(180deg, rgba(124, 58, 237, 0.95) 0%, rgba(79, 70, 229, 0.92) 100%);
-  box-shadow:
-    0 10px 26px rgba(124, 58, 237, 0.18),
-    0 1px 0 rgba(255, 255, 255, 0.10) inset;
-}
-.btnPrimary:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0 12px 30px rgba(124, 58, 237, 0.22),
-    0 1px 0 rgba(255, 255, 255, 0.12) inset;
-}
-
-/* Sections */
-.section {
-  padding: 70px 0;
-}
-
-.hero1 {
+.mkt .heroCard {
   position: relative;
-  padding: 84px 0 40px;
-  /* IMPORTANT: hero1 não tem "degradê vertical" próprio.
-     O fundo roxo é do .page (global), para evitar a "faixa/retângulo" e o seam com hero2. */
-  background: transparent;
-  overflow: hidden;
-}
-
-/* Fade de continuidade (hero1 -> hero2): um único responsável pela transição */
-.hero1::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -420px;
-  height: 900px;
-  pointer-events: none;
-  z-index: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0) 0%,
-    rgba(0, 0, 0, 0.12) 40%,
-    rgba(0, 0, 0, 0.42) 72%,
-    rgba(0, 0, 0, 0.78) 92%,
-    rgba(0, 0, 0, 1) 100%
-  );
-}
-
-/* Grid do hero */
-.heroGrid {
   display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
-  gap: 26px;
-  align-items: center;
-  min-height: 360px;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 18px;
   border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid var(--stroke);
+  background: none;
+  box-shadow: 0 26px 60px rgba(15, 23, 42, 0.10);
+  padding: 26px;
+  min-height: 360px;
 }
 
-/* Copy */
-.heroCopy {
-  max-width: 520px;
+.mkt[data-mkt-theme="dark"] .heroCard {
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.45);
 }
 
-.eyebrow {
-  font-size: 12px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.54);
-  margin-bottom: 16px;
+.mkt .heroCopy { position: relative; z-index: 2; max-width: 540px; }
+.mkt .heroBanner { position: relative; z-index: 2; width: 100%; height: 100%; min-height: 360px; }
+
+/* respiro do subtítulo + CTAs (layout apenas) */
+.mkt .heroSubtitle { margin: 10px 0 16px; }
+.mkt .heroCtas { display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* =========================================================
+   SERVICE BAR (layout)
+   ========================================================= */
+
+.mkt .serviceBar {
+  margin-top: 16px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bar);
+  border: 1px solid var(--bar-stroke);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.18),
+    0 1px 0 rgba(255, 255, 255, 0.06) inset;
 }
 
-.heroEyebrow {
-  line-height: 1.35;
+.mkt .serviceRow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
 }
 
-.h1Hero {
-  font-size: 44px;
-  line-height: 1.08;
-  letter-spacing: -0.02em;
-  margin: 0 0 14px;
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.bodyText {
-  font-size: 14px;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.66);
-  margin: 0;
-}
-
-.heroSubtitle {
-  max-width: 480px;
-  margin-bottom: 18px;
-}
-
-.heroCtaRow {
+.mkt .serviceItem {
   display: flex;
   gap: 12px;
-  align-items: center;
-  margin-top: 6px;
+  padding: 14px 16px;
+  border-right: 1px solid rgba(255, 255, 255, 0.10);
 }
+.mkt .serviceItem:last-child { border-right: 0; }
 
-/* Dobra 2 */
-.hero2 {
-  position: relative;
-  background: transparent;
-  padding: 66px 0;
-}
-
-.hero2FromHero {
-  padding-top: 78px;
-}
-
-/* Títulos */
-.h2 {
-  font-size: 34px;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  margin: 0 0 10px;
-  color: rgba(255, 255, 255, 0.94);
-}
-
-/* Steps */
-.stepsRow {
-  margin-top: 22px;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-}
-
-.stepCard {
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
-  padding: 18px;
-  min-height: 220px;
-}
-
-.stepTop {
+.mkt .serviceIcon {
   width: 28px;
   height: 28px;
   border-radius: 999px;
@@ -227,139 +79,234 @@
   align-items: center;
   justify-content: center;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.86);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(0, 0, 0, 0.35);
-}
-
-.stepTitle {
-  margin: 10px 0 6px;
-  font-size: 14px;
-  font-weight: 700;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.92);
+  flex: 0 0 auto;
 }
 
-.stepBody {
-  margin: 0 0 14px;
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.60);
+.mkt .serviceTitle {
+  margin: 0 0 2px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--bar-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
 }
 
-.stepMedia {
+.mkt .serviceDesc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 500;
+  color: var(--bar-muted);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+/* =========================================================
+   TEXT HELPERS (tipografia usando tokens do site.css)
+   ========================================================= */
+
+.mkt .eyebrow {
+  font-size: var(--t-eyebrow-size);
+  line-height: var(--t-eyebrow-lh);
+  letter-spacing: var(--t-eyebrow-letter);
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.mkt .bodyText {
+  font-size: var(--t-body-size);
+  line-height: var(--t-body-lh);
+  color: var(--muted-2);
+  font-weight: 500;
+}
+
+.mkt .h1Hero {
+  font-size: var(--t-title-size);
+  line-height: var(--t-title-lh);
+  font-weight: var(--t-title-weight);
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin: 0 0 12px;
+}
+
+.mkt .h2 {
+  font-size: var(--t-h2-size);
+  line-height: var(--t-h2-lh);
+  font-weight: var(--t-h2-weight);
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin: 0 0 10px;
+}
+
+/* =========================================================
+   SECTIONS / STEPS (layout)
+   ========================================================= */
+
+.mkt .section { padding: 70px 0; }
+.mkt .sectionAlt { padding-top: 56px; }
+
+.mkt .stepsRow {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.mkt .stepCard {
+  border-radius: 18px;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.70);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+  padding: 18px;
+  min-height: 220px;
+}
+
+.mkt[data-mkt-theme="dark"] .stepCard {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+}
+
+.mkt .stepTop {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.mkt[data-mkt-theme="dark"] .stepTop {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.mkt .stepTitle { margin: 10px 0 6px; font-size: 14px; font-weight: 800; }
+.mkt .stepBody { margin: 0 0 14px; font-size: 12.5px; line-height: 1.5; opacity: 0.82; }
+
+.mkt .stepMedia {
   height: 86px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.mkt[data-mkt-theme="dark"] .stepMedia {
+  border: 1px solid rgba(255, 255, 255, 0.10);
   background: rgba(0, 0, 0, 0.25);
 }
 
-/* Blocks */
-.blockText {
-  max-width: 860px;
-}
+/* =========================================================
+   BLOCK TEXT (kicker/sections) (layout)
+   ========================================================= */
 
-.kicker {
+.mkt .blockText { max-width: 920px; }
+.mkt .kicker {
   font-size: 12px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.46);
-  margin-bottom: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  margin-bottom: 10px;
 }
 
-/* Features */
-.featuresWrap {
-  margin-top: 22px;
-}
+/* =========================================================
+   FEATURES (layout)
+   ========================================================= */
 
-.featuresGrid {
+.mkt .featuresWrap { margin-top: 18px; }
+
+.mkt .featuresGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
-  margin-top: 18px;
+  margin-top: 14px;
 }
 
-.featureCard {
+.mkt .featureCard {
   display: flex;
   gap: 12px;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  padding: 16px;
+  align-items: flex-start;
+  padding: 16px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
 }
 
-.featureIcon {
-  width: 34px;
-  height: 34px;
+.mkt[data-mkt-theme="dark"] .featureCard {
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.55);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.mkt .featureIcon {
+  height: 38px;
+  width: 38px;
   border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(124, 58, 237, 0.18);
-  border: 1px solid rgba(124, 58, 237, 0.22);
-  color: rgba(255, 255, 255, 0.86);
   flex: 0 0 auto;
+  font-size: 16px;
+  line-height: 1;
+  color: rgba(15, 23, 42, 0.85);
+  background: rgba(15, 23, 42, 0.06);
 }
 
-.featureLabel {
-  margin: 0 0 6px;
+.mkt[data-mkt-theme="dark"] .featureIcon {
+  color: rgba(226, 232, 240, 0.92);
+  background: rgba(226, 232, 240, 0.08);
+}
+
+.mkt .featureLabel {
+  margin: 0 0 4px 0;
   font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.52);
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  opacity: 0.72;
 }
 
-.featureTitle {
-  margin: 0 0 6px;
-  font-size: 14px;
-  font-weight: 800;
-  color: rgba(255, 255, 255, 0.92);
+.mkt .featureTitle {
+  margin: 0 0 6px 0;
+  font-size: 15px;
+  font-weight: 700;
 }
 
-.featureBody {
+.mkt .featureBody {
   margin: 0;
-  font-size: 12.5px;
-  line-height: 1.55;
-  color: rgba(255, 255, 255, 0.62);
+  font-size: 13.5px;
+  line-height: 1.45;
+  opacity: 0.82;
 }
 
-/* Responsive */
+/* =========================================================
+   RESPONSIVE (layout)
+   ========================================================= */
+
 @media (max-width: 980px) {
-  .heroGrid {
-    grid-template-columns: 1fr;
-    min-height: 420px;
-  }
+  .mkt .heroCard { grid-template-columns: 1fr; min-height: 420px; }
+  .mkt .heroBanner { min-height: 320px; }
+  .mkt .h1Hero { font-size: 40px; }
 
-  .h1Hero {
-    font-size: 40px;
-  }
+  .mkt .serviceRow { grid-template-columns: 1fr 1fr; }
+  .mkt .serviceItem { border-right: 0; border-bottom: 1px solid rgba(255, 255, 255, 0.10); }
 
-  .stepsRow {
-    grid-template-columns: 1fr;
-  }
-
-  .featuresGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .navRight {
-    gap: 12px;
-  }
-
-  .navLink {
-    display: none;
-  }
+  .mkt .stepsRow { grid-template-columns: 1fr; }
+  .mkt .featuresGrid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 520px) {
-  .section {
-    padding: 56px 0;
-  }
-
-  .hero1 {
-    padding: 70px 0 26px;
-  }
-
-  .h1Hero {
-    font-size: 34px;
-  }
+  .mkt .section { padding: 56px 0; }
+  .mkt .h1Hero { font-size: 34px; }
 }
