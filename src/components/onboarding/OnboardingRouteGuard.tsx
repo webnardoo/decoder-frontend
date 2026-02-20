@@ -1,3 +1,4 @@
+// src/components/onboarding/OnboardingRouteGuard.tsx
 "use client";
 
 import React, { useEffect, useRef } from "react";
@@ -24,21 +25,9 @@ function hasDialogueNickname(status: any): boolean {
   return byFlag || byValue;
 }
 
-function normalizeJourney(v: any): "PAID" | "TRIAL" | null {
-  const s = String(v ?? "").trim().toUpperCase();
-  if (s === "PAID") return "PAID";
-  if (s === "TRIAL") return "TRIAL";
-  return null;
-}
-
-function buildIdentityUrl(nextPath: string, reason: string) {
-  const next = encodeURIComponent(nextPath || APP_HOME);
-  return `/app/onboarding/identity?next=${next}&reason=${encodeURIComponent(reason)}`;
-}
-
 /**
  * Rotas públicas: não exigem status/onboarding.
- * IMPORTANTÍSSIMO: cobrir /app/* e também as rotas "raiz" (/login etc)
+ * IMPORTANTE: cobrir /app/* e também rotas "raiz" (/login etc)
  */
 function isPublicRoute(path: string): boolean {
   if (!path) return false;
@@ -49,7 +38,10 @@ function isPublicRoute(path: string): boolean {
   if (path === "/app/forgot-password") return true;
   if (path === "/app/reset-password") return true;
 
+  // Checkout é público (Stripe externo)
   if (path.startsWith("/app/checkout")) return true;
+
+  // Billing pode existir como rota, mas NÃO é parte do onboarding
   if (path.startsWith("/app/billing")) return true;
 
   // raiz
@@ -81,10 +73,7 @@ function PrivateOnboardingGuard({
   const safePathname = pathname ?? "";
 
   const isLogin = safePathname === "/app/login" || safePathname === "/login";
-  const onBilling = safePathname.startsWith("/app/billing");
   const onIdentity = safePathname.startsWith("/app/onboarding/identity");
-
-  const onAppHome = safePathname === APP_HOME || safePathname.startsWith(`${APP_HOME}/`);
 
   const { status, loading, error, refreshStatus } = useOnboardingStatus();
   const didRetryRef = useRef(false);
@@ -116,61 +105,39 @@ function PrivateOnboardingGuard({
     didRetryRef.current = false;
 
     const stage = String(status.onboardingStage || "").toUpperCase().trim();
-    const journey = normalizeJourney((status as any)?.journey);
     const nickOk = hasDialogueNickname(status);
-    const subscriptionActive = status.subscriptionActive === true;
 
-    // Assinante ativo → APP_HOME
-    if (subscriptionActive) {
-      if (!onAppHome) router.replace(APP_HOME);
-      return;
-    }
+    /**
+     * ✅ NOVA REGRA (Signup sem obrigatoriedade de plano)
+     * - Se não tem nickname => /app/onboarding/identity
+     * - Se tem nickname e onboardingStage READY => /app
+     * - subscriptionActive/paymentStatus/journey NÃO determinam navegação do onboarding
+     */
 
-    // TRIAL
-    if (journey === "TRIAL") {
-      if (onBilling) {
-        router.replace(APP_HOME);
-        return;
-      }
-
-      if (!nickOk) {
-        if (!onIdentity) router.replace(buildIdentityUrl(APP_HOME, "TRIAL_NEEDS_NICKNAME"));
-        return;
-      }
-
-      if (!onAppHome && !onIdentity && !isLogin) {
-        router.replace(APP_HOME);
-      }
-      return;
-    }
-
-    // PAID logado, sem assinatura → planos
-    if (stage === "PLAN_SELECTION_REQUIRED") {
-      if (!onBilling) router.replace("/app/billing/plan");
-      return;
-    }
-
-    if (onBilling) return;
-
-    // PAID: nickname obrigatório antes de billing
+    // Nickname ausente → identity (SEM next, SEM billing)
     if (!nickOk) {
-      if (!onIdentity) router.replace(buildIdentityUrl("/app/billing/plan", "NEEDS_NICKNAME"));
+      if (!onIdentity) router.replace("/app/onboarding/identity");
       return;
     }
 
-    router.replace("/app/billing/plan");
-  }, [
-    loading,
-    error,
-    status,
-    safePathname,
-    router,
-    refreshStatus,
-    onBilling,
-    onIdentity,
-    onAppHome,
-    isLogin,
-  ]);
+    // Nickname ok: não permitir ficar no identity
+    if (onIdentity) {
+      router.replace(APP_HOME);
+      return;
+    }
+
+    // Se READY: garantir que /app/start não fique “preso”
+    if (stage === "READY") {
+      if (safePathname === "/app/start") router.replace(APP_HOME);
+      return;
+    }
+
+    // Fallback seguro: com nickname, entra no app e não empurra billing
+    if (safePathname === "/app/start") {
+      router.replace(APP_HOME);
+      return;
+    }
+  }, [loading, error, status, safePathname, router, refreshStatus, onIdentity, isLogin]);
 
   if (loading) {
     return <div className="card p-5 text-sm text-zinc-400">Carregando…</div>;
