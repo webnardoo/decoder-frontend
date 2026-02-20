@@ -1,6 +1,6 @@
+// src/app/exp-site-v12/page.tsx
 "use client";
 
-// src/app/exp-site-v12/page.tsx
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -107,13 +107,13 @@ export default function ExpSiteV12Page() {
                 </button>
               </div>
 
-              <a className="navLink navPill" href="/planos" onClick={goPaidPlans}>
-                Assinar
-              </a>
+              <a className="navLink navPill navPillEmph" href="/planos" onClick={goPaidPlans}>
+  Assinar
+</a>
 
-              <Link className="navLink navPill" href="/app/login">
-                Entrar
-              </Link>
+              <Link className="navLink navPill navPillEmph" href="/app/login">
+  Entrar
+</Link>
 
               <a className="btn btnPrimary" href="/app/register" onClick={goTrialRegister}>
                 Começar a degustação
@@ -143,7 +143,7 @@ export default function ExpSiteV12Page() {
                 <a className="btn btnPrimary" href="/app/register" onClick={goTrialRegister}>
                   Analisar uma conversa
                 </a>
-                <a className="btn btnSecondary" href="/planos" onClick={goPaidPlans}>
+                <a className="btn btnSecondary btnPlans" href="/planos" onClick={goPaidPlans}>
                   Ver planos
                 </a>
               </div>
@@ -173,7 +173,7 @@ export default function ExpSiteV12Page() {
             <div className="serviceRow">
               <div className="serviceItem">
                 <div className="serviceIcon" aria-hidden>
-                  ●
+                  ✅
                 </div>
                 <div>
                   <p className="serviceTitle">ANÁLISE</p>
@@ -183,7 +183,7 @@ export default function ExpSiteV12Page() {
 
               <div className="serviceItem">
                 <div className="serviceIcon" aria-hidden>
-                  ●
+                  ✅
                 </div>
                 <div>
                   <p className="serviceTitle">RESPOSTA</p>
@@ -193,7 +193,7 @@ export default function ExpSiteV12Page() {
 
               <div className="serviceItem">
                 <div className="serviceIcon" aria-hidden>
-                  ●
+                  ✅
                 </div>
                 <div>
                   <p className="serviceTitle">RISCO</p>
@@ -203,7 +203,7 @@ export default function ExpSiteV12Page() {
 
               <div className="serviceItem">
                 <div className="serviceIcon" aria-hidden>
-                  ●
+                  ✅
                 </div>
                 <div>
                   <p className="serviceTitle">PRIVACIDADE</p>
@@ -293,7 +293,7 @@ export default function ExpSiteV12Page() {
             <div className="featuresGrid">
               <div className="featureCard">
                 <div className="featureIcon" aria-hidden>
-                  ▢
+                  🔎
                 </div>
                 <div>
                   <p className="featureLabel">INTENÇÃO</p>
@@ -304,7 +304,7 @@ export default function ExpSiteV12Page() {
 
               <div className="featureCard">
                 <div className="featureIcon" aria-hidden>
-                  ○
+                  ⚡
                 </div>
                 <div>
                   <p className="featureLabel">VELOCIDADE</p>
@@ -315,7 +315,7 @@ export default function ExpSiteV12Page() {
 
               <div className="featureCard">
                 <div className="featureIcon" aria-hidden>
-                  △
+                  🛡️
                 </div>
                 <div>
                   <p className="featureLabel">SEGURANÇA</p>
@@ -351,7 +351,7 @@ export default function ExpSiteV12Page() {
             <p className="bodyText">Veja os detalhes na página de planos.</p>
 
             <div style={{ marginTop: 18 }}>
-              <a className="btn btnSecondary" href="/planos" onClick={goPaidPlans}>
+              <a className="btn btnSecondary btnPlans" href="/planos" onClick={goPaidPlans}>
                 Ver planos
               </a>
             </div>
@@ -372,7 +372,7 @@ export default function ExpSiteV12Page() {
             <a className="btn btnPrimary" href="/app/register" onClick={goTrialRegister}>
               Começar a degustação
             </a>
-            <a className="btn btnSecondary" href="/planos" onClick={goPaidPlans}>
+            <a className="btn btnSecondary btnPlans" href="/planos" onClick={goPaidPlans}>
               Ver planos
             </a>
           </div>

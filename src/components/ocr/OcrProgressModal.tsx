@@ -1,6 +1,7 @@
+/*src/components/ocr/OcrProgressModal.tsx*/
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { OcrPipelineStatus } from "@/lib/ocr-client";
 
 type Props = {
@@ -17,11 +18,18 @@ type Props = {
   onClose?: (() => void) | null;
 };
 
+type ThemeMode = "light" | "dark";
+
 type StepView = {
   key: string;
   label: string;
   status: "PENDING" | "RUNNING" | "DONE" | "ERROR";
 };
+
+function readThemeFromDom(): ThemeMode {
+  const v = document?.documentElement?.getAttribute("data-theme");
+  return v === "dark" ? "dark" : "light";
+}
 
 function iconFor(s: StepView["status"]) {
   if (s === "DONE") return "✅";
@@ -31,8 +39,6 @@ function iconFor(s: StepView["status"]) {
 }
 
 function normalizeSteps(status: OcrPipelineStatus | null): StepView[] {
-  // ✅ Base keys padronizadas para casar com o ProgressStatus do page.tsx (EXTRACT),
-  // mas com alias OCR <-> EXTRACT para compatibilidade com payloads do backend.
   const base: StepView[] = [
     { key: "RECEIVED", label: "Arquivos recebidos", status: "PENDING" },
     { key: "EXTRACT", label: "Extraindo texto", status: "PENDING" },
@@ -43,9 +49,7 @@ function normalizeSteps(status: OcrPipelineStatus | null): StepView[] {
 
   if (!status) return base;
 
-  const rawSteps: any[] = Array.isArray((status as any).steps)
-    ? (status as any).steps
-    : [];
+  const rawSteps: any[] = Array.isArray((status as any).steps) ? (status as any).steps : [];
 
   const mapKey = (s: any) => String(s?.key ?? s?.id ?? "").trim().toUpperCase();
 
@@ -68,8 +72,6 @@ function normalizeSteps(status: OcrPipelineStatus | null): StepView[] {
     byKey.set(k, st);
 
     // ✅ Alias crítico: OCR <-> EXTRACT
-    // - Se vier OCR do backend, reflete no EXTRACT do UI.
-    // - Se vier EXTRACT do client/progress, reflete no OCR (compat futura).
     if (k === "OCR") byKey.set("EXTRACT", st);
     if (k === "EXTRACT") byKey.set("OCR", st);
   }
@@ -91,6 +93,25 @@ export default function OcrProgressModal({
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
+  const [theme, setTheme] = useState<ThemeMode>("light");
+  const isDark = theme === "dark";
+
+  // ✅ sync tema + observa mudanças
+  useEffect(() => {
+    if (!open) return;
+
+    const apply = () => setTheme(readThemeFromDom());
+    apply();
+
+    const obs = new MutationObserver(() => apply());
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
+    return () => obs.disconnect();
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const t = window.setTimeout(() => {
@@ -106,29 +127,43 @@ export default function OcrProgressModal({
   const hasError = !!errorMessage || steps.some((s) => s.status === "ERROR");
 
   const errorText =
-    errorMessage ||
-    (hasError ? "Não foi possível processar os prints. Tente novamente." : null);
+    errorMessage || (hasError ? "Não foi possível processar os prints. Tente novamente." : null);
 
   const isDone = steps.every((s) => s.status === "DONE");
   const allowClose = !!canClose || hasError || isDone;
 
   if (!open) return null;
 
+  const overlayClass = isDark ? "bg-black/70" : "bg-black/30";
+
+  const panelClass = isDark
+    ? "border border-zinc-800 bg-zinc-950 text-zinc-100 shadow-[0_18px_55px_rgba(0,0,0,0.65)]"
+    : "border border-[var(--h-border)] bg-white text-[var(--h-text)] shadow-[0_22px_66px_rgba(0,0,0,0.18)]";
+
+  const subtitleClass = isDark ? "text-zinc-300/80" : "text-[var(--h-subtle)]";
+  const rowClass = isDark
+    ? "border border-white/10 bg-white/3"
+    : "border border-[var(--h-border)] bg-white/70";
+
+  const statusRightClass = isDark ? "text-zinc-300/70" : "text-[var(--h-muted)]";
+
+  const errorBoxClass = isDark
+    ? "border border-red-900/40 bg-red-950/20 text-red-200"
+    : "border border-red-300/60 bg-red-50 text-red-800";
+
   return (
-    <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/70">
+    <div className={`fixed inset-0 z-9999 flex items-center justify-center ${overlayClass}`}>
       <div
         ref={containerRef}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
-        className="w-[min(560px,calc(100%-24px))] rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-[0_18px_55px_rgba(0,0,0,0.65)] outline-none"
+        className={`w-[min(560px,calc(100%-24px))] rounded-2xl p-5 outline-none ${panelClass}`}
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-lg font-semibold text-zinc-100">
-              {title ?? "Processando prints"}
-            </div>
-            <div className="text-xs text-zinc-300/80 mt-1">
+            <div className="text-lg font-semibold">{title ?? "Processando prints"}</div>
+            <div className={`text-xs mt-1 ${subtitleClass}`}>
               Não feche esta janela. Estamos reconstruindo o diálogo.
             </div>
           </div>
@@ -144,14 +179,14 @@ export default function OcrProgressModal({
           {steps.map((s) => (
             <div
               key={s.key}
-              className="flex items-center justify-between rounded-xl border border-white/10 bg-white/3 px-4 py-3"
+              className={`flex items-center justify-between rounded-xl px-4 py-3 ${rowClass}`}
             >
               <div className="flex items-center gap-3">
                 <span className="text-lg leading-none">{iconFor(s.status)}</span>
-                <div className="text-sm text-zinc-100">{s.label}</div>
+                <div className="text-sm">{s.label}</div>
               </div>
 
-              <div className="text-xs text-zinc-300/70">
+              <div className={`text-xs ${statusRightClass}`}>
                 {s.status === "RUNNING"
                   ? "Em andamento"
                   : s.status === "DONE"
@@ -165,9 +200,9 @@ export default function OcrProgressModal({
         </div>
 
         {errorText && (
-          <div className="mt-4 rounded-2xl border border-red-900/40 bg-red-950/20 p-4">
-            <div className="text-sm font-semibold text-red-200">Erro</div>
-            <div className="text-sm text-red-200/80 mt-1">{errorText}</div>
+          <div className={`mt-4 rounded-2xl p-4 ${errorBoxClass}`}>
+            <div className="text-sm font-semibold">Erro</div>
+            <div className="text-sm mt-1 opacity-90">{errorText}</div>
 
             {onRetry && (
               <div className="mt-3">
