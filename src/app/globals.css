@@ -1,12 +1,57 @@
-/* FRONT — src/app/globals.css */
+/* src/app/globals.css */
 @import "tailwindcss";
+@import "../styles/design-system.css";
 @import "../styles/hitch-theme.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 /* Base global do app (não mexe em layout do site exp-site-v12) */
 :root {
-  /* Ajuste fino aqui se precisar */
   --h-topnav-h: 56px;
   --h-footer-h: 66px;
+
+  /* fallback seguro p/ accent (caso hitch-theme não defina) */
+  --h-accent-rgb: 90, 70, 255;
+}
+
+/* =========================================================
+   DARK — CONTRASTE + HIERARQUIA (SÓ TOKENS/ESTILOS)
+   - Não quebra Light (atua só quando data-theme="dark")
+   - Eleva card, reforça bordas, melhora hover, evita "white morto"
+   ========================================================= */
+html[data-theme="dark"] {
+  /* Texto */
+  --h-text: rgba(255, 255, 255, 0.92);
+  --h-subtle: rgba(255, 255, 255, 0.78);
+  --h-muted: rgba(255, 255, 255, 0.70);
+
+  /* Superfícies */
+  --h-card: rgba(16, 18, 24, 0.78);
+
+  /* Bordas/hover (principal dor) */
+  --h-border: rgba(255, 255, 255, 0.12);
+  --h-hover-border: rgba(255, 255, 255, 0.18);
+
+  /* Sombras premium (evita "preto puro" sem profundidade) */
+  --h-shadow-1: 0 18px 55px rgba(0, 0, 0, 0.58);
+  --h-shadow-2:
+    0 22px 66px rgba(0, 0, 0, 0.62),
+    0 0 0 1px rgba(90, 70, 255, 0.10) inset;
+
+  /* Superfície de controles (substitui o "bg-white" no dark via classe) */
+  --h-control-bg: rgba(255, 255, 255, 0.08);
+  --h-control-bg-hover: rgba(255, 255, 255, 0.10);
+  --h-control-border: rgba(255, 255, 255, 0.14);
+  --h-control-border-hover: rgba(255, 255, 255, 0.18);
+
+  /* Accent (mantém roxo, sem glow exagerado) */
+  --h-accent-border: rgba(108, 99, 255, 0.72);
+  --h-accent-glow-1: 0 10px 30px rgba(108, 99, 255, 0.20);
+  --h-accent-glow-2: 0 14px 44px rgba(108, 99, 255, 0.28);
 }
 
 /* Base */
@@ -22,7 +67,6 @@ body {
 }
 
 ::selection {
-  /* melhor no light e no dark */
   background: rgba(15, 23, 42, 0.16);
   color: var(--h-text);
 }
@@ -41,12 +85,10 @@ a {
   isolation: isolate;
 }
 
-/* LIGHT: remove a camada do radial */
 html[data-theme="light"] .h-fixed-radial-bg::before {
   content: none !important;
 }
 
-/* DARK: mantém o radial fixo */
 html[data-theme="dark"] .h-fixed-radial-bg::before {
   content: "";
   position: fixed;
@@ -78,7 +120,7 @@ html[data-theme="dark"] .h-fixed-radial-bg::before {
 }
 
 /* =========================================================
-   FIX GLOBAL DO CHROME AUTOFILL (padroniza /login e /register)
+   FIX GLOBAL DO CHROME AUTOFILL
    ========================================================= */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
@@ -97,7 +139,6 @@ select:-webkit-autofill:focus {
 
 /* =========================================================
    CORREÇÃO DE LEGIBILIDADE (SÓ NO LIGHT)
-   - cobre Tailwind com opacidade tipo text-white/80 etc.
    ========================================================= */
 html[data-theme="light"] .text-white,
 html[data-theme="light"] .text-zinc-50,
@@ -149,7 +190,6 @@ html[data-theme="light"] [class*="text-neutral-400/"] {
   color: var(--h-muted) !important;
 }
 
-/* Ajustes pontuais */
 html[data-theme="light"] .label {
   color: var(--h-subtle) !important;
 }
@@ -159,7 +199,24 @@ html[data-theme="light"] .input::placeholder {
 }
 
 /* =========================================================
-   MARKETING HERO BANNER — MASK (fade real, sem “faixa branca”)
+   AJUSTE TÉCNICO: CONTRASTE DE "CARDS INTERNOS" NO LIGHT
+   - Corrige seus InfoRow (border-white/10 + bg-white/[0.02]) sem mexer no Dark
+   ========================================================= */
+html[data-theme="light"] .border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+html[data-theme="light"] .bg-white\/\[0\.02\] {
+  background: rgba(255, 255, 255, 0.82) !important;
+}
+html[data-theme="light"] .text-white\/45 {
+  color: rgba(2, 6, 23, 0.55) !important;
+}
+html[data-theme="light"] .text-white\/85 {
+  color: rgba(2, 6, 23, 0.92) !important;
+}
+
+/* =========================================================
+   MARKETING HERO BANNER — MASK
    ========================================================= */
 .mkt .heroBanner {
   position: relative;
@@ -168,7 +225,6 @@ html[data-theme="light"] .input::placeholder {
   background: transparent;
 }
 
-/* aplica o fade como MÁSCARA na imagem */
 .mkt .heroBanner img {
   width: 130% !important;
   height: 100% !important;
@@ -177,18 +233,18 @@ html[data-theme="light"] .input::placeholder {
   mask-image: linear-gradient(
     to right,
     transparent 0%,
-    rgba(0,0,0,0.15) 8%,
-    rgba(0,0,0,0.35) 14%,
-    rgba(0,0,0,0.6) 20%,
-    rgba(0,0,0,1) 30%
+    rgba(0, 0, 0, 0.15) 8%,
+    rgba(0, 0, 0, 0.35) 14%,
+    rgba(0, 0, 0, 0.6) 20%,
+    rgba(0, 0, 0, 1) 30%
   );
   -webkit-mask-image: linear-gradient(
     to right,
     transparent 0%,
-    rgba(0,0,0,0.15) 8%,
-    rgba(0,0,0,0.35) 14%,
-    rgba(0,0,0,0.6) 20%,
-    rgba(0,0,0,1) 30%
+    rgba(0, 0, 0, 0.15) 8%,
+    rgba(0, 0, 0, 0.35) 14%,
+    rgba(0, 0, 0, 0.6) 20%,
+    rgba(0, 0, 0, 1) 30%
   );
 }
 
@@ -201,6 +257,10 @@ html[data-theme="light"] .input::placeholder {
     background: var(--h-card);
     border-color: var(--h-border);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  }
+
+  html[data-theme="dark"] .card {
+    box-shadow: var(--h-shadow-1);
   }
 
   .btn {
@@ -216,12 +276,26 @@ html[data-theme="light"] .input::placeholder {
     box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
   }
 
+  html[data-theme="dark"] .btn {
+    background: var(--h-control-bg);
+    border-color: var(--h-control-border);
+  }
+
+  html[data-theme="dark"] .btn:hover {
+    background: var(--h-control-bg-hover);
+    border-color: var(--h-control-border-hover);
+    box-shadow: var(--h-shadow-1);
+  }
+
   .btn:focus-visible {
     outline: 2px solid rgba(2, 6, 23, 0.22);
     outline-offset: 3px;
   }
 
-  /* CTA roxo mantém branding */
+  html[data-theme="dark"] .btn:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.18);
+  }
+
   .btn-cta {
     @apply inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition;
     border: 1px solid rgba(34, 13, 84, 0.75);
@@ -240,7 +314,11 @@ html[data-theme="light"] .input::placeholder {
   .btn-cta:hover {
     box-shadow:
       0 22px 56px rgba(0, 0, 0, 0.26),
-      0 0 26px rgba(34, 13, 84, 0.20);
+      0 0 26px rgba(34, 13, 84, 0.2);
+  }
+
+  html[data-theme="dark"] .btn-cta {
+    box-shadow: var(--h-shadow-2);
   }
 
   .btn-cta:disabled {
@@ -252,12 +330,476 @@ html[data-theme="light"] .input::placeholder {
   .input {
     @apply w-full rounded-2xl px-3 py-3 text-sm outline-none transition;
     background: rgba(2, 6, 23, 0.03);
-    border: 1px solid rgba(2, 6, 23, 0.10);
+    border: 1px solid rgba(2, 6, 23, 0.1);
     color: var(--h-text);
+  }
+
+  html[data-theme="dark"] .input {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.14);
   }
 
   .label {
     @apply text-xs font-medium tracking-wide;
     color: var(--h-subtle);
   }
+
+  /* =========================
+     Premium surfaces / wrappers
+     ========================= */
+  .card-premium {
+    @apply rounded-2xl border;
+    background: var(--h-card);
+    border-color: var(--h-border);
+    box-shadow: 0 18px 55px rgba(0, 0, 0, 0.24);
+  }
+
+  html[data-theme="dark"] .card-premium {
+    box-shadow: var(--h-shadow-2);
+  }
+
+  /* =========================
+     Segmented control (Modo)
+     ========================= */
+  .segmented {
+    @apply inline-flex rounded-2xl p-1;
+    border: 1px solid var(--h-border);
+    background: rgba(2, 6, 23, 0.04);
+  }
+
+  html[data-theme="dark"] .segmented {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+
+  .btn-seg {
+    @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition;
+    color: var(--h-subtle);
+    background: transparent;
+  }
+
+  .btn-seg:hover {
+    background: rgba(2, 6, 23, 0.06);
+    color: var(--h-text);
+  }
+
+  html[data-theme="dark"] .btn-seg:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .btn-seg-active {
+    color: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(34, 13, 84, 0.7);
+    background: linear-gradient(
+      90deg,
+      rgba(34, 13, 84, 0.92) 0%,
+      rgba(50, 18, 118, 0.92) 55%,
+      rgba(34, 13, 84, 0.92) 100%
+    );
+    box-shadow:
+      0 14px 40px rgba(0, 0, 0, 0.18),
+      0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+  }
+
+  /* =========================
+     Chips (Tipo de relação)
+     ========================= */
+  .chip {
+    @apply inline-flex items-center justify-center rounded-2xl px-4 py-2 text-sm transition;
+    border: 1px solid var(--h-border);
+    background: rgba(2, 6, 23, 0.03);
+    color: var(--h-subtle);
+  }
+
+  .chip:hover {
+    background: rgba(2, 6, 23, 0.06);
+    border-color: var(--h-hover-border);
+    color: var(--h-text);
+  }
+
+  html[data-theme="dark"] .chip {
+    background: var(--h-control-bg);
+    border-color: var(--h-control-border);
+  }
+
+  html[data-theme="dark"] .chip:hover {
+    background: var(--h-control-bg-hover);
+    border-color: var(--h-control-border-hover);
+  }
+
+  .chip-active {
+    color: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(34, 13, 84, 0.7);
+    background: linear-gradient(
+      90deg,
+      rgba(34, 13, 84, 0.92) 0%,
+      rgba(50, 18, 118, 0.92) 55%,
+      rgba(34, 13, 84, 0.92) 100%
+    );
+  }
+
+  /* =========================================================
+     PADRÃO "PRINT 2": BOTÃO PÍLULA (Conta / ações)
+     - Resolve: ativo sem borda / hover preto
+     - Sem depender de JS; só classe.
+     ========================================================= */
+  .btn-pill {
+    @apply inline-flex items-center justify-center rounded-full px-6 text-sm font-semibold transition select-none;
+    height: 44px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    background: rgba(255, 255, 255, 0.82);
+    color: rgba(2, 6, 23, 0.82);
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+  }
+
+  .btn-pill:hover {
+    border-color: rgba(var(--h-accent-rgb), 0.45);
+    box-shadow:
+      0 14px 34px rgba(15, 23, 42, 0.12),
+      0 0 0 2px rgba(var(--h-accent-rgb), 0.12);
+  }
+
+  .btn-pill-active {
+    border-color: rgba(var(--h-accent-rgb), 0.60);
+    box-shadow:
+      0 14px 34px rgba(15, 23, 42, 0.12),
+      0 0 0 2px rgba(var(--h-accent-rgb), 0.18);
+    color: rgba(2, 6, 23, 0.92);
+  }
+
+  .btn-pill-cta {
+    @apply inline-flex items-center justify-center rounded-full px-6 text-sm font-semibold transition select-none;
+    height: 44px;
+    border: 1px solid rgba(var(--h-accent-rgb), 0.55);
+    background: rgba(255, 255, 255, 0.92);
+    color: rgba(2, 6, 23, 0.92);
+    box-shadow:
+      0 16px 38px rgba(15, 23, 42, 0.14),
+      0 0 0 2px rgba(var(--h-accent-rgb), 0.14),
+      0 0 28px rgba(var(--h-accent-rgb), 0.10);
+  }
+
+  .btn-pill-cta:hover {
+    border-color: rgba(var(--h-accent-rgb), 0.75);
+    box-shadow:
+      0 22px 50px rgba(15, 23, 42, 0.18),
+      0 0 0 3px rgba(var(--h-accent-rgb), 0.18),
+      0 0 44px rgba(var(--h-accent-rgb), 0.14);
+  }
+
+  .btn-pill-danger {
+    @apply inline-flex items-center justify-center rounded-full px-6 text-sm font-semibold transition select-none;
+    height: 44px;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    background: rgba(255, 255, 255, 0.82);
+    color: rgba(239, 68, 68, 0.90);
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+  }
+
+  .btn-pill-danger:hover {
+    border-color: rgba(239, 68, 68, 0.55);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
+  }
+
+  html[data-theme="dark"] .btn-pill,
+  html[data-theme="dark"] .btn-pill-cta,
+  html[data-theme="dark"] .btn-pill-danger {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.88);
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: var(--h-shadow-1);
+  }
+
+  html[data-theme="dark"] .btn-pill:hover,
+  html[data-theme="dark"] .btn-pill-cta:hover {
+    border-color: rgba(var(--h-accent-rgb), 0.55);
+    box-shadow:
+      var(--h-shadow-1),
+      0 0 0 2px rgba(var(--h-accent-rgb), 0.16);
+  }
+
+  html[data-theme="dark"] .btn-pill-active {
+    border-color: rgba(var(--h-accent-rgb), 0.65);
+    box-shadow:
+      var(--h-shadow-1),
+      0 0 0 2px rgba(var(--h-accent-rgb), 0.22);
+  }
+
+  html[data-theme="dark"] .btn-pill-danger {
+    border-color: rgba(239, 68, 68, 0.35);
+    color: rgba(255, 140, 140, 0.92);
+  }
+
+  /* =========================
+     Backwards compatibility
+     ========================= */
+  .btn-primary {
+    border: 1px solid var(--h-border);
+    background: rgba(2, 6, 23, 0.03);
+    color: var(--h-text);
+  }
+
+  .btn-primary:hover {
+    background: rgba(2, 6, 23, 0.06);
+    border-color: var(--h-hover-border);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
+  }
+
+  .btn-primary:focus-visible {
+    outline: 2px solid rgba(2, 6, 23, 0.22);
+    outline-offset: 3px;
+  }
+}
+
+/* =========================================================
+   APP TOP HEADER (ALINHADO AO MARKETING exp-site-v12)
+   - Replica a estrutura/estilo do marketing sem depender de .mkt
+   - Usa tokens semânticos: --ds-*
+   ========================================================= */
+
+.appTopHeader {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--ds-stroke-soft);
+}
+
+html[data-theme="dark"] .appTopHeader {
+  background: rgba(10, 12, 16, 0.72);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.appContainer {
+  width: min(1120px, calc(100% - (28px * 2)));
+  margin: 0 auto;
+}
+
+.appTopHeaderInner {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.appBrand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--ds-text);
+}
+
+html[data-theme="dark"] .appBrand {
+  color: var(--ds-text);
+}
+
+.appNavRight {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  flex: 0 0 auto;
+}
+
+/* Theme toggle (slider) — mesmo visual do marketing */
+.themeToggle {
+  display: inline-flex;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  background: rgba(255, 255, 255, 0.70);
+  padding: 3px;
+  gap: 2px;
+  overflow: hidden;
+  box-shadow: var(--ds-shadow-1);
+}
+
+html[data-theme="dark"] .themeToggle {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: none;
+}
+
+.themePill {
+  border: 0;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ds-muted);
+  background: transparent;
+  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.themePillActive {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ds-text);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+  outline: 1px solid rgba(15, 23, 42, 0.12);
+  outline-offset: -1px;
+}
+
+html[data-theme="dark"] .themePillActive {
+  box-shadow: none;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.92);
+  outline: 1px solid rgba(255, 255, 255, 0.18);
+  outline-offset: -1px;
+}
+
+/* Nav pill do app (Conta) — mesma linguagem do marketing (Emph) */
+.appNavPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 700;
+
+  color: var(--ds-muted);
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  background: rgba(255, 255, 255, 0.52);
+
+  transition: transform 140ms ease, background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.appNavPill:hover {
+  color: var(--ds-text);
+  background: rgba(255, 255, 255, 0.74);
+  border-color: rgba(15, 23, 42, 0.16);
+  transform: translateY(-1px);
+}
+
+html[data-theme="dark"] .appNavPill {
+  color: rgba(255, 255, 255, 0.82);
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="dark"] .appNavPill:hover {
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+/* Emphasis (premium) */
+.appNavPillEmph {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(90, 70, 255, 0.26);
+  color: var(--ds-text);
+
+  box-shadow:
+    0 16px 34px rgba(15, 23, 42, 0.14),
+    0 0 0 1px rgba(90, 70, 255, 0.10),
+    var(--ds-glow-accent-1);
+
+  transform: translateY(-1px);
+}
+
+.appNavPillEmph:hover {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(90, 70, 255, 0.40);
+
+  box-shadow:
+    0 22px 50px rgba(15, 23, 42, 0.18),
+    0 0 0 2px rgba(90, 70, 255, 0.18),
+    var(--ds-glow-accent-2);
+
+  transform: translateY(-2px);
+}
+
+.appNavPillEmph:active {
+  transform: translateY(0px);
+}
+
+html[data-theme="dark"] .appNavPillEmph {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(90, 70, 255, 0.30);
+  color: rgba(255, 255, 255, 0.92);
+
+  box-shadow:
+    0 18px 46px rgba(0, 0, 0, 0.55),
+    0 0 0 2px rgba(90, 70, 255, 0.22),
+    0 0 58px rgba(90, 70, 255, 0.35);
+}
+
+html[data-theme="dark"] .appNavPillEmph:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(90, 70, 255, 0.44);
+
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.62),
+    0 0 0 3px rgba(90, 70, 255, 0.28),
+    0 0 78px rgba(90, 70, 255, 0.48);
+}
+
+/* ============================= */
+/* THEME-ISOLATED FIXES (APP)     */
+/* ============================= */
+
+/* ----------------------------- */
+/* IMPORT PRINTS BUTTON          */
+/* ----------------------------- */
+
+/* Light (sombras claras e leves) */
+html[data-theme="light"] .import-prints-button {
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.08),
+    0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* Dark (sombras profundas e premium) */
+html[data-theme="dark"] .import-prints-button {
+  background: var(--h-control-bg) !important;
+  color: var(--h-text) !important;
+  border-color: var(--h-control-border) !important;
+  box-shadow:
+    0 18px 54px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset !important;
+}
+
+html[data-theme="dark"] .import-prints-button:hover {
+  background: var(--h-control-bg-hover) !important;
+  border-color: var(--h-control-border-hover) !important;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.62),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 0 52px rgba(108, 99, 255, 0.18) !important;
+}
+
+/* ----------------------------- */
+/* TEXTAREA (QUICK)              */
+/* ----------------------------- */
+
+/* Light: contraste real */
+html[data-theme="light"] textarea[data-tour-id="quick-textarea"] {
+  background-color: #ffffff !important;
+  border: 1px solid rgba(2, 6, 23, 0.18) !important;
+  color: #111827 !important; /* zinc-900 */
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 10px 24px rgba(2, 6, 23, 0.06) !important;
+}
+
+html[data-theme="light"] textarea[data-tour-id="quick-textarea"]::placeholder {
+  color: #a3a3a3 !important; /* zinc-400 */
+}
+
+/* Dark: mantém tokens e leitura */
+html[data-theme="dark"] textarea[data-tour-id="quick-textarea"] {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: var(--h-text) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] textarea[data-tour-id="quick-textarea"]::placeholder {
+  color: rgba(255, 255, 255, 0.60) !important;
 }
