@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 const APP_HOME = "/app";
 
@@ -13,33 +13,12 @@ function extractMessage(data: any): string | null {
   );
 }
 
-function normalizeJourney(v: any): "PAID" | "TRIAL" | null {
-  const s = String(v ?? "").trim().toUpperCase();
-  if (s === "PAID") return "PAID";
-  if (s === "TRIAL") return "TRIAL";
-  return null;
-}
-
+// ✅ regra permanente: nicknameDefined OU dialogueNickname preenchido
 function hasNickname(status: any): boolean {
   const byFlag = status?.nicknameDefined === true;
   const byValue =
     typeof status?.dialogueNickname === "string" && status.dialogueNickname.trim().length > 0;
   return byFlag || byValue;
-}
-
-function resolveNextAfterNickname(status: any, nextParam: string | null): string {
-  const journey = normalizeJourney(status?.journey);
-  const stage = String(status?.onboardingStage || "").toUpperCase().trim();
-
-  // TRIAL: planos só depois da análise guiada, não aqui
-  if (journey === "TRIAL") return APP_HOME;
-
-  const raw = (nextParam || "").trim();
-  if (raw && raw.startsWith("/app") && !raw.startsWith("/app/onboarding/identity")) return raw;
-
-  if (stage === "PLAN_SELECTION_REQUIRED") return "/planos";
-
-  return APP_HOME;
 }
 
 async function fetchOnboardingStatus(): Promise<any | null> {
@@ -77,9 +56,6 @@ export default function IdentityClient() {
 
 function IdentityInner() {
   const router = useRouter();
-  const sp = useSearchParams();
-
-  const nextParam = sp?.get("next") ?? null;
 
   const [nickname, setNickname] = useState("");
   const [loading, setLoading] = useState(false);
@@ -87,9 +63,9 @@ function IdentityInner() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
 
-  // proxy do Next → backend
   const apiUrl = useMemo(() => "/api/onboarding/dialogue-nickname", []);
 
+  // ✅ boot: se já tem nickname, EXPULSA pro /app (sem next, sem billing, sem stage)
   useEffect(() => {
     let alive = true;
 
@@ -106,8 +82,7 @@ function IdentityInner() {
       }
 
       if (status && hasNickname(status)) {
-        const target = resolveNextAfterNickname(status, nextParam);
-        router.replace(target);
+        router.replace(APP_HOME);
         return;
       }
 
@@ -117,7 +92,7 @@ function IdentityInner() {
     return () => {
       alive = false;
     };
-  }, [router, nextParam]);
+  }, [router]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -132,7 +107,6 @@ function IdentityInner() {
 
     setLoading(true);
     try {
-      // backend aceita PATCH (POST pode dar 404)
       const res = await fetch(apiUrl, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -149,11 +123,8 @@ function IdentityInner() {
 
       setInfo("Salvo. Continuando…");
 
-      // ✅ evita loop por store/stale: navegação HARD para o destino final
-      const status = await fetchOnboardingStatus();
-      const target = resolveNextAfterNickname(status, nextParam);
-
-      window.location.assign(target);
+      // ✅ regra nova: pós-salvar nickname SEMPRE vai pra /app (hard nav evita store/stale/loop)
+      window.location.assign(APP_HOME);
     } catch {
       setError("Falha de conexão. Tente novamente.");
     } finally {

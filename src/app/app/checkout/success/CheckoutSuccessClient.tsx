@@ -15,21 +15,22 @@ function hasDialogueNickname(status: any): boolean {
 }
 
 /**
- * ✅ PACOTE 5 (PAID Success)
+ * ✅ NOVA REGRA (Signup sem obrigatoriedade de plano)
  * Fonte da verdade: GET /api/onboarding/status
  * Decisão:
- * - subscriptionActive=true -> /app
- * - subscriptionActive=false -> /app/billing/plan
- * - sem nickname -> identity (next=/app/billing/plan)
+ * - sem nickname -> /app/onboarding/identity (SEM next billing)
+ * - com nickname e onboardingStage READY -> /app
+ * - assinatura/pagamento NÃO determinam navegação do onboarding
  */
 function computePostCheckoutTarget(status: any): string {
-  const subscriptionActive = status?.subscriptionActive === true;
-  if (subscriptionActive) return "/app";
-
   const nickOk = hasDialogueNickname(status);
-  if (!nickOk) return "/app/onboarding/identity?next=%2Fapp%2Fbilling%2Fplan";
+  if (!nickOk) return "/app/onboarding/identity";
 
-  return "/app/billing/plan";
+  const stage = String(status?.onboardingStage ?? "").toUpperCase().trim();
+  if (stage === "READY") return "/app";
+
+  // fallback seguro: nunca manda para billing como parte do onboarding
+  return "/app";
 }
 
 function extractMessage(data: any): string | null {
@@ -60,8 +61,7 @@ export default function CheckoutSuccessClient() {
   /**
    * ✅ B) Purchase via Browser no /checkout/success (Stripe é externa)
    * - Dispara 1x por session_id (refresh não duplica)
-   * - eventID estável (baseado no session_id) para dedupe futuro, se você quiser alinhar no server
-   * - Params são "best-effort" via sessionStorage (não bloqueia se não existir)
+   * - eventID estável (baseado no session_id) para dedupe futuro
    */
   useEffect(() => {
     try {
@@ -75,10 +75,8 @@ export default function CheckoutSuccessClient() {
       const fbqFn = (globalThis as any)?.fbq;
       if (typeof fbqFn !== "function") return;
 
-      // eventID determinístico por session_id (não use Date.now aqui)
       const eventId = sessionId ? `stripe_cs_${sessionId}_purchase` : `stripe_cs_purchase`;
 
-      // Best-effort params (se existirem). Não depende disso.
       const planId = sessionStorage.getItem("hitch_last_plan_id") || undefined;
       const planCode = sessionStorage.getItem("hitch_last_plan_code") || undefined;
       const billingCycle = sessionStorage.getItem("hitch_last_billing_cycle") || undefined;
@@ -96,10 +94,8 @@ export default function CheckoutSuccessClient() {
       if (typeof billingCycle === "string" && billingCycle.trim())
         params.billing_cycle = billingCycle.trim();
 
-      // value é opcional; se não existir, não envia
       if (value != null) params.value = value;
 
-      // 3º argumento: params; 4º argumento: options (eventID p/ dedupe)
       fbqFn("track", "Purchase", params, { eventID: eventId });
 
       sessionStorage.setItem(key, "1");
@@ -140,7 +136,6 @@ export default function CheckoutSuccessClient() {
     setError("");
 
     try {
-      // ✅ bypass one-shot: impede guided trial/popup ao voltar pra Home
       try {
         sessionStorage.setItem("hitch_skip_onboarding_once", "1");
         if (sessionId) sessionStorage.setItem("hitch_last_stripe_session_id", sessionId);
@@ -159,7 +154,6 @@ export default function CheckoutSuccessClient() {
         ? await res.json().catch(() => null)
         : await res.text().catch(() => null);
 
-      // Sem sessão -> login (sem loop)
       if (res.status === 401 || res.status === 403) {
         router.replace("/app/login");
         return;
@@ -168,20 +162,20 @@ export default function CheckoutSuccessClient() {
       if (!res.ok) {
         const msg =
           (typeof body === "object" ? extractMessage(body) : null) ||
-          "Não foi possível validar sua assinatura. Tente novamente.";
+          "Não foi possível validar seu status. Tente novamente.";
         setError(msg);
         return;
       }
 
       if (!body || typeof body !== "object") {
-        setError("Resposta inválida ao validar sua assinatura. Tente novamente.");
+        setError("Resposta inválida ao validar seu status. Tente novamente.");
         return;
       }
 
       const target = computePostCheckoutTarget(body);
       router.replace(target);
     } catch {
-      setError("Falha de conexão ao validar sua assinatura. Tente novamente.");
+      setError("Falha de conexão ao validar seu status. Tente novamente.");
     } finally {
       setLoading(false);
     }
