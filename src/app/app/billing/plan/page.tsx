@@ -239,11 +239,11 @@ const ADDONS: AddOnUi[] = [
       // ✅ mais contraste (chips estavam lavados)
       badgeBg: "bg-blue-500/18",
       badgeBorder: "border-blue-300/38",
-      badgeText: "text-blue-500",
+      badgeText: "text-blue-10",
 
       badgeBgSelected: "bg-blue-500/26",
       badgeBorderSelected: "border-blue-200/48",
-      badgeTextSelected: "text-blue-500",
+      badgeTextSelected: "text-blue-10",
 
       check: "text-blue-200",
     },
@@ -295,11 +295,11 @@ const ADDONS: AddOnUi[] = [
       // ✅ mais contraste (chips estavam lavados)
       badgeBg: "bg-violet-500/18",
       badgeBorder: "border-violet-300/38",
-      badgeText: "text-violet-500",
+      badgeText: "text-violet-10",
 
       badgeBgSelected: "bg-violet-500/26",
       badgeBorderSelected: "border-violet-200/48",
-      badgeTextSelected: "text-violet-500",
+      badgeTextSelected: "text-violet-10",
 
       check: "text-violet-200",
     },
@@ -736,27 +736,25 @@ export default function BillingPlanPage() {
                 </div>
 
                 {pixStep !== "idle" && (
-  <div className="mt-4">
-    <div className="text-xs text-zinc-500">
-      Informe seu CPF/CNPJ para emissão do pagamento.
-    </div>
-
-    <div className="mt-2 flex flex-col md:flex-row gap-3">
-      <input
-        value={cpfCnpj}
-        onChange={(e) => setCpfCnpj(e.target.value)}
-        autoFocus
-        placeholder="CPF/CNPJ"
-        inputMode="numeric"
-        className="w-full md:flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none focus:border-zinc-300 focus:ring-0"
-      />
-
-      <div className="text-xs text-zinc-500 md:w-[220px] md:self-center">
-        Somente para emissão do pagamento no Asaas.
-      </div>
-    </div>
-  </div>
-)}
+                  <div className="mt-4">
+                    <div className="text-xs text-zinc-400">
+                      Informe seu CPF/CNPJ para emissão do pagamento.
+                    </div>
+                    <div className="mt-2 flex flex-col md:flex-row gap-3">
+                      <input
+                        value={cpfCnpj}
+                        onChange={(e) => setCpfCnpj(e.target.value)}
+                        autoFocus
+                        placeholder="CPF/CNPJ"
+                        className="w-full md:flex-1 rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-white/20"
+                        inputMode="numeric"
+                      />
+                      <div className="text-xs text-zinc-500 md:w-[220px] md:self-center">
+                        Somente para emissão do pagamento no Asaas.
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="mt-5 flex justify-center">
                   <button
@@ -782,48 +780,58 @@ export default function BillingPlanPage() {
                 </div>
 
                 {pixStep === "ready" && pixRes && (pixRes as any)?.ok === true && (
-  <div className="mt-6 rounded-2xl border border-white/10 bg-white p-4 md:p-5">
-    <div className="flex items-center justify-between gap-4">
-      <div className="text-sm font-semibold text-zinc-900">
-        PIX gerado com sucesso
-      </div>
-    </div>
+                  <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4 md:p-5">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="text-sm font-semibold text-zinc-100">
+                        PIX gerado com sucesso
+                      </div>
+                      {(pixRes as any)?.payment?.invoiceUrl ? (
+                        <a
+                          className="text-xs text-zinc-300 hover:text-zinc-100 underline underline-offset-4"
+                          href={(pixRes as any).payment.invoiceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Abrir fatura
+                        </a>
+                      ) : null}
+                    </div>
 
-    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <div className="text-xs text-zinc-600">Copia e cola</div>
-        <textarea
-          readOnly
-          value={String((pixRes as any)?.pixQrCode?.payload ?? "")}
-          className="mt-2 w-full h-[120px] rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-900 outline-none focus:border-zinc-300"
-        />
-        <div className="mt-2 text-[11px] text-zinc-500">
-          Use no app do seu banco para pagar.
-        </div>
-      </div>
+                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-xs text-zinc-400">Copia e cola</div>
+                        <textarea
+                          readOnly
+                          value={String((pixRes as any)?.pixQrCode?.payload ?? "")}
+                          className="mt-2 w-full h-[120px] rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs text-zinc-200 outline-none"
+                        />
+                        <div className="mt-2 text-[11px] text-zinc-500">
+                          Use no app do seu banco para pagar.
+                        </div>
+                      </div>
 
-      <div>
-        <div className="text-xs text-zinc-600">QR Code</div>
-        <div className="mt-2 rounded-xl border border-zinc-200 bg-white p-3 flex items-center justify-center min-h-[160px]">
-          {(pixRes as any)?.pixQrCode?.encodedImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              alt="QR Code PIX"
-              className="max-h-[220px] w-auto"
-              src={`data:image/png;base64,${String(
-                (pixRes as any).pixQrCode.encodedImage,
-              )}`}
-            />
-          ) : (
-            <div className="text-xs text-zinc-500">
-              QR não disponível. Use o “copia e cola”.
-            </div>
-          )}
-        </div>
-        <div className="mt-2 text-[11px] text-zinc-500">
-          Expiração:{" "}
-          <span className="text-zinc-700">
-            {String((pixRes as any)?.pixQrCode?.expirationDate ?? "—")}
+                      <div>
+                        <div className="text-xs text-zinc-400">QR Code</div>
+                        <div className="mt-2 rounded-xl border border-white/10 bg-black/30 p-3 flex items-center justify-center min-h-[160px]">
+                          {(pixRes as any)?.pixQrCode?.encodedImage ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              alt="QR Code PIX"
+                              className="max-h-[220px] w-auto"
+                              src={`data:image/png;base64,${String(
+                                (pixRes as any).pixQrCode.encodedImage,
+                              )}`}
+                            />
+                          ) : (
+                            <div className="text-xs text-zinc-500">
+                              QR não disponível. Use o “copia e cola”.
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-2 text-[11px] text-zinc-500">
+                          Expiração:{" "}
+                          <span className="text-zinc-300">
+                            {String((pixRes as any)?.pixQrCode?.expirationDate ?? "—")}
                           </span>
                         </div>
                       </div>
