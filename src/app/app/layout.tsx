@@ -1,6 +1,11 @@
-// src/app/app/layout.tsx
 import type { ReactNode } from "react";
 import { headers } from "next/headers";
+
+import "@/app/exp-site-v12/site.css";
+import "@/app/exp-site-v12/exp.css";
+
+import MarketingTopNav from "@/components/marketing/MarketingTopNav";
+import { AppFooter } from "@/components/app-footer";
 import { OnboardingRouteGuard } from "@/components/onboarding/OnboardingRouteGuard";
 
 function stripQuery(nextUrl: string): string {
@@ -12,16 +17,11 @@ function stripQuery(nextUrl: string): string {
 function isPublicAuthPath(pathnameWithMaybeQuery: string): boolean {
   const pathname = stripQuery(pathnameWithMaybeQuery);
 
-  // rotas públicas que NÃO podem chamar onboarding/status
   return (
     pathname === "/app/login" ||
     pathname === "/app/register" ||
     pathname === "/app/forgot-password" ||
-    pathname === "/app/reset-password" ||
-    pathname === "/login" ||
-    pathname === "/register" ||
-    pathname === "/forgot-password" ||
-    pathname === "/reset-password"
+    pathname === "/app/reset-password"
   );
 }
 
@@ -30,8 +30,15 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const nextUrl = h.get("next-url") || "";
   const pathname = stripQuery(nextUrl);
 
-  const content = (
-    <>
+  const onAuth = isPublicAuthPath(pathname);
+
+  const chrome = (
+    <div className="min-h-dvh flex flex-col">
+      {/* ✅ site.css é escopado em .mkt. Sem isso, o nav fica sem estilo. */}
+      <div className="mkt">
+        <MarketingTopNav />
+      </div>
+
       <div className="flex flex-col flex-1">
         <main className="app-main w-full flex-1 flex">
           <div className="mx-auto w-full max-w-6xl px-4 py-6 flex flex-1 flex-col">
@@ -39,10 +46,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </main>
       </div>
-    </>
+
+      <AppFooter />
+    </div>
   );
 
-  if (isPublicAuthPath(pathname)) return content;
+  if (onAuth) return chrome;
 
-  return <OnboardingRouteGuard>{content}</OnboardingRouteGuard>;
+  return <OnboardingRouteGuard>{chrome}</OnboardingRouteGuard>;
 }

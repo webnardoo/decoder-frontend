@@ -1283,13 +1283,17 @@ export default function HomePage() {
           )}
 
           <div className="flex items-center justify-between gap-4">
-            <div className="space-y-2">
-              <h1 className="text-[28px] font-semibold tracking-[-0.02em]">Hitch.ai</h1>
-              <p className="text-sm text-[var(--h-subtle)] leading-relaxed">
-                Cole o diálogo e receba uma leitura clara do contexto.
-              </p>
-            </div>
-          </div>
+  <div>
+    <h1 className="text-2xl font-semibold tracking-tight">Hitch.ai</h1>
+    <p className="mt-2 text-sm text-black/60">
+      Cole o diálogo e receba uma leitura clara do contexto.
+    </p>
+  </div>
+
+  <a href="/app/billing/plan" className="buyCreditsCta">
+    Comprar Crédito
+  </a>
+</div>
 
           <div className="rounded-2xl border border-[var(--h-border)] bg-[var(--h-card)] px-4 py-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
