@@ -88,6 +88,15 @@ export function TopNav() {
               </button>
             </div>
 
+            {/* ✅ CTA: Comprar Crédito (piscante roxo) */}
+            <Link
+              className="appNavPill appNavPillCreditsPulse"
+              href="/app/app/billing/plan"
+              aria-label="Comprar crédito"
+            >
+              Comprar Crédito
+            </Link>
+
             <Link className="appNavPill appNavPillEmph" href="/app/conta">
               Conta
             </Link>

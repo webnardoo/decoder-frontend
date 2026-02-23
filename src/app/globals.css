@@ -803,3 +803,165 @@ html[data-theme="dark"] textarea[data-tour-id="quick-textarea"] {
 html[data-theme="dark"] textarea[data-tour-id="quick-textarea"]::placeholder {
   color: rgba(255, 255, 255, 0.60) !important;
 }
+/* =========================================================
+   CTA TOPNAV — "Comprar Crédito" (piscante roxo)
+   - Reusa o roxo do app: --h-accent-rgb
+   - Mesmo “roxo da borda do Analisar” (tokens do app)
+   ========================================================= */
+
+@keyframes hitch-credits-pulse {
+  0% {
+    box-shadow:
+      0 16px 34px rgba(15, 23, 42, 0.14),
+      0 0 0 1px rgba(var(--h-accent-rgb), 0.10),
+      0 0 0 0 rgba(var(--h-accent-rgb), 0.22);
+    border-color: rgba(var(--h-accent-rgb), 0.40);
+  }
+  50% {
+    box-shadow:
+      0 22px 50px rgba(15, 23, 42, 0.18),
+      0 0 0 2px rgba(var(--h-accent-rgb), 0.18),
+      0 0 42px rgba(var(--h-accent-rgb), 0.26);
+    border-color: rgba(var(--h-accent-rgb), 0.70);
+  }
+  100% {
+    box-shadow:
+      0 16px 34px rgba(15, 23, 42, 0.14),
+      0 0 0 1px rgba(var(--h-accent-rgb), 0.10),
+      0 0 0 0 rgba(var(--h-accent-rgb), 0.22);
+    border-color: rgba(var(--h-accent-rgb), 0.40);
+  }
+}
+
+.appNavPillCreditsPulse {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ds-text);
+  border: 1px solid rgba(var(--h-accent-rgb), 0.40);
+  transform: translateY(-1px);
+  animation: hitch-credits-pulse 1.35s ease-in-out infinite;
+}
+
+.appNavPillCreditsPulse:hover {
+  animation-duration: 1.05s;
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(var(--h-accent-rgb), 0.80);
+}
+
+.appNavPillCreditsPulse:active {
+  transform: translateY(0px);
+  animation: none;
+}
+
+/* Dark mode: mantém premium e aumenta glow */
+html[data-theme="dark"] .appNavPillCreditsPulse {
+  background: rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.92);
+  border-color: rgba(var(--h-accent-rgb), 0.46);
+  box-shadow:
+    0 18px 46px rgba(0, 0, 0, 0.55),
+    0 0 0 2px rgba(var(--h-accent-rgb), 0.22),
+    0 0 58px rgba(var(--h-accent-rgb), 0.35);
+}
+
+html[data-theme="dark"] .appNavPillCreditsPulse:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(var(--h-accent-rgb), 0.78);
+}
+/* =========================================================
+   FOOTER — ALINHADO AO TEMA (LIGHT/DARK)
+   - Resolve: rodapé “fora do light” (tava escuro sempre)
+   ========================================================= */
+.appFooter {
+  border-top: 1px solid var(--ds-stroke-soft);
+  background: var(--ds-card);
+}
+
+html[data-theme="dark"] .appFooter {
+  background: rgba(0, 0, 0, 0.90);
+  border-top-color: rgba(255, 255, 255, 0.10);
+}
+
+.appFooterText {
+  color: rgba(11, 18, 32, 0.62);
+}
+.appFooterLink {
+  color: rgba(11, 18, 32, 0.70);
+}
+
+html[data-theme="dark"] .appFooterText {
+  color: rgba(255, 255, 255, 0.60);
+}
+html[data-theme="dark"] .appFooterLink {
+  color: rgba(255, 255, 255, 0.70);
+}
+
+/* =========================================================
+   CORREÇÃO DE LEGIBILIDADE (SÓ NO LIGHT)
+   - evita texto “zinc-100” ficar branco no light
+   ========================================================= */
+html[data-theme="light"] .text-white,
+html[data-theme="light"] .text-zinc-50,
+html[data-theme="light"] .text-zinc-100,
+html[data-theme="light"] .text-zinc-200,
+html[data-theme="light"] .text-zinc-300,
+html[data-theme="light"] .text-slate-50,
+html[data-theme="light"] .text-slate-100,
+html[data-theme="light"] .text-slate-200,
+html[data-theme="light"] .text-gray-50,
+html[data-theme="light"] .text-gray-100,
+html[data-theme="light"] .text-gray-200 {
+  color: var(--h-text) !important;
+}
+
+html[data-theme="light"] [class*="text-white/"],
+html[data-theme="light"] [class*="text-zinc-50/"],
+html[data-theme="light"] [class*="text-zinc-100/"],
+html[data-theme="light"] [class*="text-zinc-200/"],
+html[data-theme="light"] [class*="text-zinc-300/"],
+html[data-theme="light"] [class*="text-slate-50/"],
+html[data-theme="light"] [class*="text-slate-100/"],
+html[data-theme="light"] [class*="text-slate-200/"],
+html[data-theme="light"] [class*="text-gray-50/"],
+html[data-theme="light"] [class*="text-gray-100/"],
+html[data-theme="light"] [class*="text-gray-200/"] {
+  color: var(--h-text) !important;
+}
+
+html[data-theme="light"] .text-zinc-400,
+html[data-theme="light"] .text-zinc-500,
+html[data-theme="light"] .text-slate-300,
+html[data-theme="light"] .text-slate-400,
+html[data-theme="light"] .text-gray-300,
+html[data-theme="light"] .text-gray-400,
+html[data-theme="light"] .text-neutral-300,
+html[data-theme="light"] .text-neutral-400 {
+  color: var(--h-muted) !important;
+}
+
+html[data-theme="light"] [class*="text-zinc-400/"],
+html[data-theme="light"] [class*="text-zinc-500/"],
+html[data-theme="light"] [class*="text-slate-300/"],
+html[data-theme="light"] [class*="text-slate-400/"],
+html[data-theme="light"] [class*="text-gray-300/"],
+html[data-theme="light"] [class*="text-gray-400/"],
+html[data-theme="light"] [class*="text-neutral-300/"],
+html[data-theme="light"] [class*="text-neutral-400/"] {
+  color: var(--h-muted) !important;
+}
+
+/* =========================================================
+   AJUSTE TÉCNICO: CONTRASTE DE "CARDS INTERNOS" NO LIGHT
+   - Corrige border-white/10 + bg-white/[0.02]
+   ========================================================= */
+html[data-theme="light"] .border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+html[data-theme="light"] .bg-white\/\[0\.02\] {
+  background: rgba(255, 255, 255, 0.82) !important;
+}
+html[data-theme="light"] .text-white\/45 {
+  color: rgba(2, 6, 23, 0.55) !important;
+}
+html[data-theme="light"] .text-white\/85 {
+  color: rgba(2, 6, 23, 0.92) !important;
+}
