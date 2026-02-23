@@ -702,3 +702,38 @@ html[data-theme="dark"] .mkt .topHeader {
     grid-template-columns: 1fr !important;
   }
 }
+/* =========================================================
+   FIX MOBILE HEADER (evitar toggle em cima do brand)
+   ========================================================= */
+
+@media (max-width: 640px) {
+  .mkt .topHeaderInner {
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Em telas estreitas, permite quebra e organiza em 2 linhas */
+  .mkt .topHeaderInner {
+    flex-wrap: wrap;
+  }
+
+  /* Brand sempre na primeira linha */
+  .mkt .topHeaderInner .brand {
+    flex: 1 1 auto;
+    min-width: 140px;
+  }
+
+  /* Nav vai para a segunda linha e alinha à direita */
+  .mkt .topHeaderInner .navRight {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 6px;
+  }
+
+  /* Toggle não pode esmagar o layout */
+  .mkt .topHeaderInner .themeToggle {
+    flex: 0 0 auto;
+  }
+}

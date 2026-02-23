@@ -119,7 +119,13 @@ function getFocusableWithin(container: HTMLElement | null): HTMLElement[] {
 
   const isFocusable = (el: HTMLElement) => {
     const tag = el.tagName;
-    if (tag === "BUTTON" || tag === "A" || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT")
+    if (
+      tag === "BUTTON" ||
+      tag === "A" ||
+      tag === "INPUT" ||
+      tag === "TEXTAREA" ||
+      tag === "SELECT"
+    )
       return true;
 
     const ti = el.getAttribute("tabindex");
@@ -533,7 +539,9 @@ export default function HomePage() {
 
         if (origin === "MANUAL") {
           setAnalysisProgressError(msg);
-          const base = analysisProgress?.steps?.length ? analysisProgress.steps : buildManualAnalysisSteps();
+          const base = analysisProgress?.steps?.length
+            ? analysisProgress.steps
+            : buildManualAnalysisSteps();
           const failed: AnalysisProgressStatus = {
             steps: base.map((s) => (s.status === "RUNNING" ? { ...s, status: "ERROR" } : s)),
           };
@@ -572,7 +580,9 @@ export default function HomePage() {
       }
 
       if (origin === "MANUAL") {
-        let mSteps = analysisProgress?.steps?.length ? analysisProgress.steps : buildManualAnalysisSteps();
+        let mSteps = analysisProgress?.steps?.length
+          ? analysisProgress.steps
+          : buildManualAnalysisSteps();
 
         mSteps = setManualStep(mSteps, "ANALYZE", "DONE");
         mSteps = setManualStep(mSteps, "CONSOLIDATE", "RUNNING");
@@ -602,7 +612,9 @@ export default function HomePage() {
       resetSelectionsToNull();
 
       if (origin === "MANUAL") {
-        let mSteps = analysisProgress?.steps?.length ? analysisProgress.steps : buildManualAnalysisSteps();
+        let mSteps = analysisProgress?.steps?.length
+          ? analysisProgress.steps
+          : buildManualAnalysisSteps();
 
         mSteps = setManualStep(mSteps, "CONSOLIDATE", "DONE");
         mSteps = setManualStep(mSteps, "DONE", "DONE");
@@ -615,7 +627,9 @@ export default function HomePage() {
       if (origin === "MANUAL") {
         setAnalysisProgressError(GENERIC_ANALYZE_FAIL);
 
-        const base = analysisProgress?.steps?.length ? analysisProgress.steps : buildManualAnalysisSteps();
+        const base = analysisProgress?.steps?.length
+          ? analysisProgress.steps
+          : buildManualAnalysisSteps();
         const failed: AnalysisProgressStatus = {
           steps: base.map((s) => (s.status === "RUNNING" ? { ...s, status: "ERROR" } : s)),
         };
@@ -709,10 +723,14 @@ export default function HomePage() {
 
       const startPayload = await startRes.json().catch(() => null);
       if (!startRes.ok) {
-        throw new Error(String(startPayload?.message ?? startPayload?.error ?? "Falha ao iniciar processamento."));
+        throw new Error(
+          String(startPayload?.message ?? startPayload?.error ?? "Falha ao iniciar processamento.")
+        );
       }
 
-      const pipelineId = String(startPayload?.pipelineId ?? startPayload?.jobId ?? startPayload?.id ?? "").trim();
+      const pipelineId = String(
+        startPayload?.pipelineId ?? startPayload?.jobId ?? startPayload?.id ?? ""
+      ).trim();
 
       if (!pipelineId) {
         throw new Error("Falha ao iniciar processamento: id não retornado.");
@@ -739,7 +757,9 @@ export default function HomePage() {
         const status = coercePipelineStatus(stPayload?.status ?? stPayload?.state);
 
         const rawSteps: any[] = Array.isArray(stPayload?.steps) ? stPayload.steps : [];
-        const hasRunning = rawSteps.some((s: any) => coercePipelineStatus(s?.status ?? s?.state) === "RUNNING");
+        const hasRunning = rawSteps.some(
+          (s: any) => coercePipelineStatus(s?.status ?? s?.state) === "RUNNING"
+        );
 
         if (rawSteps.length) {
           const map = new Map<string, StepView["status"]>();
@@ -1089,8 +1109,6 @@ export default function HomePage() {
 
         /* =========================================================
            ✅ PADRÃO PRINT2 (sem "dark:" do Tailwind)
-           - Motivo técnico: seu app usa html[data-theme], então "dark:" não aplica.
-           - Aqui o estado ACTIVE mantém borda roxa SEM depender de hover.
            ========================================================= */
         .h-pill {
           box-sizing: border-box;
@@ -1122,9 +1140,8 @@ export default function HomePage() {
           border-color: var(--h-accent);
         }
 
-        /* para os botões dentro do wrapper themeToggle, remove "border preto no hover" herdado */
         .themeToggle .h-pill {
-          border-color: rgba(0, 0, 0, 0.0);
+          border-color: rgba(0, 0, 0, 0);
         }
         html[data-theme="dark"] .themeToggle .h-pill {
           border-color: rgba(255, 255, 255, 0);
@@ -1136,7 +1153,6 @@ export default function HomePage() {
           border-color: var(--h-accent);
         }
 
-        /* CTA grande (Analisar) no mesmo padrão print2 */
         .h-cta {
           box-sizing: border-box;
           width: 100%;
@@ -1162,6 +1178,95 @@ export default function HomePage() {
         html[data-theme="dark"] .h-cta:hover {
           background: rgba(255, 255, 255, 0.14);
           box-shadow: 0 18px 56px rgba(108, 99, 255, 0.28);
+        }
+
+        /* =========================================================
+           ✅ CTA "Comprar Crédito"
+           - Desktop: à direita na mesma linha
+           - Mobile: abaixo do título, largura total
+           ========================================================= */
+        .buyCreditsCta {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          height: 44px;
+          padding: 0 18px;
+          border-radius: 999px;
+          border: 2px solid rgba(108, 99, 255, 0.55);
+          background: rgba(255, 255, 255, 0.92);
+          color: rgba(56, 45, 155, 0.95);
+          font-weight: 800;
+          font-size: 14px;
+          letter-spacing: -0.01em;
+          box-shadow: 0 12px 34px rgba(108, 99, 255, 0.16);
+          transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease,
+            background 160ms ease;
+          position: relative;
+          isolation: isolate;
+        }
+
+        .buyCreditsCta:hover {
+          transform: translateY(-1px);
+          border-color: rgba(108, 99, 255, 0.85);
+          box-shadow: 0 18px 44px rgba(108, 99, 255, 0.22);
+          background: rgba(247, 246, 255, 1);
+        }
+
+        /* Sonar leve (mantém premium; no mobile fica "bonito" e não agressivo) */
+        .buyCreditsCta::after {
+          content: "";
+          position: absolute;
+          inset: -10px;
+          border-radius: 999px;
+          border: 2px solid rgba(108, 99, 255, 0.22);
+          filter: blur(0.2px);
+          opacity: 0;
+          animation: buyCtaPulse 1.35s ease-out infinite;
+          z-index: -1;
+        }
+
+        @keyframes buyCtaPulse {
+          0% {
+            transform: scale(0.92);
+            opacity: 0.0;
+          }
+          25% {
+            opacity: 0.75;
+          }
+          100% {
+            transform: scale(1.12);
+            opacity: 0.0;
+          }
+        }
+
+        /* Mobile: largura total e “abaixo do título” */
+        @media (max-width: 640px) {
+          .buyCreditsCta {
+            width: 100%;
+            height: 52px;
+            font-size: 15px;
+            box-shadow: 0 18px 52px rgba(108, 99, 255, 0.18);
+          }
+
+          .buyCreditsCta::after {
+            inset: -12px;
+            border-color: rgba(108, 99, 255, 0.18);
+          }
+        }
+
+        html[data-theme="dark"] .buyCreditsCta {
+          background: rgba(255, 255, 255, 0.10);
+          color: rgba(255, 255, 255, 0.92);
+          border-color: rgba(108, 99, 255, 0.50);
+          box-shadow: 0 18px 52px rgba(0, 0, 0, 0.46);
+        }
+        html[data-theme="dark"] .buyCreditsCta:hover {
+          background: rgba(255, 255, 255, 0.14);
+          border-color: rgba(108, 99, 255, 0.75);
+          box-shadow: 0 22px 62px rgba(0, 0, 0, 0.55), 0 0 56px rgba(108, 99, 255, 0.16);
+        }
+        html[data-theme="dark"] .buyCreditsCta::after {
+          border-color: rgba(108, 99, 255, 0.16);
         }
       `}</style>
 
@@ -1282,18 +1387,25 @@ export default function HomePage() {
             </div>
           )}
 
-          <div className="flex items-center justify-between gap-4">
-  <div>
-    <h1 className="text-2xl font-semibold tracking-tight">Hitch.ai</h1>
-    <p className="mt-2 text-sm text-black/60">
-      Cole o diálogo e receba uma leitura clara do contexto.
-    </p>
-  </div>
+          {/* ✅ HEADER DO APP:
+              - mobile: CTA abaixo do título e full width
+              - desktop: CTA na mesma linha à direita
+           */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold tracking-tight">Hitch.ai</h1>
+              <p className="mt-2 text-sm text-black/60">
+                Cole o diálogo e receba uma leitura clara do contexto.
+              </p>
+            </div>
 
-  <a href="/app/billing/plan" className="buyCreditsCta">
-    Comprar Crédito
-  </a>
-</div>
+            <a
+              href="/app/billing/plan"
+              className="buyCreditsCta mt-1 w-full sm:mt-0 sm:w-auto"
+            >
+              Comprar Crédito
+            </a>
+          </div>
 
           <div className="rounded-2xl border border-[var(--h-border)] bg-[var(--h-card)] px-4 py-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
