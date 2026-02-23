@@ -115,9 +115,7 @@ export default function ExpSiteV12Page() {
   Entrar
 </Link>
 
-              <a className="btn btnPrimary" href="/app/register" onClick={goTrialRegister}>
-                Começar a degustação
-              </a>
+              
             </nav>
           </div>
         </div>
