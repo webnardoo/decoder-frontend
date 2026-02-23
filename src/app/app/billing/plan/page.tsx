@@ -239,11 +239,11 @@ const ADDONS: AddOnUi[] = [
       // ✅ mais contraste (chips estavam lavados)
       badgeBg: "bg-blue-500/18",
       badgeBorder: "border-blue-300/38",
-      badgeText: "text-blue-10",
+      badgeText: "text-blue-500",
 
       badgeBgSelected: "bg-blue-500/26",
       badgeBorderSelected: "border-blue-200/48",
-      badgeTextSelected: "text-blue-10",
+      badgeTextSelected: "text-blue-500",
 
       check: "text-blue-200",
     },
@@ -295,11 +295,11 @@ const ADDONS: AddOnUi[] = [
       // ✅ mais contraste (chips estavam lavados)
       badgeBg: "bg-violet-500/18",
       badgeBorder: "border-violet-300/38",
-      badgeText: "text-violet-10",
+      badgeText: "text-violet-500",
 
       badgeBgSelected: "bg-violet-500/26",
       badgeBorderSelected: "border-violet-200/48",
-      badgeTextSelected: "text-violet-10",
+      badgeTextSelected: "text-violet-500",
 
       check: "text-violet-200",
     },
