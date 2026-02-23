@@ -738,25 +738,27 @@ export default function PublicPlansClient() {
                 </div>
 
                 {pixStep !== "idle" && (
-                  <div className="mt-4">
-                    <div className="text-xs text-zinc-400">
-                      Informe seu CPF/CNPJ para emissão do pagamento.
-                    </div>
-                    <div className="mt-2 flex flex-col md:flex-row gap-3">
-                      <input
-                        value={cpfCnpj}
-                        onChange={(e) => setCpfCnpj(e.target.value)}
-                        autoFocus
-                        placeholder="CPF/CNPJ"
-                        className="w-full md:flex-1 rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-white/20"
-                        inputMode="numeric"
-                      />
-                      <div className="text-xs text-zinc-500 md:w-[220px] md:self-center">
-                        Somente para emissão do pagamento no Asaas.
-                      </div>
-                    </div>
-                  </div>
-                )}
+  <div className="mt-4">
+    <div className="text-xs text-zinc-500">
+      Informe seu CPF/CNPJ para emissão do pagamento.
+    </div>
+
+    <div className="mt-2 flex flex-col md:flex-row gap-3">
+      <input
+        value={cpfCnpj}
+        onChange={(e) => setCpfCnpj(e.target.value)}
+        autoFocus
+        placeholder="CPF/CNPJ"
+        inputMode="numeric"
+        className="w-full md:flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none focus:border-zinc-300 focus:ring-0"
+      />
+
+      <div className="text-xs text-zinc-500 md:w-[220px] md:self-center">
+        Somente para emissão do pagamento no Asaas.
+      </div>
+    </div>
+  </div>
+)}
 
                 <div className="mt-5 flex justify-center">
                   <button
