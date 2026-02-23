@@ -1,12 +1,13 @@
-// src/components/marketing/MarketingTopNav.tsx
 "use client";
 
 import Link from "next/link";
 import Image from "next/image";
 import React, { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 
 type ThemeMode = "light" | "dark";
 type TopNavVariant = "default" | "planos";
+type NavMode = "marketing" | "app" | "minimal";
 
 type Props = {
   logoSrc?: string;
@@ -15,11 +16,25 @@ type Props = {
   /** controla o visual do header via CSS modifier */
   variant?: TopNavVariant;
 
+  /**
+   * ✅ modos:
+   * - marketing: Assinar + Entrar
+   * - app: Conta
+   * - minimal: apenas toggle de tema (auth/signup)
+   */
+  mode?: NavMode;
+
   loginHref?: string;
+
+  // marketing
   primaryCtaLabel?: string;
   primaryCtaHref?: string;
   secondaryCtaLabel?: string;
   secondaryCtaHref?: string;
+
+  // app
+  accountHref?: string;
+  accountLabel?: string;
 };
 
 function readTheme(): ThemeMode {
@@ -51,16 +66,47 @@ function applyTheme(t: ThemeMode) {
   } catch {}
 }
 
+function inferModeFromPath(pathname: string): NavMode {
+  // ✅ Auth/signup: minimal
+  if (
+    pathname === "/app/login" ||
+    pathname === "/app/register" ||
+    pathname === "/app/forgot-password" ||
+    pathname === "/app/reset-password" ||
+    pathname === "/signup" ||
+    pathname.startsWith("/signup/")
+  ) {
+    return "minimal";
+  }
+
+  // ✅ App
+  if (pathname === "/app" || pathname.startsWith("/app/")) return "app";
+
+  // ✅ Marketing
+  return "marketing";
+}
+
 export default function MarketingTopNav({
   logoSrc = "/logo-hitchai.png",
   onPaidPlansClick,
   variant = "default",
+  mode,
+
   loginHref = "/app/login",
+
+  // marketing defaults
   primaryCtaLabel = "Assinar",
   primaryCtaHref = "/planos",
   secondaryCtaLabel = "Entrar",
   secondaryCtaHref,
+
+  // app defaults
+  accountHref = "/app/conta",
+  accountLabel = "Conta",
 }: Props) {
+  const pathname = usePathname() || "/";
+  const inferredMode: NavMode = mode ? mode : inferModeFromPath(pathname);
+
   const [theme, setTheme] = useState<ThemeMode>("light");
 
   useEffect(() => {
@@ -69,7 +115,10 @@ export default function MarketingTopNav({
     applyTheme(t);
   }, []);
 
-  const themeLabel = useMemo(() => (theme === "light" ? "Light" : "Dark"), [theme]);
+  const themeLabel = useMemo(
+    () => (theme === "light" ? "Light" : "Dark"),
+    [theme],
+  );
 
   function onSetTheme(t: ThemeMode) {
     setTheme(t);
@@ -98,7 +147,11 @@ export default function MarketingTopNav({
           </Link>
 
           <nav className="navRight" aria-label="Navegação principal">
-            <div className="themeToggle" role="tablist" aria-label={`Tema atual: ${themeLabel}`}>
+            <div
+              className="themeToggle"
+              role="tablist"
+              aria-label={`Tema atual: ${themeLabel}`}
+            >
               <button
                 type="button"
                 className={`themePill ${theme === "light" ? "themePillActive" : ""}`}
@@ -119,17 +172,25 @@ export default function MarketingTopNav({
               </button>
             </div>
 
-            <a
-              className="navLink navPill navPillEmph"
-              href={primaryCtaHref}
-              onClick={onPaidPlansClick}
-            >
-              {primaryCtaLabel}
-            </a>
+            {inferredMode === "minimal" ? null : inferredMode === "app" ? (
+              <Link className="navLink navPill navPillEmph" href={accountHref}>
+                {accountLabel}
+              </Link>
+            ) : (
+              <>
+                <a
+                  className="navLink navPill navPillEmph"
+                  href={primaryCtaHref}
+                  onClick={onPaidPlansClick}
+                >
+                  {primaryCtaLabel}
+                </a>
 
-            <Link className="navLink navPill navPillEmph" href={entrarHref}>
-              {secondaryCtaLabel}
-            </Link>
+                <Link className="navLink navPill navPillEmph" href={entrarHref}>
+                  {secondaryCtaLabel}
+                </Link>
+              </>
+            )}
           </nav>
         </div>
       </div>

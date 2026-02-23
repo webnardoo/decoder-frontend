@@ -2,8 +2,6 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 import Script from "next/script";
-import { AppFooter } from "@/components/app-footer";
-import { TopNav } from "@/components/top-nav";
 
 export const viewport = {
   width: "device-width",
@@ -16,11 +14,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   const pixelId = String(process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "").trim();
 
   return (
-    <html
-  lang="pt-BR"
-  suppressHydrationWarning
-  data-theme="light"
->
+    <html lang="pt-BR" suppressHydrationWarning data-theme="light">
       <head>
         {/* ✅ Theme bootstrap (default = light). Define data-theme antes do app renderizar. */}
         <Script
@@ -36,9 +30,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
     // ✅ default: light (e só aceita "light"|"dark" quando salvo)
     var theme = (saved === "dark" || saved === "light") ? saved : "light";
-
-    // Se quiser respeitar o sistema quando NÃO houver preferência salva, use:
-    // if (!saved) theme = (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
 
     document.documentElement.setAttribute("data-theme", theme);
   } catch (e) {
@@ -90,11 +81,8 @@ fbq('track', 'PageView');
           </>
         ) : null}
 
-        <div className="min-h-dvh flex flex-col">
-          <TopNav />
-          <main className="flex-1 flex flex-col">{children}</main>
-          <AppFooter />
-        </div>
+        {/* ✅ ROOT não injeta nav/footer. Cada segmento cuida do seu chrome. */}
+        {children}
       </body>
     </html>
   );
