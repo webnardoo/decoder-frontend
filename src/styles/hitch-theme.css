@@ -20,7 +20,7 @@ html[data-theme="light"] {
   --h-border: var(--ds-stroke);
   --h-border-strong: rgba(15, 23, 42, 0.16);
 
-  /* Brand (mantém por enquanto; na Fase 1 não vamos quebrar CTA existente) */
+  /* Brand */
   --h-purple: #220d54;
 
   /* Hover */
@@ -33,7 +33,7 @@ html[data-theme="light"] {
   --h-brand: rgb(31, 14, 55);
   --h-brand-contrast: #ffffff;
 
-  /* Tokens do radial fixo (light: desabilitado no globals via ::before content:none) */
+  /* Tokens do radial fixo */
   --h-fixed-radial-size-x: 1200px;
   --h-fixed-radial-size-y: 700px;
   --h-fixed-radial-x: 50%;
@@ -63,7 +63,7 @@ html[data-theme="dark"] {
   --h-hover-deep-2: rgba(18, 10, 40, 0.82);
   --h-hover-border: rgba(34, 13, 84, 0.55);
 
-  /* ✅ App background (mantém por enquanto; Fase 2 vai alinhar com DS) */
+  /* App background */
   --h-app-bg:
     radial-gradient(
       1600px 1100px at 50% 40%,

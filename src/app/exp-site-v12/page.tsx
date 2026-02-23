@@ -1,10 +1,9 @@
 // src/app/exp-site-v12/page.tsx
 "use client";
 
-import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
+import React from "react";
+import MarketingTopNav from "@/components/marketing/MarketingTopNav";
 
 async function startJourney(journey: "PAID" | "TRIAL") {
   try {
@@ -19,107 +18,29 @@ async function startJourney(journey: "PAID" | "TRIAL") {
   }
 }
 
-type ThemeMode = "light" | "dark";
-
-function readThemeFromDom(): ThemeMode {
-  const v = document?.documentElement?.getAttribute("data-theme");
-  return v === "dark" ? "dark" : "light";
-}
-
-function applyThemeToDom(next: ThemeMode) {
-  document.documentElement.setAttribute("data-theme", next);
-  document.documentElement.style.colorScheme = next === "dark" ? "dark" : "light";
-  try {
-    localStorage.setItem("hitch_theme", next);
-  } catch {}
-}
-
 export default function ExpSiteV12Page() {
   const router = useRouter();
 
-  const [theme, setTheme] = useState<ThemeMode>("light");
-
-  useEffect(() => {
-    try {
-      const current = readThemeFromDom();
-      setTheme(current);
-      document.documentElement.style.colorScheme = current === "dark" ? "dark" : "light";
-    } catch {
-      setTheme("light");
-      document.documentElement.style.colorScheme = "light";
-    }
-  }, []);
-
-  const isLight = theme === "light";
-
-  function onSetTheme(next: ThemeMode) {
-    setTheme(next);
-    applyThemeToDom(next);
-  }
-
-  async function goPaidPlans(e: React.MouseEvent) {
+  async function goPaidPlans(e: React.MouseEvent<HTMLAnchorElement>) {
     e.preventDefault();
     await startJourney("PAID");
     router.push("/planos");
   }
 
-  async function goTrialRegister(e: React.MouseEvent) {
+  async function goTrialRegister(e: React.MouseEvent<HTMLAnchorElement>) {
     e.preventDefault();
     await startJourney("TRIAL");
     router.push("/app/register?next=%2Fapp");
   }
 
-  const themeLabel = useMemo(() => (isLight ? "Light" : "Dark"), [isLight]);
-
-  const LOGO_SRC = "/logo-hitchai.png";
   const HERO_SRC = "/Banner_site.png";
+
+  
 
   return (
     <main className="mkt page">
-      {/* TOP HEADER */}
-      <header className="topHeader">
-        <div className="container">
-          <div className="topHeaderInner">
-            <Link className="brand" href="/" aria-label="Hitch.ai">
-              <Image src={LOGO_SRC} alt="Hitch.ai" width={34} height={34} priority style={{ display: "block" }} />
-              <span>Hitch.ai</span>
-            </Link>
-
-            <nav className="navRight" aria-label="Navegação principal">
-              <div className="themeToggle" role="tablist" aria-label={`Tema atual: ${themeLabel}`}>
-                <button
-                  type="button"
-                  className={`themePill ${theme === "light" ? "themePillActive" : ""}`}
-                  onClick={() => onSetTheme("light")}
-                  role="tab"
-                  aria-selected={theme === "light"}
-                >
-                  Light
-                </button>
-                <button
-                  type="button"
-                  className={`themePill ${theme === "dark" ? "themePillActive" : ""}`}
-                  onClick={() => onSetTheme("dark")}
-                  role="tab"
-                  aria-selected={theme === "dark"}
-                >
-                  Dark
-                </button>
-              </div>
-
-              <a className="navLink navPill navPillEmph" href="/planos" onClick={goPaidPlans}>
-  Assinar
-</a>
-
-              <Link className="navLink navPill navPillEmph" href="/app/login">
-  Entrar
-</Link>
-
-              
-            </nav>
-          </div>
-        </div>
-      </header>
+      {/* TOP NAV (ÚNICO COMPONENTE) */}
+      <MarketingTopNav logoSrc="/logo-hitchai.png" onPaidPlansClick={goPaidPlans} />
 
       {/* HERO */}
       <div id="top" className="heroWrap">
@@ -339,6 +260,7 @@ export default function ExpSiteV12Page() {
           </div>
         </div>
       </section>
+      
 
       {/* PLANOS */}
       <section id="planos" className="section">
@@ -376,6 +298,37 @@ export default function ExpSiteV12Page() {
           </div>
         </div>
       </section>
+      <style jsx global>{`
+  /* =========================================================
+     FEATURES — Dark contrast (FORÇADO)
+     Colar no FINAL do JSX para garantir prioridade
+     ========================================================= */
+
+  html[data-theme="dark"] .mkt #features .featuresGrid .featureCard {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow:
+      0 20px 55px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  }
+
+  html[data-theme="dark"] .mkt #features .featuresGrid .featureIcon {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  }
+
+  html[data-theme="dark"] .mkt #features .featuresGrid .featureLabel {
+    color: rgba(255, 255, 255, 0.72) !important;
+  }
+
+  html[data-theme="dark"] .mkt #features .featuresGrid .featureTitle {
+    color: rgba(255, 255, 255, 0.95) !important;
+  }
+
+  html[data-theme="dark"] .mkt #features .featuresGrid .featureBody {
+    color: rgba(255, 255, 255, 0.82) !important;
+  }
+`}</style>
     </main>
   );
 }

@@ -512,7 +512,25 @@ export default function BillingPlanPage() {
   const plansIsSelected = tab === "plans";
 
   return (
-    <main className="flex-1 px-4 py-10 md:py-12">
+  <main className="flex-1 px-4 py-10 md:py-12">
+
+    {/* BOTÃO VOLTAR */}
+    <div className="mx-auto w-full max-w-6xl mb-6 flex justify-end">
+  <button
+    onClick={() => router.push("/app/app")}
+    type="button"
+    className="inline-flex items-center rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 ease-out active:scale-[0.98]"
+    style={{
+      border: "2px solid rgba(124,58,237,0.65)",
+      background: "rgba(124,58,237,0.08)",
+      color: "#000000",
+      boxShadow:
+        "0 0 0 1px rgba(124,58,237,0.35), 0 6px 20px rgba(124,58,237,0.25)",
+    }}
+  >
+    ← Voltar
+  </button>
+</div>
       <div className="mx-auto w-full max-w-6xl">
         <div className="text-center space-y-4">
           <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-zinc-100">

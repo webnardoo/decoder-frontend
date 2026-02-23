@@ -1,4 +1,3 @@
-// src/app/app/billing/plan/PublicPlansClient.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -178,6 +177,16 @@ function buildLoggedPlanNext(planId: string, cycle: BillingCycle) {
   return `/app/app/billing/plan?${qs.toString()}`;
 }
 
+// ✅ redireciona para página LOGADA já no modo "Comprar Créditos" + addon selecionado
+function buildLoggedCreditsNext(addOnCode: string) {
+  const qs = new URLSearchParams({
+    tab: "credits",
+    pix: "1",
+    addon: addOnCode,
+  });
+  return `/app/app/billing/plan?${qs.toString()}`;
+}
+
 function fireInitiateCheckout(params: {
   planId: string;
   planCode: string;
@@ -225,9 +234,6 @@ type AddOnUi = {
   };
 };
 
-// ✅ mesmas cores dos cards mensais (Starter=Standard | Essential=Ilimitado | Medium=Pro)
-// ✅ contraste resolvido (badges + checks)
-// ✅ ordem: Starter -> Essential -> Medium
 const ADDONS: AddOnUi[] = [
   {
     code: "addon_starter",
@@ -337,7 +343,9 @@ export default function PublicPlansClient() {
     return me?.plan?.name ? String(me.plan.name) : null;
   }, [me]);
 
-  // ✅ público: sem “isAuthed”. Mantemos apenas para refletir “plano atual” se estiver logado.
+  // ✅ usado só para decidir se precisa disparar fluxo público (email/OTP/login)
+  const isAuthed = useMemo(() => !loadingMe && me != null, [loadingMe, me]);
+
   const [selectedAddOn, setSelectedAddOn] = useState<AddOnUi["code"]>(
     "addon_essential",
   );
@@ -416,15 +424,75 @@ export default function PublicPlansClient() {
     setCpfCnpj("");
   }
 
+  async function ensureUserThenGo(nextUrl: string) {
+    const email = window.prompt("Digite seu e-mail para continuar:");
+    const eMail = normalizeEmail(String(email || ""));
+    if (!eMail) return;
+
+    const existsRes = await fetch("/api/auth/register/exists", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify({ email: eMail }),
+    });
+
+    const existsData =
+      (await existsRes.json().catch(() => ({}))) as Partial<RegisterExistsResponse>;
+
+    if (!existsRes.ok) {
+      const msg = extractMessage(existsData) || "Falha ao validar e-mail.";
+      throw new Error(msg);
+    }
+
+    const exists = existsData?.exists === true;
+    const shouldStartOnboarding = existsData?.shouldStartOnboarding === true;
+    const shouldLogin = existsData?.shouldLogin === true;
+
+    // Não existe usuário -> OTP cria + loga -> next
+    if (!exists) {
+      router.push(
+        `/register-otp?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(nextUrl)}`,
+      );
+      return;
+    }
+
+    // Existe e ainda precisa onboarding -> OTP -> next
+    if (shouldStartOnboarding && !shouldLogin) {
+      router.push(
+        `/register-otp?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(nextUrl)}`,
+      );
+      return;
+    }
+
+    // Existe -> login -> next
+    router.push(
+      `/app/app/login?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(nextUrl)}`,
+    );
+  }
+
   async function onPixPrimaryClick() {
     setPixErr(null);
     setPixRes(null);
 
+    // ✅ PASSO 1 (público): garantir identidade antes de qualquer PIX
     if (pixStep === "idle") {
+      // se não está logado, dispara o mesmo fluxo público (email → exists → OTP/login)
+      if (!isAuthed) {
+        try {
+          const nextLoggedCredits = buildLoggedCreditsNext(selected.code);
+          await ensureUserThenGo(nextLoggedCredits);
+        } catch (e: any) {
+          setPixErr(String(e?.message || "Falha ao iniciar pagamento."));
+        }
+        return;
+      }
+
+      // logado: pode seguir com CPF
       setPixStep("cpf");
       return;
     }
 
+    // ✅ PASSO 2: CPF
     if (pixStep === "cpf") {
       const digits = onlyDigits(cpfCnpj);
       if (digits.length < 11) {
@@ -576,7 +644,7 @@ export default function PublicPlansClient() {
         )}
 
         {pixErr && creditsIsSelected && (
-          <div className="mt-8 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2 text-sm text-zinc-900">
+          <div className="mt-8 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2 text-sm text-zinc-200">
             {pixErr}
           </div>
         )}
@@ -600,9 +668,7 @@ export default function PublicPlansClient() {
               {ADDONS.map((a) => {
                 const isSelected = a.code === selectedAddOn;
 
-                // Não-selecionado: mais "flat premium"
                 const flatShadow = "shadow-[0_10px_26px_rgba(0,0,0,0.18)]";
-                // Selecionado: salta de verdade
                 const selectedShadow = "shadow-[0_22px_72px_rgba(0,0,0,0.58)]";
 
                 const scaleClass = isSelected ? "scale-[1.04]" : "scale-100";
@@ -738,27 +804,27 @@ export default function PublicPlansClient() {
                 </div>
 
                 {pixStep !== "idle" && (
-  <div className="mt-4">
-    <div className="text-xs text-zinc-500">
-      Informe seu CPF/CNPJ para emissão do pagamento.
-    </div>
+                  <div className="mt-4">
+                    <div className="text-xs text-zinc-400">
+                      Informe seu CPF/CNPJ para emissão do pagamento.
+                    </div>
 
-    <div className="mt-2 flex flex-col md:flex-row gap-3">
-      <input
-        value={cpfCnpj}
-        onChange={(e) => setCpfCnpj(e.target.value)}
-        autoFocus
-        placeholder="CPF/CNPJ"
-        inputMode="numeric"
-        className="w-full md:flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none focus:border-zinc-300 focus:ring-0"
-      />
+                    <div className="mt-2 flex flex-col md:flex-row gap-3">
+                      <input
+                        value={cpfCnpj}
+                        onChange={(e) => setCpfCnpj(e.target.value)}
+                        autoFocus
+                        placeholder="CPF/CNPJ"
+                        inputMode="numeric"
+                        className="w-full md:flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none focus:border-zinc-300 focus:ring-0"
+                      />
 
-      <div className="text-xs text-zinc-500 md:w-[220px] md:self-center">
-        Somente para emissão do pagamento no Asaas.
-      </div>
-    </div>
-  </div>
-)}
+                      <div className="text-xs text-zinc-500 md:w-[220px] md:self-center">
+                        Somente para emissão do pagamento no Asaas.
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="mt-5 flex justify-center">
                   <button
@@ -784,48 +850,48 @@ export default function PublicPlansClient() {
                 </div>
 
                 {pixStep === "ready" && pixRes && (pixRes as any)?.ok === true && (
-  <div className="mt-6 rounded-2xl border border-white/10 bg-white p-4 md:p-5">
-    <div className="flex items-center justify-between gap-4">
-      <div className="text-sm font-semibold text-zinc-900">
-        PIX gerado com sucesso
-      </div>
-    </div>
+                  <div className="mt-6 rounded-2xl border border-white/10 bg-white p-4 md:p-5">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="text-sm font-semibold text-zinc-900">
+                        PIX gerado com sucesso
+                      </div>
+                    </div>
 
-    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <div className="text-xs text-zinc-600">Copia e cola</div>
-        <textarea
-          readOnly
-          value={String((pixRes as any)?.pixQrCode?.payload ?? "")}
-          className="mt-2 w-full h-[120px] rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-900 outline-none focus:border-zinc-300"
-        />
-        <div className="mt-2 text-[11px] text-zinc-500">
-          Use no app do seu banco para pagar.
-        </div>
-      </div>
+                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-xs text-zinc-600">Copia e cola</div>
+                        <textarea
+                          readOnly
+                          value={String((pixRes as any)?.pixQrCode?.payload ?? "")}
+                          className="mt-2 w-full h-[120px] rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-900 outline-none focus:border-zinc-300"
+                        />
+                        <div className="mt-2 text-[11px] text-zinc-500">
+                          Use no app do seu banco para pagar.
+                        </div>
+                      </div>
 
-      <div>
-        <div className="text-xs text-zinc-600">QR Code</div>
-        <div className="mt-2 rounded-xl border border-zinc-200 bg-white p-3 flex items-center justify-center min-h-[160px]">
-          {(pixRes as any)?.pixQrCode?.encodedImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              alt="QR Code PIX"
-              className="max-h-[220px] w-auto"
-              src={`data:image/png;base64,${String(
-                (pixRes as any).pixQrCode.encodedImage,
-              )}`}
-            />
-          ) : (
-            <div className="text-xs text-zinc-500">
-              QR não disponível. Use o “copia e cola”.
-            </div>
-          )}
-        </div>
-        <div className="mt-2 text-[11px] text-zinc-500">
-          Expiração:{" "}
-          <span className="text-zinc-700">
-            {String((pixRes as any)?.pixQrCode?.expirationDate ?? "—")}
+                      <div>
+                        <div className="text-xs text-zinc-600">QR Code</div>
+                        <div className="mt-2 rounded-xl border border-zinc-200 bg-white p-3 flex items-center justify-center min-h-[160px]">
+                          {(pixRes as any)?.pixQrCode?.encodedImage ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              alt="QR Code PIX"
+                              className="max-h-[220px] w-auto"
+                              src={`data:image/png;base64,${String(
+                                (pixRes as any).pixQrCode.encodedImage,
+                              )}`}
+                            />
+                          ) : (
+                            <div className="text-xs text-zinc-500">
+                              QR não disponível. Use o “copia e cola”.
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-2 text-[11px] text-zinc-500">
+                          Expiração:{" "}
+                          <span className="text-zinc-700">
+                            {String((pixRes as any)?.pixQrCode?.expirationDate ?? "—")}
                           </span>
                         </div>
                       </div>
@@ -841,7 +907,8 @@ export default function PublicPlansClient() {
           <section className="mt-10">
             <div className="text-center">
               <div className="text-sm text-zinc-400">
-                Modalidade: <span className="text-zinc-200 font-semibold">{cycleLabel}</span>
+                Modalidade:{" "}
+                <span className="text-zinc-200 font-semibold">{cycleLabel}</span>
               </div>
             </div>
 

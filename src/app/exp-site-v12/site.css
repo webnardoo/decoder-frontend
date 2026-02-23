@@ -664,3 +664,41 @@ html[data-theme="dark"] .mkt .btnPlans {
     0 0 0 3px rgba(90, 70, 255, 0.6),
     0 0 110px rgba(90, 70, 255, 0.9);
 }
+/* =========================================================
+   PLANOS — overrides (TopNav)
+   ========================================================= */
+.mkt.planos .topHeader {
+   background: rgba(255, 255, 255, 0.45); /* 80% opaco, 20% transparente */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: 1px solid var(--stroke-soft);
+}
+
+html[data-theme="dark"] .mkt .topHeader {
+  background: rgba(5, 7, 12, 0.45); /* ajuste conforme sua cor base */
+  border-bottom: 0;
+}
+/* =========================================================
+   FEATURES — FORCE 2x2 (somente na Home MKT)
+   ========================================================= */
+
+.mkt.page.planos #features .featuresGrid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+  align-items: stretch !important;
+}
+
+.mkt.page.planos #features .featureCard {
+  width: auto !important;
+  max-width: none !important;
+  display: flex !important;
+  gap: 16px !important;
+  align-items: flex-start !important;
+}
+
+@media (max-width: 900px) {
+  .mkt.page.planos #features .featuresGrid {
+    grid-template-columns: 1fr !important;
+  }
+}

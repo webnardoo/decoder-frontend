@@ -1,6 +1,7 @@
+// src/app/(marketing)/page.tsx
 import React from "react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
-import ExpSiteHome from "./exp-site-v12/page";
+import ExpSiteHome from "../exp-site-v12/page";
 
 export default function HomePage() {
   return (
