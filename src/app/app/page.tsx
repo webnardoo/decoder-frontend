@@ -1186,31 +1186,48 @@ export default function HomePage() {
            - Mobile: abaixo do título, largura total
            ========================================================= */
         .buyCreditsCta {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          height: 44px;
-          padding: 0 18px;
-          border-radius: 999px;
-          border: 2px solid rgba(108, 99, 255, 0.55);
-          background: rgba(255, 255, 255, 0.92);
-          color: rgba(56, 45, 155, 0.95);
-          font-weight: 800;
-          font-size: 14px;
-          letter-spacing: -0.01em;
-          box-shadow: 0 12px 34px rgba(108, 99, 255, 0.16);
-          transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease,
-            background 160ms ease;
-          position: relative;
-          isolation: isolate;
-        }
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
-        .buyCreditsCta:hover {
-          transform: translateY(-1px);
-          border-color: rgba(108, 99, 255, 0.85);
-          box-shadow: 0 18px 44px rgba(108, 99, 255, 0.22);
-          background: rgba(247, 246, 255, 1);
-        }
+  height: 44px;
+  padding: 0 22px;
+
+  border-radius: 999px;
+  border: 1.5px solid rgba(108, 99, 255, 0.55);
+
+  background: transparent;
+  color: rgba(72, 61, 195, 0.95);
+
+  font-weight: 700;
+  font-size: 14px;
+
+  transition: all 180ms ease;
+}
+
+.buyCreditsCta:hover {
+  border-color: rgba(108, 99, 255, 0.85);
+  background: rgba(108, 99, 255, 0.06);
+}
+
+/* MOBILE – elegante, não agressivo */
+@media (max-width: 640px) {
+  .buyCreditsCta {
+    width: 100%;
+    height: 48px;
+    font-size: 15px;
+    margin-top: 4px;
+  }
+}
+
+html[data-theme="dark"] .buyCreditsCta {
+  color: rgba(255, 255, 255, 0.92);
+  border-color: rgba(108, 99, 255, 0.5);
+}
+
+html[data-theme="dark"] .buyCreditsCta:hover {
+  background: rgba(108, 99, 255, 0.14);
+}
 
         /* Sonar leve (mantém premium; no mobile fica "bonito" e não agressivo) */
         .buyCreditsCta::after {
