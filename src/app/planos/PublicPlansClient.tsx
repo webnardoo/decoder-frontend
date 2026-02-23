@@ -220,6 +220,8 @@ type AddOnUi = {
     badgeBgSelected: string;
     badgeBorderSelected: string;
     badgeTextSelected: string;
+
+    check: string;
   };
 };
 
@@ -244,10 +246,11 @@ const ADDONS: AddOnUi[] = [
         "linear-gradient(180deg, rgba(59,130,246,0.10), rgba(255,255,255,0.035))",
       badgeBg: "bg-blue-500/12",
       badgeBorder: "border-blue-400/25",
-      badgeText: "text-blue-50",
+      badgeText: "text-blue-500",
       badgeBgSelected: "bg-blue-500/18",
       badgeBorderSelected: "border-blue-300/40",
       badgeTextSelected: "text-blue-50",
+      check: "text-blue-200",
     },
   },
   {
@@ -265,13 +268,13 @@ const ADDONS: AddOnUi[] = [
         "radial-gradient(closest-side, rgba(245,158,11,0.28), rgba(245,158,11,0.0))",
       bg:
         "linear-gradient(180deg, rgba(245,158,11,0.10), rgba(255,255,255,0.035))",
-      // contraste forte (amarelo precisa ser “dark text”)
       badgeBg: "bg-amber-300/40",
       badgeBorder: "border-amber-300/65",
       badgeText: "text-amber-950",
       badgeBgSelected: "bg-amber-300/60",
       badgeBorderSelected: "border-amber-200/80",
       badgeTextSelected: "text-amber-950",
+      check: "text-amber-200",
     },
   },
   {
@@ -291,10 +294,11 @@ const ADDONS: AddOnUi[] = [
         "linear-gradient(180deg, rgba(139,92,246,0.10), rgba(255,255,255,0.035))",
       badgeBg: "bg-violet-500/14",
       badgeBorder: "border-violet-400/25",
-      badgeText: "text-violet-50",
+      badgeText: "text-violet-500",
       badgeBgSelected: "bg-violet-500/20",
       badgeBorderSelected: "border-violet-300/40",
       badgeTextSelected: "text-violet-50",
+      check: "text-violet-200",
     },
   },
 ];
@@ -572,9 +576,9 @@ export default function PublicPlansClient() {
         )}
 
         {pixErr && creditsIsSelected && (
-        <div className="mt-8 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2 text-sm text-zinc-900">
-  {pixErr}
-</div>
+          <div className="mt-8 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2 text-sm text-zinc-900">
+            {pixErr}
+          </div>
         )}
 
         {creditsIsSelected && (
@@ -596,10 +600,10 @@ export default function PublicPlansClient() {
               {ADDONS.map((a) => {
                 const isSelected = a.code === selectedAddOn;
 
-                // ✅ não selecionado mais “quieto”
-                const flatShadow = "shadow-[0_8px_22px_rgba(0,0,0,0.18)]";
-                // ✅ selecionado “salta”
-                const selectedShadow = "shadow-[0_22px_70px_rgba(0,0,0,0.58)]";
+                // Não-selecionado: mais "flat premium"
+                const flatShadow = "shadow-[0_10px_26px_rgba(0,0,0,0.18)]";
+                // Selecionado: salta de verdade
+                const selectedShadow = "shadow-[0_22px_72px_rgba(0,0,0,0.58)]";
 
                 const scaleClass = isSelected ? "scale-[1.04]" : "scale-100";
                 const z = isSelected ? "z-10" : "z-0";
@@ -633,14 +637,17 @@ export default function PublicPlansClient() {
                       aria-hidden
                       className={[
                         "absolute -bottom-24 left-1/2 -translate-x-1/2 w-[520px] h-[240px] blur-2xl",
-                        isSelected ? "opacity-90" : "opacity-30",
+                        isSelected ? "opacity-90" : "opacity-28",
                         "transition-all duration-200 ease-out",
                       ].join(" ")}
                       style={{ background: a.accent.glow }}
                     />
                     <div
                       aria-hidden
-                      className="absolute inset-0 opacity-60"
+                      className={[
+                        "absolute inset-0 transition-all duration-200 ease-out",
+                        isSelected ? "opacity-60" : "opacity-52",
+                      ].join(" ")}
                       style={{ background: a.accent.bg }}
                     />
 
@@ -655,19 +662,18 @@ export default function PublicPlansClient() {
                             {a.price}
                           </div>
 
-                          <div className="mt-1 text-sm text-zinc-200/90">
+                          <div className="mt-1 text-sm text-zinc-200/95">
                             <span className="font-semibold">{a.credits}</span> créditos
-                            <span className="mx-2 text-zinc-600">•</span>
-                            <span className="text-zinc-300">{a.perCredit}</span>
+                            <span className="mx-2 text-zinc-400">•</span>
+                            <span className="text-zinc-200">{a.perCredit}</span>
                           </div>
                         </div>
 
                         {isSelected ? (
-                          <div className="inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold border border-white/20 bg-white/10 text-zinc-100">
+                          <div className="inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold border border-white/22 bg-white/12 text-zinc-100">
                             Selecionado
                           </div>
                         ) : (
-                          // ✅ menos contraste (não compete com CTA)
                           <div className="inline-flex items-center rounded-full px-3 py-1 text-[11px] border border-white/10 bg-transparent text-zinc-500">
                             Selecionar
                           </div>
@@ -696,18 +702,18 @@ export default function PublicPlansClient() {
                       </div>
 
                       <div className="mt-auto pt-5">
-                        <ul className="text-xs text-zinc-300/90 space-y-1">
+                        <ul className="text-xs text-zinc-300 space-y-1">
                           <li className="flex items-center gap-2">
-                            <span className="text-violet-200">✔</span> Compra única
+                            <span className={a.accent.check}>✔</span> Compra única
                           </li>
                           <li className="flex items-center gap-2">
-                            <span className="text-violet-200">✔</span> Créditos permanentes
+                            <span className={a.accent.check}>✔</span> Créditos permanentes
                           </li>
                           <li className="flex items-center gap-2">
-                            <span className="text-violet-200">✔</span> Compatível com plano mensal
+                            <span className={a.accent.check}>✔</span> Compatível com plano mensal
                           </li>
                           <li className="flex items-center gap-2">
-                            <span className="text-violet-200">✔</span> Liberação automática após confirmação
+                            <span className={a.accent.check}>✔</span> Liberação automática após confirmação
                           </li>
                         </ul>
                       </div>
@@ -953,21 +959,16 @@ export default function PublicPlansClient() {
                               <div className="mt-2 text-xs text-zinc-400 text-center">{ui.hint}</div>
 
                               <div className="mt-2 text-[11px] text-zinc-500 text-center">
-                                Modalidade:{" "}
-                                <span className="text-zinc-300">{cycleLabel}</span>
+                                Modalidade: <span className="text-zinc-300">{cycleLabel}</span>
                                 {!canUseCycle && (
-                                  <span className="ml-2 text-red-300">
-                                    • indisponível neste ciclo
-                                  </span>
+                                  <span className="ml-2 text-red-300">• indisponível neste ciclo</span>
                                 )}
                               </div>
 
                               {isCurrentPlan && (
                                 <div className="mt-2 text-sm text-zinc-200/80 text-center">
                                   Você já é assinante do plano{" "}
-                                  <span className="text-zinc-100 font-semibold">
-                                    {planDisplayName}
-                                  </span>{" "}
+                                  <span className="text-zinc-100 font-semibold">{planDisplayName}</span>{" "}
                                   selecione outro plano.
                                 </div>
                               )}
