@@ -1,4 +1,3 @@
-// src/app/app/layout.tsx
 "use client";
 
 import type { ReactNode } from "react";
@@ -16,6 +15,10 @@ type OnboardingStatus = {
   creditsBalance?: number;
   journey?: string;
   onboardingStage?: string;
+};
+
+type UnreadCountResponse = {
+  unreadCount?: number;
 };
 
 function stripQuery(nextUrl: string): string {
@@ -44,30 +47,53 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   // ✅ condição do CTA "Comprar crédito" (TopNav)
   const [showBuyCredits, setShowBuyCredits] = useState(false);
 
+  // ✅ badge de notificações
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+
   useEffect(() => {
     let alive = true;
 
     async function load() {
-      // Em telas públicas/auth: nunca mostrar
+      // Em telas públicas/auth: nunca mostrar CTA nem badge
       if (onAuth) {
-        if (alive) setShowBuyCredits(false);
+        if (alive) {
+          setShowBuyCredits(false);
+          setUnreadCount(0);
+        }
         return;
       }
 
       try {
-        const res = await fetch("/api/onboarding/status", { cache: "no-store" });
-        if (!res.ok) {
+        // 1) onboarding/status => decide se mostra "Comprar crédito"
+        // 2) notifications/unread-count => badge
+        const [onbRes, unreadRes] = await Promise.all([
+          fetch("/api/onboarding/status", { cache: "no-store" }).catch(() => null),
+          fetch("/api/notifications/unread-count", { cache: "no-store" }).catch(() => null),
+        ]);
+
+        // --- onboarding
+        if (!onbRes || !onbRes.ok) {
           if (alive) setShowBuyCredits(false);
-          return;
+        } else {
+          const data = (await onbRes.json()) as OnboardingStatus;
+          const bal = typeof data?.creditsBalance === "number" ? data.creditsBalance : null;
+          const should = typeof bal === "number" && bal < 10;
+          if (alive) setShowBuyCredits(should);
         }
-        const data = (await res.json()) as OnboardingStatus;
 
-        const bal = typeof data?.creditsBalance === "number" ? data.creditsBalance : null;
-        const should = typeof bal === "number" && bal < 10;
-
-        if (alive) setShowBuyCredits(should);
+        // --- unread count
+        if (!unreadRes || !unreadRes.ok) {
+          if (alive) setUnreadCount(0);
+        } else {
+          const data = (await unreadRes.json()) as UnreadCountResponse;
+          const n = typeof data?.unreadCount === "number" ? data.unreadCount : 0;
+          if (alive) setUnreadCount(Math.max(0, Math.floor(n)));
+        }
       } catch {
-        if (alive) setShowBuyCredits(false);
+        if (alive) {
+          setShowBuyCredits(false);
+          setUnreadCount(0);
+        }
       }
     }
 
@@ -89,12 +115,18 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           showBuyCredits={showBuyCredits}
           buyCreditsPulse={showBuyCredits}
           showAccount={true}
+          // ✅ badge
+          showNotifications={true}
+          notificationsHref="/app/notifications"
+          notificationsUnreadCount={unreadCount}
         />
       </div>
 
       <div className="flex flex-col flex-1">
         <main className="app-main w-full flex-1 flex">
-          <div className="mx-auto w-full max-w-6xl px-4 py-6 flex flex-1 flex-col">{children}</div>
+          <div className="mx-auto w-full max-w-6xl px-4 py-6 flex flex-1 flex-col">
+            {children}
+          </div>
         </main>
       </div>
 

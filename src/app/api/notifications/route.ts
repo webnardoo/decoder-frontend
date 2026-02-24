@@ -47,18 +47,16 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "Não autenticado." }, { status: 401 });
     }
 
-    const url = new URL(req.url);
-    const limit = url.searchParams.get("limit") || "20";
-    const cursor = url.searchParams.get("cursor");
-
-    const qs = new URLSearchParams();
-    qs.set("limit", String(limit));
-    if (cursor) qs.set("cursor", cursor);
-
     const jar = await cookies();
     const cookieJourney = normalizeJourney(jar.get("hitch_journey")?.value);
 
-    const upstream = await fetch(`${backendBaseUrl}/api/v1/notifications?${qs.toString()}`, {
+    const url = new URL(req.url);
+    const limit = url.searchParams.get("limit");
+
+    const upstreamUrl = new URL(`${backendBaseUrl}/api/v1/notifications`);
+    if (limit) upstreamUrl.searchParams.set("limit", limit);
+
+    const upstream = await fetch(upstreamUrl.toString(), {
       method: "GET",
       headers: {
         Accept: "application/json",
@@ -77,10 +75,7 @@ export async function GET(req: Request) {
       data = text ? JSON.parse(text) : null;
     } catch {
       return NextResponse.json(
-        {
-          message: "Resposta inválida do backend (não-JSON).",
-          raw: text || null,
-        },
+        { message: "Resposta inválida do backend (não-JSON).", raw: text || null },
         { status: 502 }
       );
     }

@@ -1,14 +1,23 @@
-// src/components/marketing/MarketingTopNav.tsx
+/*src/components/marketing/MarketingTopNav.tsx*/
 "use client";
 
 import Link from "next/link";
 import Image from "next/image";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 type ThemeMode = "light" | "dark";
 type TopNavVariant = "default" | "planos";
 type NavMode = "marketing" | "app" | "minimal";
+
+type NotificationItem = {
+  id: string;
+  title?: string | null;
+  message?: string | null;
+  createdAt?: string | null;
+  readAt?: string | null;
+  kind?: string | null;
+};
 
 type Props = {
   logoSrc?: string;
@@ -43,6 +52,11 @@ type Props = {
 
   // ✅ destaque/sonar do CTA (quando saldo baixo)
   buyCreditsPulse?: boolean;
+
+  // ✅ notificações
+  showNotifications?: boolean;
+  notificationsHref?: string;
+  notificationsUnreadCount?: number;
 };
 
 function readTheme(): ThemeMode {
@@ -105,7 +119,7 @@ function inferModeFromPath(pathnameRaw: string): NavMode {
 function useOutsideClick(
   ref: React.RefObject<HTMLElement | null>,
   onOutside: () => void,
-  enabled: boolean,
+  enabled: boolean
 ) {
   useEffect(() => {
     if (!enabled) return;
@@ -125,6 +139,40 @@ function useOutsideClick(
       document.removeEventListener("touchstart", onDown, true);
     };
   }, [ref, onOutside, enabled]);
+}
+
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const m = window.matchMedia(query);
+    const onChange = () => setMatches(!!m.matches);
+    onChange();
+    m.addEventListener?.("change", onChange);
+    return () => m.removeEventListener?.("change", onChange);
+  }, [query]);
+
+  return matches;
+}
+
+function timeAgo(iso?: string | null) {
+  try {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const diff = Date.now() - d.getTime();
+    if (!Number.isFinite(diff) || diff < 0) return "";
+    const s = Math.floor(diff / 1000);
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h`;
+    const days = Math.floor(h / 24);
+    return `${days}d`;
+  } catch {
+    return "";
+  }
 }
 
 export default function MarketingTopNav({
@@ -153,7 +201,13 @@ export default function MarketingTopNav({
 
   // ✅ pulse
   buyCreditsPulse = false,
+
+  // ✅ notifications
+  showNotifications = true,
+  notificationsHref = "/app/notifications",
+  notificationsUnreadCount = 0,
 }: Props) {
+  const router = useRouter();
   const pathnameRaw = usePathname() || "/";
   const pathname = stripQuery(pathnameRaw);
   const inferredMode: NavMode = mode ? mode : inferModeFromPath(pathname);
@@ -161,14 +215,40 @@ export default function MarketingTopNav({
   const [theme, setTheme] = useState<ThemeMode>("light");
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // ✅ notifications UI state
+  const isDesktop = useMediaQuery("(min-width: 820px)");
+  const [notifOpenDesktop, setNotifOpenDesktop] = useState(false);
+  const [notifOpenMobile, setNotifOpenMobile] = useState(false);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifError, setNotifError] = useState<string | null>(null);
+  const [notifItems, setNotifItems] = useState<NotificationItem[]>([]);
+
   const menuRef = useRef<HTMLDivElement>(null);
   useOutsideClick(menuRef, () => setMenuOpen(false), menuOpen);
+
+  const notifRef = useRef<HTMLDivElement>(null);
+  useOutsideClick(
+    notifRef,
+    () => {
+      if (notifOpenDesktop) setNotifOpenDesktop(false);
+    },
+    notifOpenDesktop
+  );
 
   useEffect(() => {
     const t = readTheme();
     setTheme(t);
     applyTheme(t);
   }, []);
+
+  // ✅ se trocar breakpoint enquanto aberto, fecha o outro
+  useEffect(() => {
+    if (isDesktop) {
+      setNotifOpenMobile(false);
+    } else {
+      setNotifOpenDesktop(false);
+    }
+  }, [isDesktop]);
 
   const themeLabel = useMemo(() => (theme === "light" ? "Light" : "Dark"), [theme]);
 
@@ -184,12 +264,72 @@ export default function MarketingTopNav({
   const showDesktopActions = inferredMode !== "minimal";
 
   // ✅ regra: na página pública /planos não faz sentido ter CTA "Assinar" duplicado no TopNav
-  const hideMarketingPrimaryCta = inferredMode === "marketing" && (variant === "planos" || pathname === "/planos");
+  const hideMarketingPrimaryCta =
+    inferredMode === "marketing" && (variant === "planos" || pathname === "/planos");
+
+  const unread = Number.isFinite(Number(notificationsUnreadCount))
+    ? Math.max(0, Math.floor(Number(notificationsUnreadCount)))
+    : 0;
+
+  async function loadNotifications(limit: number) {
+    setNotifLoading(true);
+    setNotifError(null);
+
+    try {
+      const qs = `?limit=${encodeURIComponent(String(limit))}`;
+      const res = await fetch(`/api/notifications${qs}`, { cache: "no-store" });
+      const ct = res.headers.get("content-type") || "";
+
+      if (!res.ok) {
+        let msg = `Falha ao carregar notificações (${res.status}).`;
+        if (ct.includes("application/json")) {
+          const j = await res.json().catch(() => null);
+          if (j?.message) msg = String(j.message);
+        }
+        setNotifError(msg);
+        setNotifItems([]);
+        return;
+      }
+
+      if (!ct.includes("application/json")) {
+        // evita cair naquele HTML/404
+        setNotifError("Resposta inválida do servidor (não-JSON).");
+        setNotifItems([]);
+        return;
+      }
+
+      const data = (await res.json().catch(() => null)) as any;
+      const list: NotificationItem[] =
+        Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+
+      setNotifItems(list);
+    } catch {
+      setNotifError("Falha ao carregar notificações.");
+      setNotifItems([]);
+    } finally {
+      setNotifLoading(false);
+    }
+  }
+
+  function onClickBell() {
+    if (isDesktop) {
+      const next = !notifOpenDesktop;
+      setNotifOpenDesktop(next);
+      if (next) loadNotifications(5);
+      return;
+    }
+
+    // 📱 mobile: overlay full-screen com slide da direita
+    const next = !notifOpenMobile;
+    setNotifOpenMobile(next);
+    if (next) loadNotifications(50); // “todas” (scroll), sem paginação por enquanto
+  }
 
   // Itens do menu mobile
   const menuItems = useMemo(() => {
     if (inferredMode === "app") {
       const items: { label: string; href: string }[] = [];
+      if (showNotifications) items.push({ label: "Notificações", href: notificationsHref });
       if (showBuyCredits) items.push({ label: buyCreditsLabel, href: buyCreditsHref });
       if (showAccount) items.push({ label: accountLabel, href: accountHref });
       return items;
@@ -207,6 +347,8 @@ export default function MarketingTopNav({
     return [];
   }, [
     inferredMode,
+    showNotifications,
+    notificationsHref,
     showBuyCredits,
     showAccount,
     buyCreditsLabel,
@@ -266,6 +408,67 @@ export default function MarketingTopNav({
               <div className="hTopNav__actions">
                 {inferredMode === "app" ? (
                   <>
+                    {showNotifications ? (
+                      <div className="hTopNav__notifWrap" ref={notifRef}>
+                        <button
+                          type="button"
+                          className="hTopNav__iconBtn"
+                          aria-label="Notificações"
+                          title="Notificações"
+                          onClick={onClickBell}
+                        >
+                          <span className="hTopNav__bell" aria-hidden="true">
+                            🔔
+                          </span>
+                          {unread > 0 ? (
+                            <span className="hTopNav__badge" aria-label={`${unread} não lidas`}>
+                              {unread > 99 ? "99+" : unread}
+                            </span>
+                          ) : null}
+                        </button>
+
+                        {/* 🖥 dropdown desktop */}
+                        {notifOpenDesktop ? (
+                          <div className="hNotifDrop" role="dialog" aria-label="Notificações">
+                            <div className="hNotifDrop__head">
+                              <div className="hNotifDrop__title">Notificações</div>
+                              <Link className="hNotifDrop__allBtn" href={notificationsHref}>
+                                Ver todas
+                              </Link>
+                            </div>
+
+                            {notifLoading ? (
+                              <div className="hNotifDrop__state">Carregando…</div>
+                            ) : notifError ? (
+                              <div className="hNotifDrop__state hNotifDrop__state--err">
+                                {notifError}
+                              </div>
+                            ) : notifItems.length === 0 ? (
+                              <div className="hNotifDrop__state">Sem notificações.</div>
+                            ) : (
+                              <div className="hNotifDrop__list">
+                                {notifItems.slice(0, 5).map((n) => (
+                                  <div key={n.id} className="hNotifDrop__item">
+                                    <div className="hNotifDrop__itemTop">
+                                      <div className="hNotifDrop__itemTitle">
+                                        {n.title || "Notificação"}
+                                      </div>
+                                      <div className="hNotifDrop__itemTime">
+                                        {timeAgo(n.createdAt)}
+                                      </div>
+                                    </div>
+                                    {n.message ? (
+                                      <div className="hNotifDrop__itemMsg">{n.message}</div>
+                                    ) : null}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+
                     {showBuyCredits ? (
                       <Link className={buyBtnClass} href={buyCreditsHref}>
                         {buyCreditsLabel}
@@ -343,6 +546,12 @@ export default function MarketingTopNav({
                           onClick={() => setMenuOpen(false)}
                         >
                           {it.label}
+                          {inferredMode === "app" &&
+                          showNotifications &&
+                          it.href === notificationsHref &&
+                          unread > 0 ? (
+                            <span className="hTopNav__menuBadge">{unread > 99 ? "99+" : unread}</span>
+                          ) : null}
                         </Link>
                       );
                     })}
@@ -354,7 +563,77 @@ export default function MarketingTopNav({
         </div>
       </header>
 
-      {/* CSS premium (auto-contido, sem depender do .mkt e sem quebrar globals.css) */}
+      {/* 📱 overlay mobile: camada por cima (slide da direita) */}
+      {inferredMode === "app" && showNotifications && notifOpenMobile ? (
+        <div className="hNotifLayer" role="dialog" aria-label="Notificações (mobile)">
+          <div className="hNotifLayer__sheet">
+            <div className="hNotifLayer__top">
+              <button
+                type="button"
+                className="hNotifLayer__back"
+                onClick={() => setNotifOpenMobile(false)}
+                aria-label="Voltar"
+                title="Voltar"
+              >
+                ‹
+              </button>
+              <div className="hNotifLayer__title">Notificações</div>
+              <button
+                type="button"
+                className="hNotifLayer__close"
+                onClick={() => setNotifOpenMobile(false)}
+                aria-label="Fechar"
+                title="Fechar"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="hNotifLayer__body">
+              {notifLoading ? (
+                <div className="hNotifLayer__state">Carregando…</div>
+              ) : notifError ? (
+                <div className="hNotifLayer__state hNotifLayer__state--err">{notifError}</div>
+              ) : notifItems.length === 0 ? (
+                <div className="hNotifLayer__state">Sem notificações.</div>
+              ) : (
+                <div className="hNotifLayer__list">
+                  {notifItems.map((n) => (
+                    <div key={n.id} className="hNotifLayer__item">
+                      <div className="hNotifLayer__itemTop">
+                        <div className="hNotifLayer__itemTitle">{n.title || "Notificação"}</div>
+                        <div className="hNotifLayer__itemTime">{timeAgo(n.createdAt)}</div>
+                      </div>
+                      {n.message ? <div className="hNotifLayer__itemMsg">{n.message}</div> : null}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* “Ver todas” no mobile é opcional, mas mantém como fallback */}
+              <div className="hNotifLayer__footer">
+                <button
+                  type="button"
+                  className="hNotifLayer__all"
+                  onClick={() => {
+                    setNotifOpenMobile(false);
+                    router.push(notificationsHref);
+                  }}
+                >
+                  Ver todas
+                </button>
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="hNotifLayer__backdrop"
+            aria-label="Fechar"
+            onClick={() => setNotifOpenMobile(false)}
+          />
+        </div>
+      ) : null}
+
       <style jsx global>{`
         .hTopNav {
           position: sticky;
@@ -409,7 +688,6 @@ export default function MarketingTopNav({
           gap: 10px;
         }
 
-        /* Segmented toggle (Linear-like) */
         .hTopNav__seg {
           display: inline-flex;
           align-items: center;
@@ -451,13 +729,11 @@ export default function MarketingTopNav({
           box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
         }
 
-        /* Desktop actions */
         .hTopNav__actions {
           display: none;
           align-items: center;
           gap: 10px;
         }
-
         @media (min-width: 820px) {
           .hTopNav__actions {
             display: inline-flex;
@@ -502,7 +778,6 @@ export default function MarketingTopNav({
           background: rgba(255, 255, 255, 0.08);
         }
 
-        /* ✅ Pulse forte (sonar) no Comprar crédito quando saldo baixo */
         .hTopNav__btn--pulse::after {
           content: "";
           position: absolute;
@@ -562,6 +837,204 @@ export default function MarketingTopNav({
           box-shadow: 0 22px 62px rgba(0, 0, 0, 0.55), 0 0 56px rgba(108, 99, 255, 0.16);
         }
 
+        /* ✅ Ícone de notificação + badge */
+        .hTopNav__notifWrap {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+        }
+
+        .hTopNav__iconBtn {
+          position: relative;
+          height: 36px;
+          width: 40px;
+          border-radius: 999px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid rgba(2, 6, 23, 0.12);
+          background: rgba(255, 255, 255, 0.62);
+          text-decoration: none;
+          transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+          cursor: pointer;
+        }
+        .hTopNav__iconBtn:hover {
+          border-color: rgba(108, 99, 255, 0.55);
+          background: rgba(108, 99, 255, 0.06);
+          transform: translateY(-1px);
+        }
+        html[data-theme="dark"] .hTopNav__iconBtn {
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          background: rgba(255, 255, 255, 0.06);
+        }
+        html[data-theme="dark"] .hTopNav__iconBtn:hover {
+          border-color: rgba(108, 99, 255, 0.5);
+          background: rgba(255, 255, 255, 0.09);
+        }
+
+        .hTopNav__bell {
+          font-size: 16px;
+          line-height: 1;
+          color: rgba(2, 6, 23, 0.86);
+        }
+        html[data-theme="dark"] .hTopNav__bell {
+          color: rgba(255, 255, 255, 0.92);
+        }
+
+        .hTopNav__badge {
+          position: absolute;
+          top: -6px;
+          right: -6px;
+          min-width: 18px;
+          height: 18px;
+          padding: 0 6px;
+          border-radius: 999px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.01em;
+          color: rgba(255, 255, 255, 0.98);
+          background: rgba(108, 99, 255, 0.92);
+          box-shadow: 0 10px 26px rgba(108, 99, 255, 0.22);
+          border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+        html[data-theme="dark"] .hTopNav__badge {
+          border: 1px solid rgba(255, 255, 255, 0.22);
+        }
+
+        /* 🖥 Dropdown desktop */
+        .hNotifDrop {
+          position: absolute;
+          right: 0;
+          top: calc(100% + 10px);
+          width: 360px;
+          max-width: 82vw;
+          border-radius: 18px;
+          border: 1px solid rgba(2, 6, 23, 0.08);
+          background: rgba(255, 255, 255, 0.96);
+          box-shadow: 0 28px 72px rgba(2, 6, 23, 0.16);
+          backdrop-filter: blur(16px);
+          overflow: hidden;
+          z-index: 80;
+        }
+        html[data-theme="dark"] .hNotifDrop {
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(18, 18, 22, 0.92);
+          box-shadow: 0 28px 72px rgba(0, 0, 0, 0.62);
+        }
+
+        .hNotifDrop__head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 14px 14px 10px 14px;
+          border-bottom: 1px solid rgba(2, 6, 23, 0.06);
+        }
+        html[data-theme="dark"] .hNotifDrop__head {
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .hNotifDrop__title {
+          font-size: 14px;
+          font-weight: 800;
+          color: rgba(2, 6, 23, 0.9);
+        }
+        html[data-theme="dark"] .hNotifDrop__title {
+          color: rgba(255, 255, 255, 0.92);
+        }
+
+        .hNotifDrop__allBtn {
+          height: 30px;
+          padding: 0 12px;
+          border-radius: 999px;
+          border: 1px solid rgba(108, 99, 255, 0.35);
+          background: rgba(108, 99, 255, 0.08);
+          text-decoration: none;
+          font-size: 12px;
+          font-weight: 800;
+          color: rgba(2, 6, 23, 0.86);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        html[data-theme="dark"] .hNotifDrop__allBtn {
+          color: rgba(255, 255, 255, 0.92);
+          border-color: rgba(108, 99, 255, 0.28);
+          background: rgba(255, 255, 255, 0.08);
+        }
+
+        .hNotifDrop__state {
+          padding: 14px;
+          font-size: 13px;
+          font-weight: 700;
+          color: rgba(2, 6, 23, 0.68);
+        }
+        .hNotifDrop__state--err {
+          color: rgba(220, 38, 38, 0.95);
+        }
+        html[data-theme="dark"] .hNotifDrop__state {
+          color: rgba(255, 255, 255, 0.72);
+        }
+        html[data-theme="dark"] .hNotifDrop__state--err {
+          color: rgba(248, 113, 113, 0.95);
+        }
+
+        .hNotifDrop__list {
+          padding: 10px 12px 12px 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .hNotifDrop__item {
+          border-radius: 14px;
+          border: 1px solid rgba(2, 6, 23, 0.08);
+          background: rgba(255, 255, 255, 0.7);
+          padding: 10px 12px;
+        }
+        html[data-theme="dark"] .hNotifDrop__item {
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .hNotifDrop__itemTop {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-bottom: 4px;
+        }
+
+        .hNotifDrop__itemTitle {
+          font-size: 13px;
+          font-weight: 900;
+          color: rgba(2, 6, 23, 0.9);
+        }
+        html[data-theme="dark"] .hNotifDrop__itemTitle {
+          color: rgba(255, 255, 255, 0.92);
+        }
+
+        .hNotifDrop__itemTime {
+          font-size: 12px;
+          font-weight: 800;
+          color: rgba(2, 6, 23, 0.55);
+        }
+        html[data-theme="dark"] .hNotifDrop__itemTime {
+          color: rgba(255, 255, 255, 0.58);
+        }
+
+        .hNotifDrop__itemMsg {
+          font-size: 13px;
+          font-weight: 700;
+          color: rgba(2, 6, 23, 0.72);
+          line-height: 1.25;
+        }
+        html[data-theme="dark"] .hNotifDrop__itemMsg {
+          color: rgba(255, 255, 255, 0.74);
+        }
+
         /* Mobile menu */
         .hTopNav__menuWrap {
           display: inline-flex;
@@ -603,7 +1076,6 @@ export default function MarketingTopNav({
           color: rgba(255, 255, 255, 0.9);
         }
 
-        /* Hide burger on desktop */
         @media (min-width: 820px) {
           .hTopNav__menuWrap {
             display: none;
@@ -632,6 +1104,7 @@ export default function MarketingTopNav({
         .hTopNav__menuItem {
           display: flex;
           align-items: center;
+          justify-content: space-between;
           height: 44px;
           padding: 0 12px;
           border-radius: 12px;
@@ -649,6 +1122,215 @@ export default function MarketingTopNav({
         }
         html[data-theme="dark"] .hTopNav__menuItem:hover {
           background: rgba(108, 99, 255, 0.14);
+        }
+
+        .hTopNav__menuBadge {
+          min-width: 18px;
+          height: 18px;
+          padding: 0 6px;
+          border-radius: 999px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
+          font-weight: 800;
+          color: rgba(255, 255, 255, 0.98);
+          background: rgba(108, 99, 255, 0.92);
+          border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+        html[data-theme="dark"] .hTopNav__menuBadge {
+          border: 1px solid rgba(255, 255, 255, 0.22);
+        }
+
+        /* 📱 Layer mobile (slide da direita) */
+        .hNotifLayer {
+          position: fixed;
+          inset: 0;
+          z-index: 200;
+          display: block;
+        }
+
+        .hNotifLayer__backdrop {
+          position: absolute;
+          inset: 0;
+          background: rgba(2, 6, 23, 0.28);
+          border: 0;
+          padding: 0;
+          margin: 0;
+          cursor: pointer;
+        }
+        html[data-theme="dark"] .hNotifLayer__backdrop {
+          background: rgba(0, 0, 0, 0.5);
+        }
+
+        .hNotifLayer__sheet {
+          position: absolute;
+          inset: 0;
+          background: rgba(255, 255, 255, 0.98);
+          transform: translateX(100%);
+          animation: hitchSlideInRight 220ms ease-out forwards;
+          box-shadow: -18px 0 64px rgba(2, 6, 23, 0.18);
+        }
+        html[data-theme="dark"] .hNotifLayer__sheet {
+          background: rgba(18, 18, 22, 0.98);
+          box-shadow: -18px 0 72px rgba(0, 0, 0, 0.62);
+        }
+
+        @keyframes hitchSlideInRight {
+          from {
+            transform: translateX(100%);
+          }
+          to {
+            transform: translateX(0%);
+          }
+        }
+
+        .hNotifLayer__top {
+          height: 56px;
+          display: grid;
+          grid-template-columns: 44px 1fr 44px;
+          align-items: center;
+          padding: 0 10px;
+          border-bottom: 1px solid rgba(2, 6, 23, 0.06);
+        }
+        html[data-theme="dark"] .hNotifLayer__top {
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .hNotifLayer__back,
+        .hNotifLayer__close {
+          height: 40px;
+          width: 40px;
+          border-radius: 999px;
+          border: 1px solid rgba(2, 6, 23, 0.12);
+          background: rgba(255, 255, 255, 0.6);
+          cursor: pointer;
+          font-size: 18px;
+          font-weight: 900;
+          color: rgba(2, 6, 23, 0.82);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        html[data-theme="dark"] .hNotifLayer__back,
+        html[data-theme="dark"] .hNotifLayer__close {
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          background: rgba(255, 255, 255, 0.06);
+          color: rgba(255, 255, 255, 0.9);
+        }
+
+        .hNotifLayer__title {
+          font-size: 15px;
+          font-weight: 900;
+          color: rgba(2, 6, 23, 0.9);
+          text-align: center;
+        }
+        html[data-theme="dark"] .hNotifLayer__title {
+          color: rgba(255, 255, 255, 0.92);
+        }
+
+        .hNotifLayer__body {
+          height: calc(100% - 56px);
+          display: flex;
+          flex-direction: column;
+        }
+
+        .hNotifLayer__state {
+          padding: 16px;
+          font-size: 14px;
+          font-weight: 800;
+          color: rgba(2, 6, 23, 0.68);
+        }
+        .hNotifLayer__state--err {
+          color: rgba(220, 38, 38, 0.95);
+        }
+        html[data-theme="dark"] .hNotifLayer__state {
+          color: rgba(255, 255, 255, 0.72);
+        }
+        html[data-theme="dark"] .hNotifLayer__state--err {
+          color: rgba(248, 113, 113, 0.95);
+        }
+
+        .hNotifLayer__list {
+          padding: 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          overflow: auto;
+          -webkit-overflow-scrolling: touch;
+          flex: 1;
+        }
+
+        .hNotifLayer__item {
+          border-radius: 16px;
+          border: 1px solid rgba(2, 6, 23, 0.08);
+          background: rgba(255, 255, 255, 0.7);
+          padding: 12px 12px;
+        }
+        html[data-theme="dark"] .hNotifLayer__item {
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .hNotifLayer__itemTop {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-bottom: 6px;
+        }
+
+        .hNotifLayer__itemTitle {
+          font-size: 14px;
+          font-weight: 900;
+          color: rgba(2, 6, 23, 0.9);
+        }
+        html[data-theme="dark"] .hNotifLayer__itemTitle {
+          color: rgba(255, 255, 255, 0.92);
+        }
+
+        .hNotifLayer__itemTime {
+          font-size: 12px;
+          font-weight: 900;
+          color: rgba(2, 6, 23, 0.55);
+        }
+        html[data-theme="dark"] .hNotifLayer__itemTime {
+          color: rgba(255, 255, 255, 0.58);
+        }
+
+        .hNotifLayer__itemMsg {
+          font-size: 13px;
+          font-weight: 750;
+          color: rgba(2, 6, 23, 0.72);
+          line-height: 1.28;
+        }
+        html[data-theme="dark"] .hNotifLayer__itemMsg {
+          color: rgba(255, 255, 255, 0.74);
+        }
+
+        .hNotifLayer__footer {
+          padding: 12px 14px 16px 14px;
+          border-top: 1px solid rgba(2, 6, 23, 0.06);
+        }
+        html[data-theme="dark"] .hNotifLayer__footer {
+          border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .hNotifLayer__all {
+          width: 100%;
+          height: 44px;
+          border-radius: 14px;
+          border: 1px solid rgba(108, 99, 255, 0.35);
+          background: rgba(108, 99, 255, 0.08);
+          font-size: 14px;
+          font-weight: 900;
+          color: rgba(2, 6, 23, 0.88);
+          cursor: pointer;
+        }
+        html[data-theme="dark"] .hNotifLayer__all {
+          color: rgba(255, 255, 255, 0.92);
+          border-color: rgba(108, 99, 255, 0.28);
+          background: rgba(255, 255, 255, 0.08);
         }
       `}</style>
     </>
