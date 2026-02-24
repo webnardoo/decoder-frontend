@@ -195,12 +195,9 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 export default function HomePage() {
   const [mode, setMode] = useState<Mode>("AVULSA");
-
   const [quickMode, setQuickMode] = useState<QuickMode | null>(null);
   const [relationshipType, setRelationshipType] = useState<RelationshipType | null>(null);
-
   const [resultQuickMode, setResultQuickMode] = useState<QuickMode>("RESUMO");
-
   const [conversaId, setConversaId] = useState<string>("");
 
   const [conversation, setConversation] = useState("");
@@ -245,7 +242,6 @@ export default function HomePage() {
   function openModeRelModal() {
     setModeRelModalOpen(true);
   }
-
   function closeModeRelModal() {
     setModeRelModalOpen(false);
   }
@@ -258,7 +254,6 @@ export default function HomePage() {
   }
 
   const textReadOnly = importOpen || importFiles.length > 0 || progressOpen || importSending;
-
   const [skipOnboardingOnce, setSkipOnboardingOnce] = useState(false);
 
   function resetSelectionsToNull() {
@@ -295,9 +290,7 @@ export default function HomePage() {
       const data = (await res.json()) as OnboardingStatus;
       setOnboarding(data);
 
-      if (typeof data?.creditsBalance === "number") {
-        setCreditsBalance(data.creditsBalance);
-      }
+      if (typeof data?.creditsBalance === "number") setCreditsBalance(data.creditsBalance);
 
       if (skipOnboardingOnce) {
         setShowTrialStart(false);
@@ -316,9 +309,7 @@ export default function HomePage() {
 
       const isTrialActive = data?.onboardingStage === "TRIAL_ACTIVE" && data?.trialGuided === true;
 
-      if (isTrialActive && data?.trialStartPopupPending === true) {
-        setShowTrialStart(true);
-      }
+      if (isTrialActive && data?.trialStartPopupPending === true) setShowTrialStart(true);
       if (!isTrialActive) {
         setShowTrialStart(false);
         setShowTrialEnd(false);
@@ -475,9 +466,7 @@ export default function HomePage() {
       return;
     }
 
-    if (!validateModeAndRelationshipOrPopup()) {
-      return;
-    }
+    if (!validateModeAndRelationshipOrPopup()) return;
 
     const usedQuickMode = quickMode as QuickMode;
 
@@ -544,30 +533,19 @@ export default function HomePage() {
           return;
         }
 
-        if (r.status === 409) {
-          await refreshOnboarding();
-        }
+        if (r.status === 409) await refreshOnboarding();
 
         if (typeof r.status === "number" && r.status >= 500) {
-          setBanner({
-            title: "Falha ao analisar",
-            reason: msg,
-            fix: "Tente novamente em instantes.",
-          });
+          setBanner({ title: "Falha ao analisar", reason: msg, fix: "Tente novamente em instantes." });
           return;
         }
 
-        setBanner({
-          title: "Falha ao analisar",
-          reason: msg,
-          fix: "Tente novamente.",
-        });
+        setBanner({ title: "Falha ao analisar", reason: msg, fix: "Tente novamente." });
         return;
       }
 
       if (origin === "MANUAL") {
         let mSteps = analysisProgress?.steps?.length ? analysisProgress.steps : buildManualAnalysisSteps();
-
         mSteps = setManualStep(mSteps, "ANALYZE", "DONE");
         mSteps = setManualStep(mSteps, "CONSOLIDATE", "RUNNING");
         setAnalysisProgress({ steps: mSteps });
@@ -578,9 +556,7 @@ export default function HomePage() {
       setResultQuickMode(usedQuickMode);
       setResult(data);
 
-      if (typeof data?.creditsBalanceAfter === "number") {
-        setCreditsBalance(data.creditsBalanceAfter);
-      }
+      if (typeof data?.creditsBalanceAfter === "number") setCreditsBalance(data.creditsBalanceAfter);
 
       saveHistoryItem({
         id: crypto.randomUUID(),
@@ -597,7 +573,6 @@ export default function HomePage() {
 
       if (origin === "MANUAL") {
         let mSteps = analysisProgress?.steps?.length ? analysisProgress.steps : buildManualAnalysisSteps();
-
         mSteps = setManualStep(mSteps, "CONSOLIDATE", "DONE");
         mSteps = setManualStep(mSteps, "DONE", "DONE");
         setAnalysisProgress({ steps: mSteps });
@@ -605,18 +580,6 @@ export default function HomePage() {
         await sleep(450);
         setAnalysisProgressOpen(false);
       }
-    } catch (e: any) {
-      if (origin === "MANUAL") {
-        setAnalysisProgressError(GENERIC_ANALYZE_FAIL);
-
-        const base = analysisProgress?.steps?.length ? analysisProgress.steps : buildManualAnalysisSteps();
-        const failed: AnalysisProgressStatus = {
-          steps: base.map((s) => (s.status === "RUNNING" ? { ...s, status: "ERROR" } : s)),
-        };
-        setAnalysisProgress(failed);
-      }
-
-      throw e;
     } finally {
       setLoading(false);
     }
@@ -629,9 +592,7 @@ export default function HomePage() {
   function openNativePicker() {
     setBanner(null);
     setImportError(null);
-
     if (!validateModeAndRelationshipOrPopup()) return;
-
     try {
       fileInputRef.current?.click();
     } catch {}
@@ -695,22 +656,12 @@ export default function HomePage() {
       fd.append("relationshipType", String(relationshipType || ""));
       fd.append("quickMode", String(quickMode || ""));
 
-      const startRes = await fetch("/api/ocr/pipeline/start", {
-        method: "POST",
-        body: fd,
-        cache: "no-store",
-      });
-
+      const startRes = await fetch("/api/ocr/pipeline/start", { method: "POST", body: fd, cache: "no-store" });
       const startPayload = await startRes.json().catch(() => null);
-      if (!startRes.ok) {
-        throw new Error(String(startPayload?.message ?? startPayload?.error ?? "Falha ao iniciar processamento."));
-      }
+      if (!startRes.ok) throw new Error(String(startPayload?.message ?? startPayload?.error ?? "Falha ao iniciar."));
 
       const pipelineId = String(startPayload?.pipelineId ?? startPayload?.jobId ?? startPayload?.id ?? "").trim();
-
-      if (!pipelineId) {
-        throw new Error("Falha ao iniciar processamento: id não retornado.");
-      }
+      if (!pipelineId) throw new Error("Falha ao iniciar processamento: id não retornado.");
 
       const startedAt = Date.now();
       const timeoutMs = 180000;
@@ -721,14 +672,9 @@ export default function HomePage() {
         qs.set("pipelineId", pipelineId);
         qs.set("jobId", pipelineId);
 
-        const stRes = await fetch(`/api/ocr/pipeline/status?${qs.toString()}`, {
-          cache: "no-store",
-        });
-
+        const stRes = await fetch(`/api/ocr/pipeline/status?${qs.toString()}`, { cache: "no-store" });
         const stPayload = await stRes.json().catch(() => null);
-        if (!stRes.ok) {
-          throw new Error(String(stPayload?.message ?? stPayload?.error ?? "Falha ao consultar status."));
-        }
+        if (!stRes.ok) throw new Error(String(stPayload?.message ?? stPayload?.error ?? "Falha ao consultar status."));
 
         const status = coercePipelineStatus(stPayload?.status ?? stPayload?.state);
 
@@ -745,20 +691,14 @@ export default function HomePage() {
             if (k) map.set(k, sv);
           }
 
-          steps = steps.map((cur) => ({
-            ...cur,
-            status: map.get(cur.key) ?? cur.status,
-          }));
-
+          steps = steps.map((cur) => ({ ...cur, status: map.get(cur.key) ?? cur.status }));
           setProgress({ steps });
         } else {
           setProgress({ steps });
         }
 
         if (status === "ERROR") {
-          throw new Error(
-            String(stPayload?.error?.message ?? stPayload?.message ?? "Não foi possível processar os prints.")
-          );
+          throw new Error(String(stPayload?.error?.message ?? stPayload?.message ?? "Não foi possível processar."));
         }
 
         if (status === "DONE") {
@@ -769,9 +709,7 @@ export default function HomePage() {
         await sleep(hasRunning ? 650 : 850);
       }
 
-      if (!extractedText) {
-        throw new Error("Tempo excedido ao processar os prints.");
-      }
+      if (!extractedText) throw new Error("Tempo excedido ao processar os prints.");
 
       steps = setStep(steps, "EXTRACT", "DONE");
       steps = setStep(steps, "ORGANIZE", "DONE");
@@ -811,7 +749,6 @@ export default function HomePage() {
     if (!list.length) return;
 
     const files = list.slice(0, 3);
-
     setImportFiles(files);
     setImportError(null);
     setImportOpen(true);
@@ -830,7 +767,6 @@ export default function HomePage() {
     if (showTrialStart) return;
 
     if (mode !== "AVULSA") setMode("AVULSA");
-
     if (!stepId) markStepIfNull("S1_SELECT_SUMMARY_MODE");
 
     const hasText = effectiveText.length >= TRIAL_MIN;
@@ -988,14 +924,18 @@ export default function HomePage() {
 
   const nicknameLabel = (onboarding?.dialogueNickname ?? "").toString().trim() || "—";
 
-  const balanceLabel =
+  const effectiveBalanceNum =
     typeof creditsBalance === "number"
-      ? `${creditsBalance} créditos`
+      ? creditsBalance
       : typeof onboarding?.creditsBalance === "number"
-      ? `${onboarding.creditsBalance} créditos`
-      : "—";
+      ? onboarding.creditsBalance
+      : null;
 
-  // ✅ Mantém o wrapper do toggle (mesmo do topo)
+  const balanceLabel = typeof effectiveBalanceNum === "number" ? `${effectiveBalanceNum} créditos` : "—";
+
+  // ✅ condição do CTA dentro do card
+  const showContextualBuyCredits = typeof effectiveBalanceNum === "number" && effectiveBalanceNum < 10;
+
   const modeToggleWrapClass = "themeToggle";
 
   return (
@@ -1007,7 +947,6 @@ export default function HomePage() {
           --h-control-border: rgba(2, 6, 23, 0.1);
           --h-control-border-hover: rgba(108, 99, 255, 0.55);
 
-          /* padrão do print2 */
           --h-pill-border: rgba(2, 6, 23, 0.14);
           --h-pill-bg-active: rgba(255, 255, 255, 0.92);
           --h-pill-text: rgba(2, 6, 23, 0.85);
@@ -1027,7 +966,6 @@ export default function HomePage() {
           --h-pill-text-muted: rgba(255, 255, 255, 0.75);
         }
 
-        /* ===== Theme isolation (HomePage controls) ===== */
         html:not([data-theme="dark"]) .import-prints-button {
           background: #ffffff;
           color: var(--h-text);
@@ -1081,9 +1019,6 @@ export default function HomePage() {
           background: rgba(255, 255, 255, 0.04);
         }
 
-        /* =========================================================
-           ✅ PADRÃO PRINT2 (sem "dark:" do Tailwind)
-           ========================================================= */
         .h-pill {
           box-sizing: border-box;
           height: 40px;
@@ -1109,9 +1044,6 @@ export default function HomePage() {
           border-color: var(--h-accent);
           background: var(--h-pill-bg-active);
           box-shadow: 0 6px 18px rgba(108, 99, 255, 0.25);
-        }
-        .h-pill--active:hover {
-          border-color: var(--h-accent);
         }
 
         .themeToggle .h-pill {
@@ -1154,31 +1086,54 @@ export default function HomePage() {
           box-shadow: 0 18px 56px rgba(108, 99, 255, 0.28);
         }
 
-        /* =========================================================
-           ✅ CTA "Comprar Crédito" (corrigido)
-           ========================================================= */
+        /* CTA contextual (apenas quando saldo baixo) */
         .buyCreditsCta {
           position: relative;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-
           height: 38px;
           padding: 0 14px;
           border-radius: 999px;
-
           border: 1px solid rgba(108, 99, 255, 0.55);
           background: rgba(255, 255, 255, 0.65);
           color: rgba(2, 6, 23, 0.82);
-
           font-weight: 700;
           font-size: 13px;
           letter-spacing: 0.01em;
-
           box-shadow: 0 10px 26px rgba(108, 99, 255, 0.14);
           backdrop-filter: blur(10px);
-
           transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease;
+        }
+
+        .buyCreditsCta::after {
+          content: "";
+          position: absolute;
+          inset: -12px;
+          border-radius: 999px;
+          border: 2px solid rgba(108, 99, 255, 0.32);
+          opacity: 0;
+          animation: buyCtaPulse 1.05s ease-out infinite;
+          z-index: -1;
+          pointer-events: none;
+          box-shadow: 0 0 0 0 rgba(108, 99, 255, 0);
+        }
+
+        @keyframes buyCtaPulse {
+          0% {
+            transform: scale(0.88);
+            opacity: 0.05;
+            box-shadow: 0 0 0 0 rgba(108, 99, 255, 0);
+          }
+          35% {
+            opacity: 0.95;
+            box-shadow: 0 0 48px 10px rgba(108, 99, 255, 0.18);
+          }
+          100% {
+            transform: scale(1.18);
+            opacity: 0;
+            box-shadow: 0 0 72px 18px rgba(108, 99, 255, 0);
+          }
         }
 
         .buyCreditsCta:hover {
@@ -1188,62 +1143,16 @@ export default function HomePage() {
           transform: translateY(-1px);
         }
 
-        .buyCreditsCta::after {
-          content: "";
-          position: absolute;
-          inset: -10px;
-          border-radius: 999px;
-          border: 2px solid rgba(108, 99, 255, 0.22);
-          filter: blur(0.2px);
-          opacity: 0;
-          animation: buyCtaPulse 1.35s ease-out infinite;
-          z-index: -1;
-          pointer-events: none;
-        }
-
-        @keyframes buyCtaPulse {
-          0% {
-            transform: scale(0.92);
-            opacity: 0;
-          }
-          25% {
-            opacity: 0.75;
-          }
-          100% {
-            transform: scale(1.12);
-            opacity: 0;
-          }
-        }
-
-        @media (max-width: 640px) {
-          .buyCreditsCta {
-            width: 100%;
-            height: 52px;
-            font-size: 15px;
-            padding: 0 12px;
-            box-shadow: 0 18px 52px rgba(108, 99, 255, 0.18);
-          }
-          .buyCreditsCta::after {
-            inset: -12px;
-            border-color: rgba(108, 99, 255, 0.18);
-          }
-        }
-
         html[data-theme="dark"] .buyCreditsCta {
           background: rgba(255, 255, 255, 0.1);
           color: rgba(255, 255, 255, 0.92);
           border-color: rgba(108, 99, 255, 0.5);
           box-shadow: 0 10px 26px rgba(108, 99, 255, 0.14);
         }
-
         html[data-theme="dark"] .buyCreditsCta:hover {
           background: rgba(255, 255, 255, 0.14);
           border-color: rgba(108, 99, 255, 0.75);
           box-shadow: 0 22px 62px rgba(0, 0, 0, 0.55), 0 0 56px rgba(108, 99, 255, 0.16);
-        }
-
-        html[data-theme="dark"] .buyCreditsCta::after {
-          border-color: rgba(108, 99, 255, 0.16);
         }
       `}</style>
 
@@ -1323,7 +1232,7 @@ export default function HomePage() {
                 aria-modal="true"
                 tabIndex={-1}
                 onKeyDown={(e) => focusTrapKeydown(e, startModalRef.current)}
-                className="w-[min(520px,calc(100%-24px))] rounded-2xl border border-[var(--h-border)]  bg-[var(--h-card)] p-5 shadow-[0_22px_66px_rgba(0,0,0,0.18)]"
+                className="w-[min(520px,calc(100%-24px))] rounded-2xl border border-[var(--h-border)] bg-[var(--h-card)] p-5 shadow-[0_22px_66px_rgba(0,0,0,0.18)]"
               >
                 <div className="text-lg font-semibold text-[var(--h-text)]">Seja bem-vindo à degustação do Hitch.ai</div>
                 <div className="text-sm text-[var(--h-subtle)] mt-2 leading-relaxed">
@@ -1347,7 +1256,7 @@ export default function HomePage() {
                 aria-modal="true"
                 tabIndex={-1}
                 onKeyDown={(e) => focusTrapKeydown(e, endModalRef.current)}
-                className="w-[min(520px,calc(100%-24px))] rounded-2xl border border-[var(--h-border)]  bg-[var(--h-card)] p-5 shadow-[0_22px_66px_rgba(0,0,0,0.18)]"
+                className="w-[min(520px,calc(100%-24px))] rounded-2xl border border-[var(--h-border)] bg-[var(--h-card)] p-5 shadow-[0_22px_66px_rgba(0,0,0,0.18)]"
               >
                 <div className="text-lg font-semibold text-[var(--h-text)]">Degustação concluída</div>
                 <div className="text-sm text-[var(--h-subtle)] mt-2 leading-relaxed">
@@ -1362,23 +1271,15 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* ✅ HEADER DO APP:
-              - mobile: CTA abaixo do título e full width
-              - desktop: CTA na mesma linha à direita
-           */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-            <div className="min-w-0">
+          {/* ✅ Header do app (SEM CTA comprar crédito fora do card) */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex flex-col gap-2">
               <h1 className="text-2xl font-semibold tracking-tight">Hitch.ai</h1>
-              <p className="mt-2 text-sm text-black/60">Cole o diálogo e receba uma leitura clara do contexto.</p>
-            </div>
-
-            <div className="sm:pt-1">
-              <Link href="/app/billing/credits" className="buyCreditsCta">
-                Comprar crédito
-              </Link>
+              <p className="text-sm text-black/60">Cole o diálogo e receba uma leitura clara do contexto.</p>
             </div>
           </div>
 
+          {/* ✅ Card Nickname + Saldo + CTA contextual */}
           <div className="rounded-2xl border border-[var(--h-border)] bg-[var(--h-card)] px-4 py-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--h-muted)] min-w-0">
@@ -1389,7 +1290,7 @@ export default function HomePage() {
                     i
                   </span>
 
-                  <div className="pointer-events-none absolute left-0 top-7 z-20 hidden w-[320px] rounded-2xl border border-[var(--h-border)]  bg-[var(--h-card)] p-3 text-xs text-[var(--h-subtle)] shadow-[0_18px_55px_rgba(0,0,0,0.18)] group-hover:block">
+                  <div className="pointer-events-none absolute left-0 top-7 z-20 hidden w-[320px] rounded-2xl border border-[var(--h-border)] bg-[var(--h-card)] p-3 text-xs text-[var(--h-subtle)] shadow-[0_18px_55px_rgba(0,0,0,0.18)] group-hover:block">
                     <div className="font-semibold mb-1 text-[var(--h-text)]">Por que isso é obrigatório?</div>
                     <p className="leading-relaxed">
                       O sistema usa esse nome para separar você da outra pessoa no diálogo.
@@ -1410,6 +1311,14 @@ export default function HomePage() {
                 <span className="text-[var(--h-text)] font-semibold">{balanceLabel}</span>
               </div>
             </div>
+
+            {showContextualBuyCredits ? (
+              <div className="mt-3 flex justify-end">
+                <Link href="/app/billing/plan" className="buyCreditsCta">
+                  Comprar mais créditos
+                </Link>
+              </div>
+            ) : null}
           </div>
 
           <div className="flex items-center justify-end">
@@ -1491,7 +1400,10 @@ export default function HomePage() {
               <SectionLabel>Tipo de relação</SectionLabel>
             </div>
 
-            <div className="flex flex-nowrap gap-2 overflow-x-auto whitespace-nowrap pb-1" data-tour-id="quick-relationship-option">
+            <div
+              className="flex flex-nowrap gap-2 overflow-x-auto whitespace-nowrap pb-1"
+              data-tour-id="quick-relationship-option"
+            >
               {relationshipOptions.map((opt) => {
                 const active = relationshipType === opt.value;
 
@@ -1574,7 +1486,7 @@ function OkModal({
         role="dialog"
         aria-modal="true"
         tabIndex={-1}
-        className="w-[min(520px,calc(100%-24px))] rounded-2xl border border-[var(--h-border)]  bg-[var(--h-card)] p-5 shadow-[0_22px_66px_rgba(0,0,0,0.18)]"
+        className="w-[min(520px,calc(100%-24px))] rounded-2xl border border-[var(--h-border)] bg-[var(--h-card)] p-5 shadow-[0_22px_66px_rgba(0,0,0,0.18)]"
       >
         <div className="text-lg font-semibold text-[var(--h-text)]">{title}</div>
 
