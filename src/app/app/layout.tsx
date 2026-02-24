@@ -1,3 +1,4 @@
+/* src/app/app/layout.tsx */
 import type { ReactNode } from "react";
 import { headers } from "next/headers";
 
@@ -34,9 +35,16 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   const chrome = (
     <div className="min-h-dvh flex flex-col">
-      {/* ✅ site.css é escopado em .mkt. Sem isso, o nav fica sem estilo. */}
+      {/* ✅ site.css é escopado em .mkt */}
       <div className="mkt">
-        <MarketingTopNav />
+        <MarketingTopNav
+          mode={onAuth ? "minimal" : "app"}
+          /* app */
+          accountHref="/app/conta"
+          accountLabel="Conta"
+          buyCreditsHref="/app/billing/plan"
+          buyCreditsLabel="Comprar Crédito"
+        />
       </div>
 
       <div className="flex flex-col flex-1">

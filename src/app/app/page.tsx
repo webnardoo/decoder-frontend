@@ -119,13 +119,7 @@ function getFocusableWithin(container: HTMLElement | null): HTMLElement[] {
 
   const isFocusable = (el: HTMLElement) => {
     const tag = el.tagName;
-    if (
-      tag === "BUTTON" ||
-      tag === "A" ||
-      tag === "INPUT" ||
-      tag === "TEXTAREA" ||
-      tag === "SELECT"
-    )
+    if (tag === "BUTTON" || tag === "A" || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT")
       return true;
 
     const ti = el.getAttribute("tabindex");
@@ -189,19 +183,13 @@ function buildManualAnalysisSteps(): AnalysisStepView[] {
   ];
 }
 
-function setManualStep(
-  steps: AnalysisStepView[],
-  key: AnalysisStepKey,
-  status: AnalysisStepView["status"]
-) {
+function setManualStep(steps: AnalysisStepView[], key: AnalysisStepKey, status: AnalysisStepView["status"]) {
   return steps.map((s) => (s.key === key ? { ...s, status } : s));
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[11px] font-semibold tracking-[0.16em] text-[var(--h-subtle)] uppercase">
-      {children}
-    </div>
+    <div className="text-[11px] font-semibold tracking-[0.16em] text-[var(--h-subtle)] uppercase">{children}</div>
   );
 }
 
@@ -539,9 +527,7 @@ export default function HomePage() {
 
         if (origin === "MANUAL") {
           setAnalysisProgressError(msg);
-          const base = analysisProgress?.steps?.length
-            ? analysisProgress.steps
-            : buildManualAnalysisSteps();
+          const base = analysisProgress?.steps?.length ? analysisProgress.steps : buildManualAnalysisSteps();
           const failed: AnalysisProgressStatus = {
             steps: base.map((s) => (s.status === "RUNNING" ? { ...s, status: "ERROR" } : s)),
           };
@@ -580,9 +566,7 @@ export default function HomePage() {
       }
 
       if (origin === "MANUAL") {
-        let mSteps = analysisProgress?.steps?.length
-          ? analysisProgress.steps
-          : buildManualAnalysisSteps();
+        let mSteps = analysisProgress?.steps?.length ? analysisProgress.steps : buildManualAnalysisSteps();
 
         mSteps = setManualStep(mSteps, "ANALYZE", "DONE");
         mSteps = setManualStep(mSteps, "CONSOLIDATE", "RUNNING");
@@ -612,9 +596,7 @@ export default function HomePage() {
       resetSelectionsToNull();
 
       if (origin === "MANUAL") {
-        let mSteps = analysisProgress?.steps?.length
-          ? analysisProgress.steps
-          : buildManualAnalysisSteps();
+        let mSteps = analysisProgress?.steps?.length ? analysisProgress.steps : buildManualAnalysisSteps();
 
         mSteps = setManualStep(mSteps, "CONSOLIDATE", "DONE");
         mSteps = setManualStep(mSteps, "DONE", "DONE");
@@ -627,9 +609,7 @@ export default function HomePage() {
       if (origin === "MANUAL") {
         setAnalysisProgressError(GENERIC_ANALYZE_FAIL);
 
-        const base = analysisProgress?.steps?.length
-          ? analysisProgress.steps
-          : buildManualAnalysisSteps();
+        const base = analysisProgress?.steps?.length ? analysisProgress.steps : buildManualAnalysisSteps();
         const failed: AnalysisProgressStatus = {
           steps: base.map((s) => (s.status === "RUNNING" ? { ...s, status: "ERROR" } : s)),
         };
@@ -723,14 +703,10 @@ export default function HomePage() {
 
       const startPayload = await startRes.json().catch(() => null);
       if (!startRes.ok) {
-        throw new Error(
-          String(startPayload?.message ?? startPayload?.error ?? "Falha ao iniciar processamento.")
-        );
+        throw new Error(String(startPayload?.message ?? startPayload?.error ?? "Falha ao iniciar processamento."));
       }
 
-      const pipelineId = String(
-        startPayload?.pipelineId ?? startPayload?.jobId ?? startPayload?.id ?? ""
-      ).trim();
+      const pipelineId = String(startPayload?.pipelineId ?? startPayload?.jobId ?? startPayload?.id ?? "").trim();
 
       if (!pipelineId) {
         throw new Error("Falha ao iniciar processamento: id não retornado.");
@@ -757,9 +733,7 @@ export default function HomePage() {
         const status = coercePipelineStatus(stPayload?.status ?? stPayload?.state);
 
         const rawSteps: any[] = Array.isArray(stPayload?.steps) ? stPayload.steps : [];
-        const hasRunning = rawSteps.some(
-          (s: any) => coercePipelineStatus(s?.status ?? s?.state) === "RUNNING"
-        );
+        const hasRunning = rawSteps.some((s: any) => coercePipelineStatus(s?.status ?? s?.state) === "RUNNING");
 
         if (rawSteps.length) {
           const map = new Map<string, StepView["status"]>();
@@ -1181,55 +1155,39 @@ export default function HomePage() {
         }
 
         /* =========================================================
-           ✅ CTA "Comprar Crédito"
-           - Desktop: à direita na mesma linha
-           - Mobile: abaixo do título, largura total
+           ✅ CTA "Comprar Crédito" (corrigido)
            ========================================================= */
         .buyCreditsCta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
 
-  height: 44px;
-  padding: 0 22px;
+          height: 38px;
+          padding: 0 14px;
+          border-radius: 999px;
 
-  border-radius: 999px;
-  border: 1.5px solid rgba(108, 99, 255, 0.55);
+          border: 1px solid rgba(108, 99, 255, 0.55);
+          background: rgba(255, 255, 255, 0.65);
+          color: rgba(2, 6, 23, 0.82);
 
-  background: transparent;
-  color: rgba(72, 61, 195, 0.95);
+          font-weight: 700;
+          font-size: 13px;
+          letter-spacing: 0.01em;
 
-  font-weight: 700;
-  font-size: 14px;
+          box-shadow: 0 10px 26px rgba(108, 99, 255, 0.14);
+          backdrop-filter: blur(10px);
 
-  transition: all 180ms ease;
-}
+          transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease;
+        }
 
-.buyCreditsCta:hover {
-  border-color: rgba(108, 99, 255, 0.85);
-  background: rgba(108, 99, 255, 0.06);
-}
+        .buyCreditsCta:hover {
+          border-color: rgba(108, 99, 255, 0.78);
+          background: rgba(108, 99, 255, 0.07);
+          box-shadow: 0 14px 34px rgba(108, 99, 255, 0.2);
+          transform: translateY(-1px);
+        }
 
-/* MOBILE – elegante, não agressivo */
-@media (max-width: 640px) {
-  .buyCreditsCta {
-    width: 100%;
-    height: 48px;
-    font-size: 15px;
-    margin-top: 4px;
-  }
-}
-
-html[data-theme="dark"] .buyCreditsCta {
-  color: rgba(255, 255, 255, 0.92);
-  border-color: rgba(108, 99, 255, 0.5);
-}
-
-html[data-theme="dark"] .buyCreditsCta:hover {
-  background: rgba(108, 99, 255, 0.14);
-}
-
-        /* Sonar leve (mantém premium; no mobile fica "bonito" e não agressivo) */
         .buyCreditsCta::after {
           content: "";
           position: absolute;
@@ -1240,31 +1198,31 @@ html[data-theme="dark"] .buyCreditsCta:hover {
           opacity: 0;
           animation: buyCtaPulse 1.35s ease-out infinite;
           z-index: -1;
+          pointer-events: none;
         }
 
         @keyframes buyCtaPulse {
           0% {
             transform: scale(0.92);
-            opacity: 0.0;
+            opacity: 0;
           }
           25% {
             opacity: 0.75;
           }
           100% {
             transform: scale(1.12);
-            opacity: 0.0;
+            opacity: 0;
           }
         }
 
-        /* Mobile: largura total e “abaixo do título” */
         @media (max-width: 640px) {
           .buyCreditsCta {
             width: 100%;
             height: 52px;
             font-size: 15px;
+            padding: 0 12px;
             box-shadow: 0 18px 52px rgba(108, 99, 255, 0.18);
           }
-
           .buyCreditsCta::after {
             inset: -12px;
             border-color: rgba(108, 99, 255, 0.18);
@@ -1272,16 +1230,18 @@ html[data-theme="dark"] .buyCreditsCta:hover {
         }
 
         html[data-theme="dark"] .buyCreditsCta {
-          background: rgba(255, 255, 255, 0.10);
+          background: rgba(255, 255, 255, 0.1);
           color: rgba(255, 255, 255, 0.92);
-          border-color: rgba(108, 99, 255, 0.50);
-          box-shadow: 0 18px 52px rgba(0, 0, 0, 0.46);
+          border-color: rgba(108, 99, 255, 0.5);
+          box-shadow: 0 10px 26px rgba(108, 99, 255, 0.14);
         }
+
         html[data-theme="dark"] .buyCreditsCta:hover {
           background: rgba(255, 255, 255, 0.14);
           border-color: rgba(108, 99, 255, 0.75);
           box-shadow: 0 22px 62px rgba(0, 0, 0, 0.55), 0 0 56px rgba(108, 99, 255, 0.16);
         }
+
         html[data-theme="dark"] .buyCreditsCta::after {
           border-color: rgba(108, 99, 255, 0.16);
         }
@@ -1365,9 +1325,7 @@ html[data-theme="dark"] .buyCreditsCta:hover {
                 onKeyDown={(e) => focusTrapKeydown(e, startModalRef.current)}
                 className="w-[min(520px,calc(100%-24px))] rounded-2xl border border-[var(--h-border)]  bg-[var(--h-card)] p-5 shadow-[0_22px_66px_rgba(0,0,0,0.18)]"
               >
-                <div className="text-lg font-semibold text-[var(--h-text)]">
-                  Seja bem-vindo à degustação do Hitch.ai
-                </div>
+                <div className="text-lg font-semibold text-[var(--h-text)]">Seja bem-vindo à degustação do Hitch.ai</div>
                 <div className="text-sm text-[var(--h-subtle)] mt-2 leading-relaxed">
                   Você fará 1 análise (Receber análise) e 1 geração de respostas (Opções de respostas).
                 </div>
@@ -1411,17 +1369,14 @@ html[data-theme="dark"] .buyCreditsCta:hover {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
             <div className="min-w-0">
               <h1 className="text-2xl font-semibold tracking-tight">Hitch.ai</h1>
-              <p className="mt-2 text-sm text-black/60">
-                Cole o diálogo e receba uma leitura clara do contexto.
-              </p>
+              <p className="mt-2 text-sm text-black/60">Cole o diálogo e receba uma leitura clara do contexto.</p>
             </div>
 
-            <a
-              href="/app/billing/plan"
-              className="buyCreditsCta mt-1 w-full sm:mt-0 sm:w-auto"
-            >
-              Comprar Crédito
-            </a>
+            <div className="sm:pt-1">
+              <Link href="/app/billing/credits" className="buyCreditsCta">
+                Comprar crédito
+              </Link>
+            </div>
           </div>
 
           <div className="rounded-2xl border border-[var(--h-border)] bg-[var(--h-card)] px-4 py-3">
@@ -1536,10 +1491,7 @@ html[data-theme="dark"] .buyCreditsCta:hover {
               <SectionLabel>Tipo de relação</SectionLabel>
             </div>
 
-            <div
-              className="flex flex-nowrap gap-2 overflow-x-auto whitespace-nowrap pb-1"
-              data-tour-id="quick-relationship-option"
-            >
+            <div className="flex flex-nowrap gap-2 overflow-x-auto whitespace-nowrap pb-1" data-tour-id="quick-relationship-option">
               {relationshipOptions.map((opt) => {
                 const active = relationshipType === opt.value;
 

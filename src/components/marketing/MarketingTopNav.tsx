@@ -1,3 +1,4 @@
+/* src/components/marketing/MarketingTopNav.tsx */
 "use client";
 
 import Link from "next/link";
@@ -19,7 +20,7 @@ type Props = {
   /**
    * ✅ modos:
    * - marketing: Assinar + Entrar
-   * - app: Conta
+   * - app: Comprar Crédito + Conta
    * - minimal: apenas toggle de tema (auth/signup)
    */
   mode?: NavMode;
@@ -35,6 +36,9 @@ type Props = {
   // app
   accountHref?: string;
   accountLabel?: string;
+
+  buyCreditsHref?: string;
+  buyCreditsLabel?: string;
 };
 
 function readTheme(): ThemeMode {
@@ -103,6 +107,8 @@ export default function MarketingTopNav({
   // app defaults
   accountHref = "/app/conta",
   accountLabel = "Conta",
+  buyCreditsHref = "/app/billing/plan",
+  buyCreditsLabel = "Comprar Crédito",
 }: Props) {
   const pathname = usePathname() || "/";
   const inferredMode: NavMode = mode ? mode : inferModeFromPath(pathname);
@@ -115,10 +121,7 @@ export default function MarketingTopNav({
     applyTheme(t);
   }, []);
 
-  const themeLabel = useMemo(
-    () => (theme === "light" ? "Light" : "Dark"),
-    [theme],
-  );
+  const themeLabel = useMemo(() => (theme === "light" ? "Light" : "Dark"), [theme]);
 
   function onSetTheme(t: ThemeMode) {
     setTheme(t);
@@ -127,8 +130,7 @@ export default function MarketingTopNav({
 
   const entrarHref = secondaryCtaHref ?? loginHref;
 
-  const headerClass =
-    variant === "planos" ? "topHeader topHeader--planos" : "topHeader";
+  const headerClass = variant === "planos" ? "topHeader topHeader--planos" : "topHeader";
 
   return (
     <header className={headerClass}>
@@ -147,11 +149,7 @@ export default function MarketingTopNav({
           </Link>
 
           <nav className="navRight" aria-label="Navegação principal">
-            <div
-              className="themeToggle"
-              role="tablist"
-              aria-label={`Tema atual: ${themeLabel}`}
-            >
+            <div className="themeToggle" role="tablist" aria-label={`Tema atual: ${themeLabel}`}>
               <button
                 type="button"
                 className={`themePill ${theme === "light" ? "themePillActive" : ""}`}
@@ -173,9 +171,15 @@ export default function MarketingTopNav({
             </div>
 
             {inferredMode === "minimal" ? null : inferredMode === "app" ? (
-              <Link className="navLink navPill navPillEmph" href={accountHref}>
-                {accountLabel}
-              </Link>
+              <>
+                <Link className="navLink navPill navPillEmph navPillThin" href={buyCreditsHref}>
+                  {buyCreditsLabel}
+                </Link>
+
+                <Link className="navLink navPill navPillEmph" href={accountHref}>
+                  {accountLabel}
+                </Link>
+              </>
             ) : (
               <>
                 <a
@@ -194,6 +198,14 @@ export default function MarketingTopNav({
           </nav>
         </div>
       </div>
+
+      {/* ✅ deixa o botão "Comprar Crédito" menos grosseiro sem mexer no site.css */}
+      <style jsx>{`
+        :global(.navPillThin) {
+          padding: 10px 14px !important;
+          border-width: 2px !important;
+        }
+      `}</style>
     </header>
   );
 }
