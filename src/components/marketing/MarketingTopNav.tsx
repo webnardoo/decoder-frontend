@@ -18,7 +18,7 @@ type Props = {
   /**
    * modos:
    * - marketing: Assinar + Entrar
-   * - app: SOMENTE Conta (Comprar crédito fica na page/card)
+   * - app: Comprar crédito + Conta
    * - minimal: apenas tema (auth/signup)
    */
   mode?: NavMode;
@@ -34,16 +34,14 @@ type Props = {
   // app
   accountHref?: string;
   accountLabel?: string;
-
-  // (mantido por compatibilidade, mas não será exibido no modo app)
   buyCreditsHref?: string;
   buyCreditsLabel?: string;
 
-  // flags
+  // ✅ flags de visibilidade (para você controlar por layout)
   showBuyCredits?: boolean;
   showAccount?: boolean;
 
-  // destaque/sonar (mantido por compatibilidade, mas não será usado no TopNav no modo app)
+  // ✅ destaque/sonar do CTA (quando saldo baixo)
   buyCreditsPulse?: boolean;
 };
 
@@ -104,7 +102,11 @@ function inferModeFromPath(pathnameRaw: string): NavMode {
   return "marketing";
 }
 
-function useOutsideClick(ref: React.RefObject<HTMLElement | null>, onOutside: () => void, enabled: boolean) {
+function useOutsideClick(
+  ref: React.RefObject<HTMLElement | null>,
+  onOutside: () => void,
+  enabled: boolean,
+) {
   useEffect(() => {
     if (!enabled) return;
 
@@ -142,19 +144,18 @@ export default function MarketingTopNav({
   // app defaults
   accountHref = "/app/conta",
   accountLabel = "Conta",
-
-  // compat (não exibido no modo app)
   buyCreditsHref = "/app/billing/credits",
   buyCreditsLabel = "Comprar crédito",
 
-  // defaults
+  // ✅ defaults
   showBuyCredits = true,
   showAccount = true,
 
-  // compat (não usado no modo app)
+  // ✅ pulse
   buyCreditsPulse = false,
 }: Props) {
-  const pathname = usePathname() || "/";
+  const pathnameRaw = usePathname() || "/";
+  const pathname = stripQuery(pathnameRaw);
   const inferredMode: NavMode = mode ? mode : inferModeFromPath(pathname);
 
   const [theme, setTheme] = useState<ThemeMode>("light");
@@ -182,29 +183,34 @@ export default function MarketingTopNav({
   const showBurger = inferredMode !== "minimal";
   const showDesktopActions = inferredMode !== "minimal";
 
-  // ✅ regra definitiva: no modo APP, NÃO renderizar comprar crédito no TopNav
-  const effectiveShowBuyCredits = inferredMode === "app" ? false : showBuyCredits;
+  // ✅ regra: na página pública /planos não faz sentido ter CTA "Assinar" duplicado no TopNav
+  const hideMarketingPrimaryCta = inferredMode === "marketing" && (variant === "planos" || pathname === "/planos");
 
   // Itens do menu mobile
   const menuItems = useMemo(() => {
     if (inferredMode === "app") {
       const items: { label: string; href: string }[] = [];
-      // comprar crédito fica na page/card — nunca aqui
+      if (showBuyCredits) items.push({ label: buyCreditsLabel, href: buyCreditsHref });
       if (showAccount) items.push({ label: accountLabel, href: accountHref });
       return items;
     }
 
     if (inferredMode === "marketing") {
-      return [
-        { label: primaryCtaLabel, href: primaryCtaHref, onClick: onPaidPlansClick },
-        { label: secondaryCtaLabel, href: entrarHref },
-      ];
+      const items: any[] = [];
+      if (!hideMarketingPrimaryCta) {
+        items.push({ label: primaryCtaLabel, href: primaryCtaHref, onClick: onPaidPlansClick });
+      }
+      items.push({ label: secondaryCtaLabel, href: entrarHref });
+      return items;
     }
 
     return [];
   }, [
     inferredMode,
+    showBuyCredits,
     showAccount,
+    buyCreditsLabel,
+    buyCreditsHref,
     accountLabel,
     accountHref,
     primaryCtaLabel,
@@ -212,9 +218,14 @@ export default function MarketingTopNav({
     secondaryCtaLabel,
     entrarHref,
     onPaidPlansClick,
+    hideMarketingPrimaryCta,
   ]);
 
-  const buyBtnClass = ["hTopNav__btn", "hTopNav__btn--ghost", buyCreditsPulse ? "hTopNav__btn--pulse" : ""]
+  const buyBtnClass = [
+    "hTopNav__btn",
+    "hTopNav__btn--ghost",
+    buyCreditsPulse ? "hTopNav__btn--pulse" : "",
+  ]
     .filter(Boolean)
     .join(" ");
 
@@ -228,6 +239,7 @@ export default function MarketingTopNav({
           </Link>
 
           <div className="hTopNav__right">
+            {/* Toggle tema (Stripe/Linear: segmented, sutil) */}
             <div className="hTopNav__seg" role="tablist" aria-label={`Tema atual: ${themeLabel}`}>
               <button
                 type="button"
@@ -249,11 +261,17 @@ export default function MarketingTopNav({
               </button>
             </div>
 
+            {/* Desktop actions (>= 820px) */}
             {showDesktopActions ? (
               <div className="hTopNav__actions">
                 {inferredMode === "app" ? (
                   <>
-                    {/* ✅ comprar crédito removido no modo app */}
+                    {showBuyCredits ? (
+                      <Link className={buyBtnClass} href={buyCreditsHref}>
+                        {buyCreditsLabel}
+                      </Link>
+                    ) : null}
+
                     {showAccount ? (
                       <Link className="hTopNav__btn hTopNav__btn--primary" href={accountHref}>
                         {accountLabel}
@@ -262,31 +280,25 @@ export default function MarketingTopNav({
                   </>
                 ) : inferredMode === "marketing" ? (
                   <>
-                    <a className="hTopNav__btn hTopNav__btn--primary" href={primaryCtaHref} onClick={onPaidPlansClick}>
-                      {primaryCtaLabel}
-                    </a>
+                    {!hideMarketingPrimaryCta ? (
+                      <a
+                        className="hTopNav__btn hTopNav__btn--primary"
+                        href={primaryCtaHref}
+                        onClick={onPaidPlansClick}
+                      >
+                        {primaryCtaLabel}
+                      </a>
+                    ) : null}
+
                     <Link className="hTopNav__btn hTopNav__btn--ghost" href={entrarHref}>
                       {secondaryCtaLabel}
                     </Link>
                   </>
-                ) : (
-                  <>
-                    {/* fallback (não deve acontecer normalmente) */}
-                    {effectiveShowBuyCredits ? (
-                      <Link className={buyBtnClass} href={buyCreditsHref}>
-                        {buyCreditsLabel}
-                      </Link>
-                    ) : null}
-                    {showAccount ? (
-                      <Link className="hTopNav__btn hTopNav__btn--primary" href={accountHref}>
-                        {accountLabel}
-                      </Link>
-                    ) : null}
-                  </>
-                )}
+                ) : null}
               </div>
             ) : null}
 
+            {/* Mobile: burger (<= 819px) */}
             {showBurger ? (
               <div className="hTopNav__menuWrap" ref={menuRef}>
                 <button
@@ -342,6 +354,7 @@ export default function MarketingTopNav({
         </div>
       </header>
 
+      {/* CSS premium (auto-contido, sem depender do .mkt e sem quebrar globals.css) */}
       <style jsx global>{`
         .hTopNav {
           position: sticky;
@@ -396,6 +409,7 @@ export default function MarketingTopNav({
           gap: 10px;
         }
 
+        /* Segmented toggle (Linear-like) */
         .hTopNav__seg {
           display: inline-flex;
           align-items: center;
@@ -437,6 +451,7 @@ export default function MarketingTopNav({
           box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
         }
 
+        /* Desktop actions */
         .hTopNav__actions {
           display: none;
           align-items: center;
@@ -461,7 +476,8 @@ export default function MarketingTopNav({
           font-size: 13px;
           font-weight: 700;
           letter-spacing: 0.01em;
-          transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease, border-color 140ms ease;
+          transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease,
+            border-color 140ms ease;
           user-select: none;
           white-space: nowrap;
         }
@@ -486,6 +502,7 @@ export default function MarketingTopNav({
           background: rgba(255, 255, 255, 0.08);
         }
 
+        /* ✅ Pulse forte (sonar) no Comprar crédito quando saldo baixo */
         .hTopNav__btn--pulse::after {
           content: "";
           position: absolute;
@@ -545,6 +562,7 @@ export default function MarketingTopNav({
           box-shadow: 0 22px 62px rgba(0, 0, 0, 0.55), 0 0 56px rgba(108, 99, 255, 0.16);
         }
 
+        /* Mobile menu */
         .hTopNav__menuWrap {
           display: inline-flex;
           position: relative;
@@ -585,6 +603,7 @@ export default function MarketingTopNav({
           color: rgba(255, 255, 255, 0.9);
         }
 
+        /* Hide burger on desktop */
         @media (min-width: 820px) {
           .hTopNav__menuWrap {
             display: none;
