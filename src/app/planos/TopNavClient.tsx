@@ -85,9 +85,7 @@ export default function TopNavClient() {
               </button>
             </div>
 
-            <a className="mktCtaBtn" href="/signup">
-              Assinar
-            </a>
+            
             <a className="mktCtaBtn mktCtaGhost" href="/app/start">
               Entrar
             </a>
