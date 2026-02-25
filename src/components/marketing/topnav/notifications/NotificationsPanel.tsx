@@ -53,6 +53,7 @@ export default function NotificationsPanel({
     <div className="hNotifPanelOverlay" role="presentation" onPointerDown={onClose}>
       <div
   className="hNotifLayer__panel"
+  onPointerDown={(e) => e.stopPropagation()}
   style={{
     backgroundColor: "#ffffff",
     opacity: 1,
