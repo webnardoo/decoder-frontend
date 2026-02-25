@@ -52,12 +52,9 @@ export default function NotificationsPanel({
   return createPortal(
     <div className="hNotifPanelOverlay" role="presentation" onPointerDown={onClose}>
       <div
-  className="hNotifLayer__panel"
-  onPointerDown={(e) => e.stopPropagation()}
-  style={{
-    backgroundColor: "#ffffff",
-    opacity: 1,
-  }}
+  className="hNotifLayer__panel" onPointerDown={(e) => e.stopPropagation()}
+  
+  
 >
         <div className="hNotifPanel__head">
           <div className="hNotifPanel__title">
