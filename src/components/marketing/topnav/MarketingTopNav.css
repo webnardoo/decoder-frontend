@@ -464,14 +464,35 @@ html[data-theme="dark"] .hNotifDrop__itemMsg {
   display: block;
 }
 
-.hNotifLayer__backdrop {
-  position: absolute;
+.hNotifLayer__backdrop{
+  position: fixed;
   inset: 0;
   background: rgba(2, 6, 23, 0.28);
   border: 0;
   padding: 0;
   margin: 0;
-  cursor: pointer;
+  z-index: 9998;
+}
+
+/* container do painel (mobile = modal) */
+.hNotifLayer__panel{
+  position: relative; /* fica acima do ::before do overlay */
+  z-index: 9999;
+  background-color: #fff !important;
+  opacity: 1 !important;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+
+/* header fixo e lista com scroll */
+.hNotifLayer__header {
+  position: sticky;
+  top: 0;
+  background: inherit;
+  z-index: 1;
+  padding: 12px 12px;
+  border-bottom: 1px solid rgba(120, 120, 120, 0.12);
 }
 
 html[data-theme="dark"] .hNotifLayer__backdrop {
@@ -573,7 +594,7 @@ html[data-theme="dark"] .hNotifLayer__state--err {
   color: rgba(248, 113, 113, 0.95);
 }
 
-.hNotifLayer__list {
+.hNotifLayer__list{
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -923,7 +944,6 @@ html[data-theme="dark"] .hNotifPanel__itemMsg {
   border: 1px solid rgba(2, 6, 23, 0.08);
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 24px 64px rgba(2, 6, 23, 0.14);
-  backdrop-filter: blur(16px);
   z-index: 60;
   overflow: hidden;
 }
@@ -1282,4 +1302,82 @@ html[data-theme="dark"] .hTopNav__right button.hTopNav__cta:hover {
     font-size: 16px;            /* evita “zoom” estranho do iOS */
     line-height: 1.2;
   }
+}
+
+/* força superfície sólida no dropdown (mobile e safari) */
+
+.hNotifLayer__sheet,
+.hNotifLayer__surface {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  top: calc(env(safe-area-inset-top) + 12px);
+  bottom: calc(env(safe-area-inset-bottom) + 12px);
+
+  background-color: #ffffff !important; /* chave: deixa de ser transparente */
+  opacity: 1 !important;
+  border: 1px solid rgba(120, 120, 120, 0.18);
+  border-radius: 18px;
+
+  overflow: hidden;
+  z-index: 9999;
+
+  display: flex;
+  flex-direction: column;
+}
+
+/* backdrop sempre cobrindo a tela */
+.hNotifLayer__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.28);
+  z-index: 9998;
+}
+
+.hNotifPanelOverlay{
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: transparent;
+  opacity: 1 !important; /* CRÍTICO: nunca use opacity no container */
+}
+
+.hNotifPanelOverlay::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.28);
+}
+
+/* === HOTFIX MOBILE: Panel 100% opaco (Safari/Chrome iOS/Android) === */
+.hNotifPanelOverlay{
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: transparent;
+  opacity: 1 !important;
+}
+
+.hNotifPanelOverlay::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.28);
+}
+
+/* IMPORTANT: neutraliza "glass" em qualquer variação de seletor */
+.hNotifPanelOverlay .hNotifLayer__panel,
+.hNotifPanelOverlay .hNotifPanel__panel,
+.hNotifPanelOverlay .hNotifPanel,
+.hNotifPanelOverlay [class*="hNotifLayer__panel"]{
+  position: relative;
+  z-index: 9999;
+
+  background: #ffffff !important;
+  opacity: 1 !important;
+
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+
+  filter: none !important;
 }
