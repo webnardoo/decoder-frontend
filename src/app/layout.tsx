@@ -5,6 +5,12 @@ import "./globals.css";
 
 import Script from "next/script";
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   // ✅ Pixel via ENV pública (Vercel). Se estiver vazio, não injeta nada (fail-safe).
   const pixelId = String(process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "").trim();
