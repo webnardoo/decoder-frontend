@@ -1,4 +1,4 @@
-/*src/app/api/notifications/unread-count/route.ts*/
+// src/app/api/notifications/read-all/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
@@ -8,7 +8,7 @@ function getBackendBaseUrl() {
     process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL ||
     process.env.BACKEND_URL ||
     "http://localhost:4100"
-  );
+  ).replace(/\/+$/, "");
 }
 
 function normalizeToken(raw: string | null | undefined) {
@@ -38,7 +38,7 @@ function normalizeJourney(v: any): string | null {
   return null;
 }
 
-export async function GET() {
+export async function POST() {
   try {
     const backendBaseUrl = getBackendBaseUrl();
     const token = await getAuthTokenFromCookies();
@@ -50,37 +50,36 @@ export async function GET() {
     const jar = await cookies();
     const cookieJourney = normalizeJourney(jar.get("hitch_journey")?.value);
 
-    const upstream = await fetch(
-      `${backendBaseUrl}/api/v1/notifications/unread-count`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-          Cookie: `decoder_auth=${token}`,
-          ...(cookieJourney ? { "x-journey": cookieJourney } : {}),
-        },
-        cache: "no-store",
-      }
-    );
+    const upstreamUrl = `${backendBaseUrl}/api/v1/notifications/read-all`;
+
+    const upstream = await fetch(upstreamUrl, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+        Cookie: `decoder_auth=${token}`,
+        ...(cookieJourney ? { "x-journey": cookieJourney } : {}),
+      },
+      cache: "no-store",
+    });
 
     const text = await upstream.text().catch(() => "");
-    let data: any = null;
 
-    try {
-      data = text ? JSON.parse(text) : null;
-    } catch {
-      return NextResponse.json(
-        { message: "Resposta inválida do backend (não-JSON)." },
-        { status: 502 }
-      );
-    }
-
-    return NextResponse.json(data, { status: upstream.status });
-  } catch {
+    return new NextResponse(text, {
+      status: upstream.status,
+      headers: {
+        "content-type": upstream.headers.get("content-type") ?? "application/json",
+        "cache-control": "no-store",
+      },
+    });
+  } catch (err: any) {
     return NextResponse.json(
-      { message: "Falha ao consultar unread-count (proxy)." },
-      { status: 502 }
+      {
+        ok: false,
+        error: "PROXY_NOTIFICATION_READ_ALL_FAILED",
+        message: err?.message ?? "Unknown error",
+      },
+      { status: 500 }
     );
   }
 }
