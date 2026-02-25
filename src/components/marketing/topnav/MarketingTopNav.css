@@ -1381,3 +1381,22 @@ html[data-theme="dark"] .hTopNav__right button.hTopNav__cta:hover {
 
   filter: none !important;
 }
+
+/* HARD FIX: mobile notif dropdown must be opaque */
+.hNotifLayer__panel,
+.hNotifPanelOverlay .hNotifLayer__panel,
+.hNotifPanelOverlay .hNotifLayer__sheet,
+.hNotifPanelOverlay .hNotifPanel__panel,
+.hNotifPanelOverlay .hNotifMobile__panel,
+.hNotifPanelOverlay .hNotifMobile__sheet {
+  background-color: #fff !important;
+  opacity: 1 !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.hNotifPanelOverlay,
+.hNotifLayer__backdrop {
+  background: transparent !important;
+  opacity: 1 !important;
+}

@@ -6,6 +6,10 @@ import { createPortal } from "react-dom";
 import type { NotificationItem } from "./notifications.service";
 import { timeAgo } from "@/shared/utils/date/timeAgo";
 
+<div style={{position:"fixed", top:0, left:0, zIndex:999999, background:"#f00", color:"#fff", padding:4}}>
+  Desk_COMPONENT_RENDERED
+</div>
+
 type Props = {
   items: NotificationItem[];
   unread: number;
