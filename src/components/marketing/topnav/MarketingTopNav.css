@@ -476,21 +476,12 @@ html[data-theme="dark"] .hNotifDrop__itemMsg {
 
 /* container do painel (mobile = modal) */
 .hNotifLayer__panel{
-  position: fixed;
-  left: 12px;
-  right: 12px;
-  top: calc(env(safe-area-inset-top) + 12px);
-  bottom: calc(env(safe-area-inset-bottom) + 12px);
-
+  position: relative; /* fica acima do ::before do overlay */
+  z-index: 9999;
   background-color: #fff !important;
   opacity: 1 !important;
-
   border-radius: 18px;
   overflow: hidden;
-  z-index: 9999;
-
-  display: flex;
-  flex-direction: column;
 }
 
 
@@ -1344,3 +1335,17 @@ html[data-theme="dark"] .hTopNav__right button.hTopNav__cta:hover {
   z-index: 9998;
 }
 
+.hNotifPanelOverlay{
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: transparent;
+  opacity: 1 !important; /* CRÍTICO: nunca use opacity no container */
+}
+
+.hNotifPanelOverlay::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.28);
+}
