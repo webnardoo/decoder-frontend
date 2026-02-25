@@ -464,29 +464,28 @@ html[data-theme="dark"] .hNotifDrop__itemMsg {
   display: block;
 }
 
-.hNotifLayer__backdrop {
+.hNotifLayer__backdrop{
   position: fixed;
   inset: 0;
   background: rgba(2, 6, 23, 0.28);
   border: 0;
   padding: 0;
   margin: 0;
-  cursor: pointer;
   z-index: 9998;
 }
 
 /* container do painel (mobile = modal) */
-.hNotifLayer__panel {
+.hNotifLayer__panel{
   position: fixed;
   left: 12px;
   right: 12px;
   top: calc(env(safe-area-inset-top) + 12px);
   bottom: calc(env(safe-area-inset-bottom) + 12px);
 
-  background: var(--card, #fff);
-  border: 1px solid rgba(120, 120, 120, 0.18);
-  border-radius: 18px;
+  background-color: #fff !important;
+  opacity: 1 !important;
 
+  border-radius: 18px;
   overflow: hidden;
   z-index: 9999;
 
@@ -604,7 +603,7 @@ html[data-theme="dark"] .hNotifLayer__state--err {
   color: rgba(248, 113, 113, 0.95);
 }
 
-.hNotifLayer__list {
+.hNotifLayer__list{
   padding: 14px;
   display: flex;
   flex-direction: column;

@@ -52,11 +52,12 @@ export default function NotificationsPanel({
   return createPortal(
     <div className="hNotifPanelOverlay" role="presentation" onPointerDown={onClose}>
       <div
-        className="hNotifPanel"
-        role="dialog"
-        aria-label="Todas as notificações"
-        onPointerDown={(e) => e.stopPropagation()}
-      >
+  className="hNotifLayer__panel"
+  style={{
+    backgroundColor: "#ffffff",
+    opacity: 1,
+  }}
+>
         <div className="hNotifPanel__head">
           <div className="hNotifPanel__title">
             Notificações {unreadCount > 0 ? `(${unreadCount})` : ""}
