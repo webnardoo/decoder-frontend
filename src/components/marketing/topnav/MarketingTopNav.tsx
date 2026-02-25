@@ -101,7 +101,7 @@ export default function MarketingTopNav({
 
   return (
     <>
-      <header className="hTopNav">
+      <header className="hTopNav" data-topnav="NEW_TOPNAV_MODULE">
         <div className="hTopNav__inner">
           <Link href="/" className="hTopNav__brand" aria-label="Hitch.ai">
             <Image src={logoSrc} alt="Hitch.ai" width={32} height={32} />
