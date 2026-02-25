@@ -1,4 +1,4 @@
-// src/app/api/notifications/route.ts
+/*src/app/api/notifications/unread-count/route.ts*/
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
@@ -6,7 +6,7 @@ function getBackendBaseUrl() {
   return (
     process.env.DECODER_BACKEND_BASE_URL ||
     process.env.NEXT_PUBLIC_DECODER_BACKEND_BASE_URL ||
-    process.env.BACKEND_URL || // fallback legado (local)
+    process.env.BACKEND_URL ||
     "http://localhost:4100"
   );
 }
@@ -38,7 +38,7 @@ function normalizeJourney(v: any): string | null {
   return null;
 }
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
     const backendBaseUrl = getBackendBaseUrl();
     const token = await getAuthTokenFromCookies();
@@ -47,28 +47,22 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "Não autenticado." }, { status: 401 });
     }
 
-    const url = new URL(req.url);
-    const limit = url.searchParams.get("limit") || "20";
-    const cursor = url.searchParams.get("cursor");
-
-    const qs = new URLSearchParams();
-    qs.set("limit", String(limit));
-    if (cursor) qs.set("cursor", cursor);
-
     const jar = await cookies();
     const cookieJourney = normalizeJourney(jar.get("hitch_journey")?.value);
 
-    const upstream = await fetch(`${backendBaseUrl}/api/v1/notifications?${qs.toString()}`, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        Cookie: `decoder_auth=${token}`,
-        ...(cookieJourney ? { "x-journey": cookieJourney } : {}),
-      },
-      cache: "no-store",
-    });
+    const upstream = await fetch(
+      `${backendBaseUrl}/api/v1/notifications/unread-count`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+          Cookie: `decoder_auth=${token}`,
+          ...(cookieJourney ? { "x-journey": cookieJourney } : {}),
+        },
+        cache: "no-store",
+      }
+    );
 
     const text = await upstream.text().catch(() => "");
     let data: any = null;
@@ -77,10 +71,7 @@ export async function GET(req: Request) {
       data = text ? JSON.parse(text) : null;
     } catch {
       return NextResponse.json(
-        {
-          message: "Resposta inválida do backend (não-JSON).",
-          raw: text || null,
-        },
+        { message: "Resposta inválida do backend (não-JSON)." },
         { status: 502 }
       );
     }
@@ -88,10 +79,7 @@ export async function GET(req: Request) {
     return NextResponse.json(data, { status: upstream.status });
   } catch {
     return NextResponse.json(
-      {
-        message: "Falha ao consultar notifications (proxy).",
-        hint: "Verifique DECODER_BACKEND_BASE_URL / NEXT_PUBLIC_DECODER_BACKEND_BASE_URL.",
-      },
+      { message: "Falha ao consultar unread-count (proxy)." },
       { status: 502 }
     );
   }
