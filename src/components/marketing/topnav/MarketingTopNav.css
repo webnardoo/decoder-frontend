@@ -1,0 +1,1258 @@
+/* src/components/marketing/topnav/MarketingTopNav.css */
+
+.hTopNav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  border-bottom: 1px solid rgba(2, 6, 23, 0.06);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px);
+}
+
+html[data-theme="dark"] .hTopNav {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(18, 18, 22, 0.78);
+}
+
+.hTopNav__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .hTopNav__inner {
+    height: 60px;
+    padding: 0 14px;
+  }
+}
+
+.hTopNav__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+  font-weight: 700;
+}
+
+.hTopNav__brand span {
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+
+.hTopNav__right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ========= Segmented theme toggle (Stripe/Linear style) ========= */
+.hTopNav__theme {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(2, 6, 23, 0.12);
+  background: rgba(2, 6, 23, 0.03);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 2px;
+}
+
+html[data-theme="dark"] .hTopNav__theme {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.hTopNav__theme button {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(2, 6, 23, 0.7);
+  transition: background 140ms ease, color 140ms ease;
+}
+
+html[data-theme="dark"] .hTopNav__theme button {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.hTopNav__theme button[aria-selected="true"] {
+  background: rgba(255, 255, 255, 0.88);
+  color: rgba(2, 6, 23, 0.92);
+  box-shadow: 0 8px 20px rgba(2, 6, 23, 0.08);
+}
+
+html[data-theme="dark"] .hTopNav__theme button[aria-selected="true"] {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+}
+
+/* ========= CTA buttons (original) ========= */
+.hTopNav__btn {
+  position: relative;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease,
+    border-color 140ms ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.hTopNav__btn--ghost {
+  border: 1px solid rgba(108, 99, 255, 0.32);
+  background: transparent;
+  color: rgba(2, 6, 23, 0.82);
+}
+
+.hTopNav__btn--ghost:hover {
+  border-color: rgba(108, 99, 255, 0.55);
+  background: rgba(108, 99, 255, 0.06);
+  transform: translateY(-1px);
+}
+
+html[data-theme="dark"] .hTopNav__btn--ghost {
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(108, 99, 255, 0.28);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+html[data-theme="dark"] .hTopNav__btn--ghost:hover {
+  border-color: rgba(108, 99, 255, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.hTopNav__btn--primary {
+  border: 1px solid rgba(108, 99, 255, 0.55);
+  background: rgba(255, 255, 255, 0.7);
+  color: rgba(2, 6, 23, 0.9);
+  box-shadow: 0 10px 26px rgba(108, 99, 255, 0.14);
+  backdrop-filter: blur(10px);
+}
+
+.hTopNav__btn--primary:hover {
+  border-color: rgba(108, 99, 255, 0.78);
+  background: rgba(108, 99, 255, 0.07);
+  box-shadow: 0 14px 34px rgba(108, 99, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+html[data-theme="dark"] .hTopNav__btn--primary {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.92);
+  border-color: rgba(108, 99, 255, 0.45);
+  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.46);
+}
+
+html[data-theme="dark"] .hTopNav__btn--primary:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(108, 99, 255, 0.75);
+  box-shadow: 0 22px 62px rgba(0, 0, 0, 0.55), 0 0 56px rgba(108, 99, 255, 0.16);
+}
+
+/* Pulse strong (original) */
+.hTopNav__btn--pulse::after {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  border-radius: 999px;
+  border: 2px solid rgba(108, 99, 255, 0.34);
+  opacity: 0;
+  animation: hitchBuyPulseStrong 1.05s ease-out infinite;
+  z-index: -1;
+  pointer-events: none;
+  box-shadow: 0 0 0 0 rgba(108, 99, 255, 0);
+}
+
+@keyframes hitchBuyPulseStrong {
+  0% {
+    transform: scale(0.88);
+    opacity: 0.06;
+    box-shadow: 0 0 0 0 rgba(108, 99, 255, 0);
+  }
+  35% {
+    opacity: 0.95;
+    box-shadow: 0 0 48px 10px rgba(108, 99, 255, 0.18);
+  }
+  100% {
+    transform: scale(1.18);
+    opacity: 0;
+    box-shadow: 0 0 72px 18px rgba(108, 99, 255, 0);
+  }
+}
+
+html[data-theme="dark"] .hTopNav__btn--pulse::after {
+  border-color: rgba(108, 99, 255, 0.26);
+}
+
+/* ========= Notifications icon + badge (original) ========= */
+.hTopNav__notif {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.hTopNav__notif button {
+  position: relative;
+  height: 36px;
+  width: 40px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(2, 6, 23, 0.12);
+  background: rgba(255, 255, 255, 0.62);
+  text-decoration: none;
+  transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+  cursor: pointer;
+}
+
+.hTopNav__notif button:hover {
+  border-color: rgba(108, 99, 255, 0.55);
+  background: rgba(108, 99, 255, 0.06);
+  transform: translateY(-1px);
+}
+
+html[data-theme="dark"] .hTopNav__notif button {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="dark"] .hTopNav__notif button:hover {
+  border-color: rgba(108, 99, 255, 0.5);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.badge,
+.hTopNav__badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.98);
+  background: rgba(108, 99, 255, 0.92);
+  box-shadow: 0 10px 26px rgba(108, 99, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+html[data-theme="dark"] .badge,
+html[data-theme="dark"] .hTopNav__badge {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+/* ========= Desktop dropdown (original) ========= */
+.hNotifDrop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  width: 360px;
+  max-width: 82vw;
+  border-radius: 18px;
+  border: 1px solid rgba(2, 6, 23, 0.08);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 28px 72px rgba(2, 6, 23, 0.16);
+  backdrop-filter: blur(16px);
+  overflow: hidden;
+  z-index: 80;
+}
+
+html[data-theme="dark"] .hNotifDrop {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(18, 18, 22, 0.92);
+  box-shadow: 0 28px 72px rgba(0, 0, 0, 0.62);
+}
+
+.hNotifDrop__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px 10px 14px;
+  border-bottom: 1px solid rgba(2, 6, 23, 0.06);
+}
+
+html[data-theme="dark"] .hNotifDrop__head {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hNotifDrop__title {
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(2, 6, 23, 0.9);
+}
+
+html[data-theme="dark"] .hNotifDrop__title {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.hNotifDrop__headActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hNotifDrop__markBtn {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(2, 6, 23, 0.12);
+  background: rgba(2, 6, 23, 0.04);
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(2, 6, 23, 0.86);
+  cursor: pointer;
+}
+
+.hNotifDrop__markBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+html[data-theme="dark"] .hNotifDrop__markBtn {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.hNotifDrop__allBtn {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(108, 99, 255, 0.35);
+  background: rgba(108, 99, 255, 0.08);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(2, 6, 23, 0.86);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+html[data-theme="dark"] .hNotifDrop__allBtn {
+  color: rgba(255, 255, 255, 0.92);
+  border-color: rgba(108, 99, 255, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.hNotifDrop__state {
+  padding: 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(2, 6, 23, 0.68);
+}
+
+.hNotifDrop__state--err {
+  color: rgba(220, 38, 38, 0.95);
+}
+
+html[data-theme="dark"] .hNotifDrop__state {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+html[data-theme="dark"] .hNotifDrop__state--err {
+  color: rgba(248, 113, 113, 0.95);
+}
+
+.hNotifDrop__list {
+  padding: 10px 12px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hNotifDrop__item {
+  width: 100%;
+  text-align: left;
+  border-radius: 14px;
+  border: 1px solid rgba(2, 6, 23, 0.08);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.hNotifDrop__item.isUnread {
+  border-color: rgba(108, 99, 255, 0.35);
+  background: rgba(108, 99, 255, 0.08);
+}
+
+.hNotifDrop__item.isRead {
+  opacity: 0.78;
+}
+
+html[data-theme="dark"] .hNotifDrop__item {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="dark"] .hNotifDrop__item.isUnread {
+  border-color: rgba(108, 99, 255, 0.35);
+  background: rgba(108, 99, 255, 0.12);
+}
+
+.hNotifDrop__itemTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.hNotifDrop__itemTitle {
+  font-size: 13px;
+  font-weight: 900;
+  color: rgba(2, 6, 23, 0.9);
+}
+
+html[data-theme="dark"] .hNotifDrop__itemTitle {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.hNotifDrop__itemTime {
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(2, 6, 23, 0.55);
+}
+
+html[data-theme="dark"] .hNotifDrop__itemTime {
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.hNotifDrop__itemMsg {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(2, 6, 23, 0.72);
+  line-height: 1.25;
+}
+
+html[data-theme="dark"] .hNotifDrop__itemMsg {
+  color: rgba(255, 255, 255, 0.74);
+}
+
+/* ========= Mobile layer (slide from right) ========= */
+.hNotifLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: block;
+}
+
+.hNotifLayer__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.28);
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+html[data-theme="dark"] .hNotifLayer__backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.hNotifLayer__sheet {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.98);
+  transform: translateX(100%);
+  animation: hitchSlideInRight 220ms ease-out forwards;
+  box-shadow: -18px 0 64px rgba(2, 6, 23, 0.18);
+}
+
+html[data-theme="dark"] .hNotifLayer__sheet {
+  background: rgba(18, 18, 22, 0.98);
+  box-shadow: -18px 0 72px rgba(0, 0, 0, 0.62);
+}
+
+@keyframes hitchSlideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0%);
+  }
+}
+
+.hNotifLayer__top {
+  height: 56px;
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  padding: 0 10px;
+  border-bottom: 1px solid rgba(2, 6, 23, 0.06);
+}
+
+html[data-theme="dark"] .hNotifLayer__top {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hNotifLayer__back,
+.hNotifLayer__close {
+  height: 40px;
+  width: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(2, 6, 23, 0.12);
+  background: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 900;
+  color: rgba(2, 6, 23, 0.82);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+html[data-theme="dark"] .hNotifLayer__back,
+html[data-theme="dark"] .hNotifLayer__close {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.hNotifLayer__title {
+  font-size: 15px;
+  font-weight: 900;
+  color: rgba(2, 6, 23, 0.9);
+  text-align: center;
+}
+
+html[data-theme="dark"] .hNotifLayer__title {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.hNotifLayer__body {
+  height: calc(100% - 56px);
+  display: flex;
+  flex-direction: column;
+}
+
+.hNotifLayer__state {
+  padding: 16px;
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(2, 6, 23, 0.68);
+}
+
+.hNotifLayer__state--err {
+  color: rgba(220, 38, 38, 0.95);
+}
+
+html[data-theme="dark"] .hNotifLayer__state {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+html[data-theme="dark"] .hNotifLayer__state--err {
+  color: rgba(248, 113, 113, 0.95);
+}
+
+.hNotifLayer__list {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+}
+
+.hNotifLayer__item {
+  width: 100%;
+  text-align: left;
+  border-radius: 16px;
+  border: 1px solid rgba(2, 6, 23, 0.08);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 12px 12px;
+  cursor: pointer;
+}
+
+.hNotifLayer__item.isUnread {
+  border-color: rgba(108, 99, 255, 0.35);
+  background: rgba(108, 99, 255, 0.08);
+}
+
+.hNotifLayer__item.isRead {
+  opacity: 0.82;
+}
+
+html[data-theme="dark"] .hNotifLayer__item {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="dark"] .hNotifLayer__item.isUnread {
+  border-color: rgba(108, 99, 255, 0.35);
+  background: rgba(108, 99, 255, 0.12);
+}
+
+.hNotifLayer__itemTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.hNotifLayer__itemTitle {
+  font-size: 14px;
+  font-weight: 900;
+  color: rgba(2, 6, 23, 0.9);
+}
+
+html[data-theme="dark"] .hNotifLayer__itemTitle {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.hNotifLayer__itemTime {
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(2, 6, 23, 0.55);
+}
+
+html[data-theme="dark"] .hNotifLayer__itemTime {
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.hNotifLayer__itemMsg {
+  font-size: 13px;
+  font-weight: 750;
+  color: rgba(2, 6, 23, 0.72);
+  line-height: 1.28;
+}
+
+html[data-theme="dark"] .hNotifLayer__itemMsg {
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.hNotifLayer__footer {
+  padding: 12px 14px 16px 14px;
+  border-top: 1px solid rgba(2, 6, 23, 0.06);
+}
+
+html[data-theme="dark"] .hNotifLayer__footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hNotifLayer__all {
+  width: 100%;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(108, 99, 255, 0.35);
+  background: rgba(108, 99, 255, 0.08);
+  font-size: 14px;
+  font-weight: 900;
+  color: rgba(2, 6, 23, 0.88);
+  cursor: pointer;
+}
+
+html[data-theme="dark"] .hNotifLayer__all {
+  color: rgba(255, 255, 255, 0.92);
+  border-color: rgba(108, 99, 255, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ========= Full panel overlay (original) ========= */
+.hNotifPanel {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  display: block;
+}
+
+.hNotifPanel__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.34);
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+html[data-theme="dark"] .hNotifPanel__backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.hNotifPanel__sheet {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: min(520px, 92vw);
+  background: rgba(255, 255, 255, 0.98);
+  border-left: 1px solid rgba(2, 6, 23, 0.08);
+  box-shadow: -18px 0 72px rgba(2, 6, 23, 0.18);
+  animation: hitchPanelIn 220ms ease-out forwards;
+  display: flex;
+  flex-direction: column;
+}
+
+html[data-theme="dark"] .hNotifPanel__sheet {
+  background: rgba(18, 18, 22, 0.98);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: -18px 0 80px rgba(0, 0, 0, 0.65);
+}
+
+@keyframes hitchPanelIn {
+  from {
+    transform: translateX(8%);
+    opacity: 0.75;
+  }
+  to {
+    transform: translateX(0%);
+    opacity: 1;
+  }
+}
+
+.hNotifPanel__top {
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  border-bottom: 1px solid rgba(2, 6, 23, 0.06);
+}
+
+html[data-theme="dark"] .hNotifPanel__top {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hNotifPanel__title {
+  font-size: 15px;
+  font-weight: 900;
+  color: rgba(2, 6, 23, 0.9);
+}
+
+html[data-theme="dark"] .hNotifPanel__title {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.hNotifPanel__topActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hNotifPanel__markBtn {
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(2, 6, 23, 0.12);
+  background: rgba(2, 6, 23, 0.04);
+  font-size: 13px;
+  font-weight: 900;
+  color: rgba(2, 6, 23, 0.86);
+  cursor: pointer;
+}
+
+.hNotifPanel__markBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+html[data-theme="dark"] .hNotifPanel__markBtn {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.hNotifPanel__close {
+  height: 40px;
+  width: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(2, 6, 23, 0.12);
+  background: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 900;
+  color: rgba(2, 6, 23, 0.82);
+}
+
+html[data-theme="dark"] .hNotifPanel__close {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.hNotifPanel__body {
+  flex: 1;
+  overflow: auto;
+  padding: 14px;
+}
+
+.hNotifPanel__state {
+  padding: 14px 2px;
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(2, 6, 23, 0.68);
+}
+
+.hNotifPanel__state--err {
+  color: rgba(220, 38, 38, 0.95);
+}
+
+html[data-theme="dark"] .hNotifPanel__state {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+html[data-theme="dark"] .hNotifPanel__state--err {
+  color: rgba(248, 113, 113, 0.95);
+}
+
+.hNotifPanel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hNotifPanel__item {
+  width: 100%;
+  text-align: left;
+  border-radius: 16px;
+  border: 1px solid rgba(2, 6, 23, 0.08);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 12px 12px;
+  cursor: pointer;
+}
+
+.hNotifPanel__item.isUnread {
+  border-color: rgba(108, 99, 255, 0.35);
+  background: rgba(108, 99, 255, 0.08);
+}
+
+.hNotifPanel__item.isRead {
+  opacity: 0.82;
+}
+
+html[data-theme="dark"] .hNotifPanel__item {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="dark"] .hNotifPanel__item.isUnread {
+  border-color: rgba(108, 99, 255, 0.35);
+  background: rgba(108, 99, 255, 0.12);
+}
+
+.hNotifPanel__itemTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.hNotifPanel__itemTitle {
+  font-size: 14px;
+  font-weight: 900;
+  color: rgba(2, 6, 23, 0.9);
+}
+
+html[data-theme="dark"] .hNotifPanel__itemTitle {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.hNotifPanel__itemTime {
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(2, 6, 23, 0.55);
+}
+
+html[data-theme="dark"] .hNotifPanel__itemTime {
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.hNotifPanel__itemMsg {
+  font-size: 13px;
+  font-weight: 750;
+  color: rgba(2, 6, 23, 0.72);
+  line-height: 1.28;
+}
+
+html[data-theme="dark"] .hNotifPanel__itemMsg {
+  color: rgba(255, 255, 255, 0.74);
+}
+/* =========================
+   NOTIF DROPDOWN (DESKTOP)
+   ========================= */
+
+.hNotifDrop__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  cursor: default;
+}
+
+.hNotifDrop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  width: min(420px, 92vw);
+  border-radius: 16px;
+  border: 1px solid rgba(2, 6, 23, 0.08);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 24px 64px rgba(2, 6, 23, 0.14);
+  backdrop-filter: blur(16px);
+  z-index: 60;
+  overflow: hidden;
+}
+
+html[data-theme="dark"] .hNotifDrop {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(18, 18, 22, 0.92);
+  box-shadow: 0 28px 72px rgba(0, 0, 0, 0.6);
+}
+
+.hNotifDrop__head {
+  padding: 12px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid rgba(2, 6, 23, 0.06);
+}
+
+html[data-theme="dark"] .hNotifDrop__head {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hNotifDrop__title {
+  font-size: 14px;
+  font-weight: 900;
+  color: rgba(2, 6, 23, 0.9);
+}
+
+html[data-theme="dark"] .hNotifDrop__title {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.hNotifDrop__headActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hNotifDrop__allBtn {
+  border-color: rgba(108, 99, 255, 0.35);
+  background: rgba(108, 99, 255, 0.08);
+}
+
+.hNotifDrop__markBtn,
+.hNotifDrop__allBtn {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(2, 6, 23, 0.12);
+  background: rgba(2, 6, 23, 0.04);
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(2, 6, 23, 0.86);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.hNotifDrop__markBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+html[data-theme="dark"] .hNotifDrop__markBtn,
+html[data-theme="dark"] .hNotifDrop__allBtn {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.hNotifDrop__state {
+  padding: 14px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(2, 6, 23, 0.68);
+}
+
+.hNotifDrop__state--err {
+  color: rgba(220, 38, 38, 0.95);
+}
+
+html[data-theme="dark"] .hNotifDrop__state {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+html[data-theme="dark"] .hNotifDrop__state--err {
+  color: rgba(248, 113, 113, 0.95);
+}
+
+.hNotifDrop__list {
+  max-height: 360px;
+  overflow: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hNotifDrop__item {
+  width: 100%;
+  text-align: left;
+  border-radius: 14px;
+  border: 1px solid rgba(2, 6, 23, 0.08);
+  background: rgba(255, 255, 255, 0.6);
+  padding: 12px 12px;
+  cursor: pointer;
+}
+
+.hNotifDrop__item.isUnread {
+  border-color: rgba(108, 99, 255, 0.35);
+  background: rgba(108, 99, 255, 0.08);
+}
+
+.hNotifDrop__item.isRead {
+  opacity: 0.86;
+}
+
+html[data-theme="dark"] .hNotifDrop__item {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="dark"] .hNotifDrop__item.isUnread {
+  border-color: rgba(108, 99, 255, 0.35);
+  background: rgba(108, 99, 255, 0.12);
+}
+
+.hNotifDrop__itemTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.hNotifDrop__itemTitle {
+  font-size: 13px;
+  font-weight: 900;
+  color: rgba(2, 6, 23, 0.9);
+}
+
+html[data-theme="dark"] .hNotifDrop__itemTitle {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.hNotifDrop__itemTime {
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(2, 6, 23, 0.55);
+  white-space: nowrap;
+}
+
+html[data-theme="dark"] .hNotifDrop__itemTime {
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.hNotifDrop__itemMsg {
+  font-size: 13px;
+  font-weight: 750;
+  color: rgba(2, 6, 23, 0.72);
+  line-height: 1.28;
+}
+
+html[data-theme="dark"] .hNotifDrop__itemMsg {
+  color: rgba(255, 255, 255, 0.74);
+}
+.hTopNav__notif {
+  position: relative;
+}
+/* ===== FIX: garantir layout do dropdown independente do CSS global ===== */
+.hNotifDrop,
+.hNotifDrop * {
+  box-sizing: border-box;
+}
+
+.hNotifDrop {
+  display: block;
+}
+
+.hNotifDrop__list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+}
+
+.hNotifDrop__item {
+  display: block !important;
+  width: 100% !important;
+  text-align: left !important;
+  white-space: normal !important;
+  line-height: 1.25 !important;
+  padding: 12px 12px !important;
+}
+
+.hNotifDrop__itemTop {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+}
+
+.hNotifDrop__itemTitle,
+.hNotifDrop__itemTime,
+.hNotifDrop__itemMsg {
+  display: block !important;
+  position: static !important;
+  float: none !important;
+  transform: none !important;
+}
+.hNotifDrop__list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.hNotifDrop__list::-webkit-scrollbar-thumb {
+  background: rgba(108, 99, 255, 0.35);
+  border-radius: 999px;
+}
+/* overlay clicável para fechar o dropdown */
+.hNotifDropOverlay{
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: transparent;
+  pointer-events: auto;
+}
+
+/* o dropdown fica acima do overlay */
+.hNotifDrop{
+  position: absolute;
+  top: 64px;
+  right: 16px;
+  z-index: 1000;
+}
+.hTopNav__right a,
+.hTopNav__right button.hTopNav__cta {
+  position: relative;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease,
+    border-color 140ms ease;
+  user-select: none;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Primary (primeiro CTA) */
+.hTopNav__right a:first-of-type {
+  border: 1px solid rgba(108, 99, 255, 0.55);
+  background: rgba(255, 255, 255, 0.7);
+  color: rgba(2, 6, 23, 0.9);
+  box-shadow: 0 10px 26px rgba(108, 99, 255, 0.14);
+  backdrop-filter: blur(10px);
+}
+
+.hTopNav__right a:first-of-type:hover {
+  border-color: rgba(108, 99, 255, 0.78);
+  background: rgba(108, 99, 255, 0.07);
+  box-shadow: 0 14px 34px rgba(108, 99, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+html[data-theme="dark"] .hTopNav__right a:first-of-type {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.92);
+  border-color: rgba(108, 99, 255, 0.45);
+  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.46);
+}
+
+html[data-theme="dark"] .hTopNav__right a:first-of-type:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(108, 99, 255, 0.75);
+  box-shadow: 0 22px 62px rgba(0, 0, 0, 0.55),
+    0 0 56px rgba(108, 99, 255, 0.16);
+}
+
+/* Ghost (segundo CTA) */
+.hTopNav__right a:last-of-type {
+  border: 1px solid rgba(108, 99, 255, 0.32);
+  background: transparent;
+  color: rgba(2, 6, 23, 0.82);
+}
+
+.hTopNav__right a:last-of-type:hover {
+  border-color: rgba(108, 99, 255, 0.55);
+  background: rgba(108, 99, 255, 0.06);
+  transform: translateY(-1px);
+}
+
+html[data-theme="dark"] .hTopNav__right a:last-of-type {
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(108, 99, 255, 0.28);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+html[data-theme="dark"] .hTopNav__right a:last-of-type:hover {
+  border-color: rgba(108, 99, 255, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ✅ Conta: mesmo estilo do “ghost” */
+.hTopNav__right button.hTopNav__cta {
+  border: 1px solid rgba(108, 99, 255, 0.32);
+  color: rgba(2, 6, 23, 0.82);
+}
+
+.hTopNav__right button.hTopNav__cta:hover {
+  border-color: rgba(108, 99, 255, 0.55);
+  background: rgba(108, 99, 255, 0.06);
+  transform: translateY(-1px);
+}
+
+html[data-theme="dark"] .hTopNav__right button.hTopNav__cta {
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(108, 99, 255, 0.28);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+html[data-theme="dark"] .hTopNav__right button.hTopNav__cta:hover {
+  border-color: rgba(108, 99, 255, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+}
