@@ -100,7 +100,11 @@ export default function MarketingTopNav({
   }
 
   return (
+    
     <>
+    <div style={{ position: "fixed", top: 0, right: 0, zIndex: 9999999, background: "#0f0", color: "#000", padding: 6 }}>
+  TOPNAV_RUNNING
+</div>
       <header className="hTopNav" data-topnav="NEW_TOPNAV_MODULE">
         <div className="hTopNav__inner">
           <Link href="/" className="hTopNav__brand" aria-label="Hitch.ai">
