@@ -1256,3 +1256,30 @@ html[data-theme="dark"] .hTopNav__right button.hTopNav__cta:hover {
   border-color: rgba(108, 99, 255, 0.5);
   background: rgba(255, 255, 255, 0.08);
 }
+
+/* MOBILE: dropdown não pode ser cortado por overflow do header */
+@media (max-width: 768px) {
+  .mTopNav { overflow: visible; } /* se existir wrapper com overflow */
+  .mTopNav__right { overflow: visible; }
+
+  .mTopNav__accountMenu {
+    position: fixed;            /* <- em vez de absolute */
+    left: 12px;
+    right: 12px;
+    top: 64px;                  /* ajuste conforme altura do topnav */
+    z-index: 9999;
+    max-height: calc(100vh - 80px);
+    overflow: auto;
+
+    border-radius: 14px;
+    border: 1px solid var(--border, rgba(0,0,0,.12));
+    background: var(--card, #fff);
+    box-shadow: 0 18px 60px rgba(0,0,0,.18);
+  }
+
+  .mTopNav__accountMenuItem {
+    padding: 12px 14px;
+    font-size: 16px;            /* evita “zoom” estranho do iOS */
+    line-height: 1.2;
+  }
+}
