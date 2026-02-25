@@ -2,10 +2,11 @@
 /*src/app/layout.tsx*/
 import type { ReactNode } from "react";
 import "./globals.css";
+import type { Viewport } from "next";
 
 import Script from "next/script";
 
-export const viewport = {
+export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
