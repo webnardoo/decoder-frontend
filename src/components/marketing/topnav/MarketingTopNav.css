@@ -944,7 +944,6 @@ html[data-theme="dark"] .hNotifPanel__itemMsg {
   border: 1px solid rgba(2, 6, 23, 0.08);
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 24px 64px rgba(2, 6, 23, 0.14);
-  backdrop-filter: blur(16px);
   z-index: 60;
   overflow: hidden;
 }
@@ -1306,7 +1305,7 @@ html[data-theme="dark"] .hTopNav__right button.hTopNav__cta:hover {
 }
 
 /* força superfície sólida no dropdown (mobile e safari) */
-.hNotifLayer__panel,
+
 .hNotifLayer__sheet,
 .hNotifLayer__surface {
   position: fixed;
@@ -1348,4 +1347,37 @@ html[data-theme="dark"] .hTopNav__right button.hTopNav__cta:hover {
   position: absolute;
   inset: 0;
   background: rgba(2, 6, 23, 0.28);
+}
+
+/* === HOTFIX MOBILE: Panel 100% opaco (Safari/Chrome iOS/Android) === */
+.hNotifPanelOverlay{
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: transparent;
+  opacity: 1 !important;
+}
+
+.hNotifPanelOverlay::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.28);
+}
+
+/* IMPORTANT: neutraliza "glass" em qualquer variação de seletor */
+.hNotifPanelOverlay .hNotifLayer__panel,
+.hNotifPanelOverlay .hNotifPanel__panel,
+.hNotifPanelOverlay .hNotifPanel,
+.hNotifPanelOverlay [class*="hNotifLayer__panel"]{
+  position: relative;
+  z-index: 9999;
+
+  background: #ffffff !important;
+  opacity: 1 !important;
+
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+
+  filter: none !important;
 }
