@@ -1,4 +1,3 @@
-// src/components/marketing/topnav/notifications/NotificationsMobile.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -6,21 +5,15 @@ import { createPortal } from "react-dom";
 import type { NotificationItem } from "./notifications.service";
 import { timeAgo } from "@/shared/utils/date/timeAgo";
 
-<div style={{position:"fixed", top:0, left:0, zIndex:999999, background:"#f00", color:"#fff", padding:4}}>
-  MOBILE_COMPONENT_RENDERED
-</div>
-
 type Props = {
   items: NotificationItem[];
   unread: number;
   loading: boolean;
   error: string | null;
 
-  onMarkAll: () => void | Promise<void>;
-  onClickItem: (n: NotificationItem) => void | Promise<void>;
-
-  // fecha
   onClose: () => void;
+  onClickItem: (n: NotificationItem) => void | Promise<void>;
+  onMarkAll: () => void | Promise<void>;
 };
 
 export default function NotificationsMobile({
@@ -28,9 +21,9 @@ export default function NotificationsMobile({
   unread,
   loading,
   error,
-  onMarkAll,
-  onClickItem,
   onClose,
+  onClickItem,
+  onMarkAll,
 }: Props) {
   const [mounted, setMounted] = useState(false);
 
@@ -41,7 +34,22 @@ export default function NotificationsMobile({
     setMounted(true);
   }, []);
 
-  // ESC fecha
+  // trava scroll do fundo (iOS/Android)
+  useEffect(() => {
+    if (!mounted) return;
+
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    const prevBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.documentElement.style.overflow = prevHtmlOverflow;
+      document.body.style.overflow = prevBodyOverflow;
+    };
+  }, [mounted]);
+
+  // ESC fecha (desktop devtools)
   useEffect(() => {
     if (!mounted) return;
 
@@ -54,38 +62,85 @@ export default function NotificationsMobile({
 
   if (!mounted) return null;
 
- return createPortal(
-  <div className="hNotifLayerOverlay" role="presentation" onClick={onClose}>
-    <div
-      className="hNotifLayer"
-      role="dialog"
-      aria-label="Notificações"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="hNotifLayer__head">
-        <div className="hNotifLayer__title">
-          Notificações {unreadCount > 0 ? `(${unreadCount})` : ""}
-        </div>
+  return createPortal(
+    <div className="hNotifLayer" role="dialog" aria-label="Notificações">
+      {/* backdrop: fecha ao clicar */}
+      <button
+        type="button"
+        className="hNotifLayer__backdrop"
+        aria-label="Fechar notificações"
+        onClick={onClose}
+      />
 
-        <div className="hNotifLayer__actions">
+      {/* sheet: superfície sólida + scroll interno (classe que seu CSS espera) */}
+      <div className="hNotifLayer__sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="hNotifLayer__top">
+          <button type="button" className="hNotifLayer__back" onClick={onClose} aria-label="Fechar">
+            ←
+          </button>
+
+          <div className="hNotifLayer__title">
+            Notificações {unreadCount > 0 ? `(${unreadCount})` : ""}
+          </div>
+
           <button
             type="button"
-            className="hNotifLayer__markBtn"
-            onClick={onMarkAll}
-            disabled={!hasUnread}
+            className="hNotifLayer__close"
+            onClick={onClose}
+            aria-label="Fechar"
           >
-            Marcar como lidas
-          </button>
-
-          <button type="button" className="hNotifLayer__closeBtn" onClick={onClose}>
-            Fechar
+            ✕
           </button>
         </div>
-      </div>
 
-      {/* ...restante do conteúdo... */}
-    </div>
-  </div>,
-  document.body
-);
+        <div className="hNotifLayer__body">
+          {loading ? (
+            <div className="hNotifLayer__state">Carregando…</div>
+          ) : error ? (
+            <div className="hNotifLayer__state hNotifLayer__state--err">{error}</div>
+          ) : items.length === 0 ? (
+            <div className="hNotifLayer__state">Nenhuma notificação encontrada.</div>
+          ) : (
+            <div className="hNotifLayer__list">
+              {items.map((n, idx) => {
+                const id = String(n?.id || "").trim();
+                const isUnread = !n.readAt;
+                const key = id ? id : `notif_${idx}`;
+
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`hNotifLayer__item ${isUnread ? "isUnread" : "isRead"}`}
+                    onClick={() => onClickItem(n)}
+                  >
+                    <div className="hNotifLayer__itemTop">
+                      <div className="hNotifLayer__itemTitle">{n.title || "Notificação"}</div>
+                      <div className="hNotifLayer__itemTime">
+                        {n.createdAt ? timeAgo(n.createdAt) : ""}
+                      </div>
+                    </div>
+
+                    {n.message ? <div className="hNotifLayer__itemMsg">{n.message}</div> : null}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="hNotifLayer__footer">
+            <button
+              type="button"
+              className="hNotifLayer__all"
+              onClick={onMarkAll}
+              disabled={!hasUnread}
+            >
+              Marcar como lidas
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
 }
