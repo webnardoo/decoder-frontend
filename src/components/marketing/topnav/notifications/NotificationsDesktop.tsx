@@ -21,6 +21,9 @@ type Props = {
 
   // ✅ hover marca como lida (sem navegar)
   onHoverItemId?: (id: string) => void | Promise<void>;
+
+  // ✅ âncora (sino) para posicionar o dropdown corretamente
+  anchorEl?: HTMLElement | null;
 };
 
 export default function NotificationsDesktop({
@@ -33,8 +36,10 @@ export default function NotificationsDesktop({
   onOpenAll,
   onRequestClose,
   onHoverItemId,
+  anchorEl,
 }: Props) {
   const [mounted, setMounted] = useState(false);
+  const [pos, setPos] = useState<{ top: number; right: number }>({ top: 74, right: 16 });
 
   const unreadCount = unread ?? 0;
   const hasUnread = useMemo(() => items.some((n) => !n.readAt), [items]);
@@ -54,6 +59,43 @@ export default function NotificationsDesktop({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [mounted, onRequestClose]);
 
+  // trava scroll do body enquanto o dropdown estiver aberto (evita “scroll da página por trás”)
+  useEffect(() => {
+    if (!mounted) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [mounted]);
+
+  // posiciona o dropdown com base no sino (portal-safe)
+  useEffect(() => {
+    if (!mounted) return;
+
+    function compute() {
+      if (!anchorEl) {
+        setPos({ top: 74, right: 16 });
+        return;
+      }
+      const r = anchorEl.getBoundingClientRect();
+      const top = Math.round(r.bottom + 10);
+      const right = Math.max(12, Math.round(window.innerWidth - r.right));
+      setPos({ top, right });
+    }
+
+    compute();
+
+    // reposiciona em scroll/resize (captura scroll em qualquer container)
+    window.addEventListener("resize", compute);
+    window.addEventListener("scroll", compute, true);
+
+    return () => {
+      window.removeEventListener("resize", compute);
+      window.removeEventListener("scroll", compute, true);
+    };
+  }, [mounted, anchorEl]);
+
   function handleHover(n: NotificationItem) {
     if (!onHoverItemId) return;
 
@@ -67,12 +109,30 @@ export default function NotificationsDesktop({
   if (!mounted) return null;
 
   return createPortal(
-    <div className="hNotifDropOverlay" role="presentation" onPointerDown={() => onRequestClose()}>
+    <div
+      // Backdrop precisa existir pra fechar ao clicar fora,
+      // mas NÃO pode bloquear o TopNav (sino) => zIndex menor que o header
+      className="hNotifDrop__backdrop"
+      role="presentation"
+      onPointerDown={() => onRequestClose()}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "transparent",
+        zIndex: 40, // header tem z-index 50
+      }}
+    >
       <div
         className="hNotifDrop"
         role="dialog"
         aria-label="Notificações"
         onPointerDown={(e) => e.stopPropagation()}
+        style={{
+          position: "fixed",
+          top: pos.top,
+          right: pos.right,
+          zIndex: 60, // acima do conteúdo (e abaixo/fora do sino porque não cobre o topo)
+        }}
       >
         <div className="hNotifDrop__head">
           <div className="hNotifDrop__title">
@@ -109,7 +169,6 @@ export default function NotificationsDesktop({
               const id = String(n?.id || "").trim();
               const isUnread = !n.readAt;
 
-              // ✅ key estável mesmo se vier id vazio (não quebra render)
               const key = id ? id : `notif_${idx}`;
 
               return (
@@ -117,7 +176,7 @@ export default function NotificationsDesktop({
                   key={key}
                   type="button"
                   className={`hNotifDrop__item ${isUnread ? "isUnread" : "isRead"}`}
-                  onMouseEnter={() => handleHover(n)} // ✅ evento único e determinístico
+                  onMouseEnter={() => handleHover(n)}
                   onClick={() => onClickItem(n)}
                 >
                   <div className="hNotifDrop__itemTop">

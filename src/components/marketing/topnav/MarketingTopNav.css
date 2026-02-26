@@ -1,5 +1,8 @@
 /* src/components/marketing/topnav/MarketingTopNav.css */
 
+/* =========================================
+   TOPNAV (base)
+   ========================================= */
 .hTopNav {
   position: sticky;
   top: 0;
@@ -53,7 +56,7 @@ html[data-theme="dark"] .hTopNav {
   gap: 10px;
 }
 
-/* ========= Segmented theme toggle (Stripe/Linear style) ========= */
+/* ========= Segmented theme toggle ========= */
 .hTopNav__theme {
   display: inline-flex;
   align-items: center;
@@ -98,8 +101,9 @@ html[data-theme="dark"] .hTopNav__theme button[aria-selected="true"] {
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
 }
 
-/* ========= CTA buttons (original) ========= */
-.hTopNav__btn {
+/* ========= CTA base ========= */
+.hTopNav__right a,
+.hTopNav__right button.hTopNav__cta {
   position: relative;
   height: 36px;
   padding: 0 14px;
@@ -115,32 +119,13 @@ html[data-theme="dark"] .hTopNav__theme button[aria-selected="true"] {
     border-color 140ms ease;
   user-select: none;
   white-space: nowrap;
-}
-
-.hTopNav__btn--ghost {
-  border: 1px solid rgba(108, 99, 255, 0.32);
+  border: 1px solid transparent;
   background: transparent;
-  color: rgba(2, 6, 23, 0.82);
+  cursor: pointer;
 }
 
-.hTopNav__btn--ghost:hover {
-  border-color: rgba(108, 99, 255, 0.55);
-  background: rgba(108, 99, 255, 0.06);
-  transform: translateY(-1px);
-}
-
-html[data-theme="dark"] .hTopNav__btn--ghost {
-  color: rgba(255, 255, 255, 0.9);
-  border-color: rgba(108, 99, 255, 0.28);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-html[data-theme="dark"] .hTopNav__btn--ghost:hover {
-  border-color: rgba(108, 99, 255, 0.5);
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.hTopNav__btn--primary {
+/* Primary (primeiro CTA) */
+.hTopNav__right a:first-of-type {
   border: 1px solid rgba(108, 99, 255, 0.55);
   background: rgba(255, 255, 255, 0.7);
   color: rgba(2, 6, 23, 0.9);
@@ -148,66 +133,79 @@ html[data-theme="dark"] .hTopNav__btn--ghost:hover {
   backdrop-filter: blur(10px);
 }
 
-.hTopNav__btn--primary:hover {
+.hTopNav__right a:first-of-type:hover {
   border-color: rgba(108, 99, 255, 0.78);
   background: rgba(108, 99, 255, 0.07);
   box-shadow: 0 14px 34px rgba(108, 99, 255, 0.2);
   transform: translateY(-1px);
 }
 
-html[data-theme="dark"] .hTopNav__btn--primary {
+html[data-theme="dark"] .hTopNav__right a:first-of-type {
   background: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.92);
   border-color: rgba(108, 99, 255, 0.45);
   box-shadow: 0 18px 52px rgba(0, 0, 0, 0.46);
 }
 
-html[data-theme="dark"] .hTopNav__btn--primary:hover {
+html[data-theme="dark"] .hTopNav__right a:first-of-type:hover {
   background: rgba(255, 255, 255, 0.14);
   border-color: rgba(108, 99, 255, 0.75);
-  box-shadow: 0 22px 62px rgba(0, 0, 0, 0.55), 0 0 56px rgba(108, 99, 255, 0.16);
+  box-shadow: 0 22px 62px rgba(0, 0, 0, 0.55),
+    0 0 56px rgba(108, 99, 255, 0.16);
 }
 
-/* Pulse strong (original) */
-.hTopNav__btn--pulse::after {
-  content: "";
-  position: absolute;
-  inset: -12px;
-  border-radius: 999px;
-  border: 2px solid rgba(108, 99, 255, 0.34);
-  opacity: 0;
-  animation: hitchBuyPulseStrong 1.05s ease-out infinite;
-  z-index: -1;
-  pointer-events: none;
-  box-shadow: 0 0 0 0 rgba(108, 99, 255, 0);
+/* Ghost (segundo CTA) */
+.hTopNav__right a:last-of-type {
+  border: 1px solid rgba(108, 99, 255, 0.32);
+  background: transparent;
+  color: rgba(2, 6, 23, 0.82);
 }
 
-@keyframes hitchBuyPulseStrong {
-  0% {
-    transform: scale(0.88);
-    opacity: 0.06;
-    box-shadow: 0 0 0 0 rgba(108, 99, 255, 0);
-  }
-  35% {
-    opacity: 0.95;
-    box-shadow: 0 0 48px 10px rgba(108, 99, 255, 0.18);
-  }
-  100% {
-    transform: scale(1.18);
-    opacity: 0;
-    box-shadow: 0 0 72px 18px rgba(108, 99, 255, 0);
-  }
+.hTopNav__right a:last-of-type:hover {
+  border-color: rgba(108, 99, 255, 0.55);
+  background: rgba(108, 99, 255, 0.06);
+  transform: translateY(-1px);
 }
 
-html[data-theme="dark"] .hTopNav__btn--pulse::after {
-  border-color: rgba(108, 99, 255, 0.26);
+html[data-theme="dark"] .hTopNav__right a:last-of-type {
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(108, 99, 255, 0.28);
+  background: rgba(255, 255, 255, 0.04);
 }
 
-/* ========= Notifications icon + badge (original) ========= */
+html[data-theme="dark"] .hTopNav__right a:last-of-type:hover {
+  border-color: rgba(108, 99, 255, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Conta (mesmo estilo do ghost) */
+.hTopNav__right button.hTopNav__cta {
+  border: 1px solid rgba(108, 99, 255, 0.32);
+  color: rgba(2, 6, 23, 0.82);
+}
+
+.hTopNav__right button.hTopNav__cta:hover {
+  border-color: rgba(108, 99, 255, 0.55);
+  background: rgba(108, 99, 255, 0.06);
+  transform: translateY(-1px);
+}
+
+html[data-theme="dark"] .hTopNav__right button.hTopNav__cta {
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(108, 99, 255, 0.28);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+html[data-theme="dark"] .hTopNav__right button.hTopNav__cta:hover {
+  border-color: rgba(108, 99, 255, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ========= Notifications icon + badge ========= */
 .hTopNav__notif {
-  position: relative;
   display: inline-flex;
   align-items: center;
+  position: relative;
 }
 
 .hTopNav__notif button {
@@ -267,7 +265,24 @@ html[data-theme="dark"] .hTopNav__badge {
   border: 1px solid rgba(255, 255, 255, 0.22);
 }
 
-/* ========= Desktop dropdown (original) ========= */
+/* =========================================
+   DESKTOP NOTIFICATIONS DROPDOWN (única versão)
+   ========================================= */
+
+/* overlay clicável para fechar (fica abaixo do dropdown) */
+/* overlay clicável para fechar (DESKTOP) */
+.hNotifDrop__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 79;            /* abaixo do dropdown */
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  cursor: default;
+}
+
+/* dropdown */
 .hNotifDrop {
   position: absolute;
   right: 0;
@@ -280,7 +295,7 @@ html[data-theme="dark"] .hTopNav__badge {
   box-shadow: 0 28px 72px rgba(2, 6, 23, 0.16);
   backdrop-filter: blur(16px);
   overflow: hidden;
-  z-index: 80;
+  z-index: 80;            /* acima do backdrop */
 }
 
 html[data-theme="dark"] .hNotifDrop {
@@ -327,6 +342,7 @@ html[data-theme="dark"] .hNotifDrop__title {
   font-weight: 900;
   color: rgba(2, 6, 23, 0.86);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .hNotifDrop__markBtn:disabled {
@@ -354,6 +370,7 @@ html[data-theme="dark"] .hNotifDrop__markBtn {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 html[data-theme="dark"] .hNotifDrop__allBtn {
@@ -386,6 +403,9 @@ html[data-theme="dark"] .hNotifDrop__state--err {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: 360px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .hNotifDrop__item {
@@ -439,6 +459,7 @@ html[data-theme="dark"] .hNotifDrop__itemTitle {
   font-size: 12px;
   font-weight: 800;
   color: rgba(2, 6, 23, 0.55);
+  white-space: nowrap;
 }
 
 html[data-theme="dark"] .hNotifDrop__itemTime {
@@ -456,55 +477,87 @@ html[data-theme="dark"] .hNotifDrop__itemMsg {
   color: rgba(255, 255, 255, 0.74);
 }
 
-/* ========= Mobile layer (slide from right) ========= */
+.hNotifDrop__list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.hNotifDrop__list::-webkit-scrollbar-thumb {
+  background: rgba(108, 99, 255, 0.35);
+  border-radius: 999px;
+}
+
+/* =========================================
+   MOBILE NOTIFICATIONS LAYER (solução estrutural)
+   ========================================= */
+
 .hNotifLayer {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 99990;
   display: block;
 }
 
-.hNotifLayer__backdrop{
+/* backdrop sempre cobrindo a tela */
+.hNotifLayer__backdrop {
   position: fixed;
   inset: 0;
   background: rgba(2, 6, 23, 0.28);
   border: 0;
   padding: 0;
   margin: 0;
-  z-index: 9998;
-}
+  z-index: 99990;
+  cursor: pointer;
 
-
-
-
-/* header fixo e lista com scroll */
-.hNotifLayer__header {
-  position: sticky;
-  top: 0;
-  background: inherit;
-  z-index: 1;
-  padding: 12px 12px;
-  border-bottom: 1px solid rgba(120, 120, 120, 0.12);
+  /* impede "scroll" do fundo em iOS/Android */
+  touch-action: none;
 }
 
 html[data-theme="dark"] .hNotifLayer__backdrop {
   background: rgba(0, 0, 0, 0.5);
 }
 
+/* sheet: sólido, começa abaixo do topnav, com scroll interno */
 .hNotifLayer__sheet {
-  position: absolute;
-  inset: 0;
-  background: rgba(255, 255, 255, 0.98);
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 64px; /* altura padrão do TopNav */
+  bottom: 0;
+
+  background: #ffffff;
+  opacity: 1 !important;
+  border-left: 0;
+  border-right: 0;
+
   transform: translateX(100%);
   animation: hitchSlideInRight 220ms ease-out forwards;
-  box-shadow: -18px 0 64px rgba(2, 6, 23, 0.18);
+
+  display: flex;
+  flex-direction: column;
+
+  z-index: 99991;
+
+  /* trava gestos e composição “glass” */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+  isolation: isolate;
+  transform: translateZ(0);
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+@media (max-width: 640px) {
+  .hNotifLayer__sheet {
+    top: 60px; /* topnav menor no mobile */
+  }
 }
 
 html[data-theme="dark"] .hNotifLayer__sheet {
-  background: rgba(18, 18, 22, 0.98);
-  box-shadow: -18px 0 72px rgba(0, 0, 0, 0.62);
+  background: #121216;
 }
 
+/* animação */
 @keyframes hitchSlideInRight {
   from {
     transform: translateX(100%);
@@ -521,6 +574,7 @@ html[data-theme="dark"] .hNotifLayer__sheet {
   align-items: center;
   padding: 0 10px;
   border-bottom: 1px solid rgba(2, 6, 23, 0.06);
+  background: inherit;
 }
 
 html[data-theme="dark"] .hNotifLayer__top {
@@ -562,9 +616,10 @@ html[data-theme="dark"] .hNotifLayer__title {
 }
 
 .hNotifLayer__body {
-  height: calc(100% - 56px);
+  flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0; /* crítico pro scroll funcionar */
 }
 
 .hNotifLayer__state {
@@ -586,7 +641,7 @@ html[data-theme="dark"] .hNotifLayer__state--err {
   color: rgba(248, 113, 113, 0.95);
 }
 
-.hNotifLayer__list{
+.hNotifLayer__list {
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -594,6 +649,9 @@ html[data-theme="dark"] .hNotifLayer__state--err {
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   flex: 1;
+  min-height: 0; /* crítico pro scroll funcionar */
+  background: inherit; /* mantém sólido */
+  overscroll-behavior: contain;
 }
 
 .hNotifLayer__item {
@@ -601,7 +659,7 @@ html[data-theme="dark"] .hNotifLayer__state--err {
   text-align: left;
   border-radius: 16px;
   border: 1px solid rgba(2, 6, 23, 0.08);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.9);
   padding: 12px 12px;
   cursor: pointer;
 }
@@ -612,7 +670,7 @@ html[data-theme="dark"] .hNotifLayer__state--err {
 }
 
 .hNotifLayer__item.isRead {
-  opacity: 0.82;
+  opacity: 0.92;
 }
 
 html[data-theme="dark"] .hNotifLayer__item {
@@ -647,6 +705,7 @@ html[data-theme="dark"] .hNotifLayer__itemTitle {
   font-size: 12px;
   font-weight: 900;
   color: rgba(2, 6, 23, 0.55);
+  white-space: nowrap;
 }
 
 html[data-theme="dark"] .hNotifLayer__itemTime {
@@ -667,6 +726,7 @@ html[data-theme="dark"] .hNotifLayer__itemMsg {
 .hNotifLayer__footer {
   padding: 12px 14px 16px 14px;
   border-top: 1px solid rgba(2, 6, 23, 0.06);
+  background: inherit;
 }
 
 html[data-theme="dark"] .hNotifLayer__footer {
@@ -691,11 +751,13 @@ html[data-theme="dark"] .hNotifLayer__all {
   background: rgba(255, 255, 255, 0.08);
 }
 
-/* ========= Full panel overlay (original) ========= */
+/* =========================================
+   FULL PANEL (desktop “ver todas”) — mantém seu padrão
+   ========================================= */
 .hNotifPanel {
   position: fixed;
   inset: 0;
-  z-index: 210;
+  z-index: 99992;
   display: block;
 }
 
@@ -818,6 +880,8 @@ html[data-theme="dark"] .hNotifPanel__close {
   flex: 1;
   overflow: auto;
   padding: 14px;
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
 }
 
 .hNotifPanel__state {
@@ -896,6 +960,7 @@ html[data-theme="dark"] .hNotifPanel__itemTitle {
   font-size: 12px;
   font-weight: 900;
   color: rgba(2, 6, 23, 0.55);
+  white-space: nowrap;
 }
 
 html[data-theme="dark"] .hNotifPanel__itemTime {
@@ -912,486 +977,3 @@ html[data-theme="dark"] .hNotifPanel__itemTime {
 html[data-theme="dark"] .hNotifPanel__itemMsg {
   color: rgba(255, 255, 255, 0.74);
 }
-/* =========================
-   NOTIF DROPDOWN (DESKTOP)
-   ========================= */
-
-.hNotifDrop__backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 55;
-  border: 0;
-  background: transparent;
-  padding: 0;
-  margin: 0;
-  cursor: default;
-}
-
-.hNotifDrop {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 10px);
-  width: min(420px, 92vw);
-  border-radius: 16px;
-  border: 1px solid rgba(2, 6, 23, 0.08);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 24px 64px rgba(2, 6, 23, 0.14);
-  z-index: 60;
-  overflow: hidden;
-}
-
-html[data-theme="dark"] .hNotifDrop {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(18, 18, 22, 0.92);
-  box-shadow: 0 28px 72px rgba(0, 0, 0, 0.6);
-}
-
-.hNotifDrop__head {
-  padding: 12px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  border-bottom: 1px solid rgba(2, 6, 23, 0.06);
-}
-
-html[data-theme="dark"] .hNotifDrop__head {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.hNotifDrop__title {
-  font-size: 14px;
-  font-weight: 900;
-  color: rgba(2, 6, 23, 0.9);
-}
-
-html[data-theme="dark"] .hNotifDrop__title {
-  color: rgba(255, 255, 255, 0.92);
-}
-
-.hNotifDrop__headActions {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.hNotifDrop__allBtn {
-  border-color: rgba(108, 99, 255, 0.35);
-  background: rgba(108, 99, 255, 0.08);
-}
-
-.hNotifDrop__markBtn,
-.hNotifDrop__allBtn {
-  height: 30px;
-  padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(2, 6, 23, 0.12);
-  background: rgba(2, 6, 23, 0.04);
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(2, 6, 23, 0.86);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.hNotifDrop__markBtn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-html[data-theme="dark"] .hNotifDrop__markBtn,
-html[data-theme="dark"] .hNotifDrop__allBtn {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.hNotifDrop__state {
-  padding: 14px 12px;
-  font-size: 13px;
-  font-weight: 800;
-  color: rgba(2, 6, 23, 0.68);
-}
-
-.hNotifDrop__state--err {
-  color: rgba(220, 38, 38, 0.95);
-}
-
-html[data-theme="dark"] .hNotifDrop__state {
-  color: rgba(255, 255, 255, 0.72);
-}
-
-html[data-theme="dark"] .hNotifDrop__state--err {
-  color: rgba(248, 113, 113, 0.95);
-}
-
-.hNotifDrop__list {
-  max-height: 360px;
-  overflow: auto;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  -webkit-overflow-scrolling: touch;
-}
-
-.hNotifDrop__item {
-  width: 100%;
-  text-align: left;
-  border-radius: 14px;
-  border: 1px solid rgba(2, 6, 23, 0.08);
-  background: rgba(255, 255, 255, 0.6);
-  padding: 12px 12px;
-  cursor: pointer;
-}
-
-.hNotifDrop__item.isUnread {
-  border-color: rgba(108, 99, 255, 0.35);
-  background: rgba(108, 99, 255, 0.08);
-}
-
-.hNotifDrop__item.isRead {
-  opacity: 0.86;
-}
-
-html[data-theme="dark"] .hNotifDrop__item {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-}
-
-html[data-theme="dark"] .hNotifDrop__item.isUnread {
-  border-color: rgba(108, 99, 255, 0.35);
-  background: rgba(108, 99, 255, 0.12);
-}
-
-.hNotifDrop__itemTop {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 6px;
-}
-
-.hNotifDrop__itemTitle {
-  font-size: 13px;
-  font-weight: 900;
-  color: rgba(2, 6, 23, 0.9);
-}
-
-html[data-theme="dark"] .hNotifDrop__itemTitle {
-  color: rgba(255, 255, 255, 0.92);
-}
-
-.hNotifDrop__itemTime {
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(2, 6, 23, 0.55);
-  white-space: nowrap;
-}
-
-html[data-theme="dark"] .hNotifDrop__itemTime {
-  color: rgba(255, 255, 255, 0.58);
-}
-
-.hNotifDrop__itemMsg {
-  font-size: 13px;
-  font-weight: 750;
-  color: rgba(2, 6, 23, 0.72);
-  line-height: 1.28;
-}
-
-html[data-theme="dark"] .hNotifDrop__itemMsg {
-  color: rgba(255, 255, 255, 0.74);
-}
-.hTopNav__notif {
-  position: relative;
-}
-/* ===== FIX: garantir layout do dropdown independente do CSS global ===== */
-.hNotifDrop,
-.hNotifDrop * {
-  box-sizing: border-box;
-}
-
-.hNotifDrop {
-  display: block;
-}
-
-.hNotifDrop__list {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 10px !important;
-}
-
-.hNotifDrop__item {
-  display: block !important;
-  width: 100% !important;
-  text-align: left !important;
-  white-space: normal !important;
-  line-height: 1.25 !important;
-  padding: 12px 12px !important;
-}
-
-.hNotifDrop__itemTop {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 10px !important;
-}
-
-.hNotifDrop__itemTitle,
-.hNotifDrop__itemTime,
-.hNotifDrop__itemMsg {
-  display: block !important;
-  position: static !important;
-  float: none !important;
-  transform: none !important;
-}
-.hNotifDrop__list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.hNotifDrop__list::-webkit-scrollbar-thumb {
-  background: rgba(108, 99, 255, 0.35);
-  border-radius: 999px;
-}
-/* overlay clicável para fechar o dropdown */
-.hNotifDropOverlay{
-  position: fixed;
-  inset: 0;
-  z-index: 999;
-  background: transparent;
-  pointer-events: auto;
-}
-
-/* o dropdown fica acima do overlay */
-.hNotifDrop{
-  position: absolute;
-  top: 64px;
-  right: 16px;
-  z-index: 1000;
-}
-.hTopNav__right a,
-.hTopNav__right button.hTopNav__cta {
-  position: relative;
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease,
-    border-color 140ms ease;
-  user-select: none;
-  white-space: nowrap;
-  border: 1px solid transparent;
-  background: transparent;
-  cursor: pointer;
-}
-
-/* Primary (primeiro CTA) */
-.hTopNav__right a:first-of-type {
-  border: 1px solid rgba(108, 99, 255, 0.55);
-  background: rgba(255, 255, 255, 0.7);
-  color: rgba(2, 6, 23, 0.9);
-  box-shadow: 0 10px 26px rgba(108, 99, 255, 0.14);
-  backdrop-filter: blur(10px);
-}
-
-.hTopNav__right a:first-of-type:hover {
-  border-color: rgba(108, 99, 255, 0.78);
-  background: rgba(108, 99, 255, 0.07);
-  box-shadow: 0 14px 34px rgba(108, 99, 255, 0.2);
-  transform: translateY(-1px);
-}
-
-html[data-theme="dark"] .hTopNav__right a:first-of-type {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.92);
-  border-color: rgba(108, 99, 255, 0.45);
-  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.46);
-}
-
-html[data-theme="dark"] .hTopNav__right a:first-of-type:hover {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(108, 99, 255, 0.75);
-  box-shadow: 0 22px 62px rgba(0, 0, 0, 0.55),
-    0 0 56px rgba(108, 99, 255, 0.16);
-}
-
-/* Ghost (segundo CTA) */
-.hTopNav__right a:last-of-type {
-  border: 1px solid rgba(108, 99, 255, 0.32);
-  background: transparent;
-  color: rgba(2, 6, 23, 0.82);
-}
-
-.hTopNav__right a:last-of-type:hover {
-  border-color: rgba(108, 99, 255, 0.55);
-  background: rgba(108, 99, 255, 0.06);
-  transform: translateY(-1px);
-}
-
-html[data-theme="dark"] .hTopNav__right a:last-of-type {
-  color: rgba(255, 255, 255, 0.9);
-  border-color: rgba(108, 99, 255, 0.28);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-html[data-theme="dark"] .hTopNav__right a:last-of-type:hover {
-  border-color: rgba(108, 99, 255, 0.5);
-  background: rgba(255, 255, 255, 0.08);
-}
-
-/* ✅ Conta: mesmo estilo do “ghost” */
-.hTopNav__right button.hTopNav__cta {
-  border: 1px solid rgba(108, 99, 255, 0.32);
-  color: rgba(2, 6, 23, 0.82);
-}
-
-.hTopNav__right button.hTopNav__cta:hover {
-  border-color: rgba(108, 99, 255, 0.55);
-  background: rgba(108, 99, 255, 0.06);
-  transform: translateY(-1px);
-}
-
-html[data-theme="dark"] .hTopNav__right button.hTopNav__cta {
-  color: rgba(255, 255, 255, 0.9);
-  border-color: rgba(108, 99, 255, 0.28);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-html[data-theme="dark"] .hTopNav__right button.hTopNav__cta:hover {
-  border-color: rgba(108, 99, 255, 0.5);
-  background: rgba(255, 255, 255, 0.08);
-}
-
-/* MOBILE: dropdown não pode ser cortado por overflow do header */
-@media (max-width: 768px) {
-  .mTopNav { overflow: visible; } /* se existir wrapper com overflow */
-  .mTopNav__right { overflow: visible; }
-
-  .mTopNav__accountMenu {
-    position: fixed;            /* <- em vez de absolute */
-    left: 12px;
-    right: 12px;
-    top: 64px;                  /* ajuste conforme altura do topnav */
-    z-index: 9999;
-    max-height: calc(100vh - 80px);
-    overflow: auto;
-
-    border-radius: 14px;
-    border: 1px solid var(--border, rgba(0,0,0,.12));
-    background: var(--card, #fff);
-    box-shadow: 0 18px 60px rgba(0,0,0,.18);
-  }
-
-  .mTopNav__accountMenuItem {
-    padding: 12px 14px;
-    font-size: 16px;            /* evita “zoom” estranho do iOS */
-    line-height: 1.2;
-  }
-}
-
-/* força superfície sólida no dropdown (mobile e safari) */
-
-.hNotifLayer__sheet,
-.hNotifLayer__surface {
-  position: fixed;
-  left: 12px;
-  right: 12px;
-  top: calc(env(safe-area-inset-top) + 12px);
-  bottom: calc(env(safe-area-inset-bottom) + 12px);
-
-  background-color: #ffffff !important; /* chave: deixa de ser transparente */
-  opacity: 1 !important;
-  border: 1px solid rgba(120, 120, 120, 0.18);
-  border-radius: 18px;
-
-  overflow: hidden;
-  z-index: 9999;
-
-  display: flex;
-  flex-direction: column;
-}
-
-/* backdrop sempre cobrindo a tela */
-.hNotifLayer__backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(2, 6, 23, 0.28);
-  z-index: 9998;
-}
-/* MOBILE NOTIFICATIONS: overlay + panel 100% opacos */
-
-.hNotifPanelOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 99998;
-}
-
-.hNotifPanelOverlay::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background: rgba(2, 6, 23, 0.28);
-}
-
-.hNotifLayer__panel,
-.hNotifLayer__sheet,
-.hNotifMobile__panel,
-.hNotifMobile__sheet {
-  background: #ffffff !important;
-  opacity: 1 !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  filter: none !important;
-
-  isolation: isolate;
-}
-
-/* HARD FIX: mobile notifications must be 100% opaque (iOS/Android) */
-.hNotifPanelOverlay,
-.hNotifLayer__overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 99998;
-  background: transparent;
-  opacity: 1 !important;
-}
-
-/* backdrop (escurece o fundo) */
-.hNotifLayer__backdrop,
-.hNotifPanelOverlay::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background: rgba(2, 6, 23, 0.28);
-}
-
-/* o “sheet/panel” do mobile precisa ser sólido */
-.hNotifLayer__panel,
-.hNotifLayer__sheet,
-.hNotifMobile__panel,
-.hNotifMobile__sheet,
-.hNotifPanel__panel {
-  background: #ffffff !important;   /* NUNCA rgba aqui */
-  opacity: 1 !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  filter: none !important;
-
-  /* evita composição “glass” em mobile */
-  isolation: isolate;
-  transform: translateZ(0);
-}
-
-/* lista também sólida (evita vazamento visual entre cards) */
-.hNotifLayer__list,
-.hNotifPanel__list {
-  background: #ffffff !important;
-}
-
