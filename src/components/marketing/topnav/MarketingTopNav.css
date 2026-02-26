@@ -474,15 +474,7 @@ html[data-theme="dark"] .hNotifDrop__itemMsg {
   z-index: 9998;
 }
 
-/* container do painel (mobile = modal) */
-.hNotifLayer__panel{
-  position: relative; /* fica acima do ::before do overlay */
-  z-index: 9999;
-  background-color: #fff !important;
-  opacity: 1 !important;
-  border-radius: 18px;
-  overflow: hidden;
-}
+
 
 
 /* header fixo e lista com scroll */
@@ -1333,59 +1325,73 @@ html[data-theme="dark"] .hTopNav__right button.hTopNav__cta:hover {
   background: rgba(2, 6, 23, 0.28);
   z-index: 9998;
 }
+/* MOBILE NOTIFICATIONS: overlay + panel 100% opacos */
 
-.hNotifPanelOverlay{
+.hNotifPanelOverlay {
   position: fixed;
   inset: 0;
-  z-index: 9998;
-  background: transparent;
-  opacity: 1 !important; /* CRÍTICO: nunca use opacity no container */
+  z-index: 99998;
 }
 
-.hNotifPanelOverlay::before{
+.hNotifPanelOverlay::before {
   content: "";
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: rgba(2, 6, 23, 0.28);
 }
 
-/* === HOTFIX MOBILE: Panel 100% opaco (Safari/Chrome iOS/Android) === */
-.hNotifPanelOverlay{
+.hNotifLayer__panel,
+.hNotifLayer__sheet,
+.hNotifMobile__panel,
+.hNotifMobile__sheet {
+  background: #ffffff !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+
+  isolation: isolate;
+}
+
+/* HARD FIX: mobile notifications must be 100% opaque (iOS/Android) */
+.hNotifPanelOverlay,
+.hNotifLayer__overlay {
   position: fixed;
   inset: 0;
-  z-index: 9998;
+  z-index: 99998;
   background: transparent;
   opacity: 1 !important;
 }
 
-.hNotifPanelOverlay::before{
+/* backdrop (escurece o fundo) */
+.hNotifLayer__backdrop,
+.hNotifPanelOverlay::before {
   content: "";
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: rgba(2, 6, 23, 0.28);
 }
 
-/* MOBILE FIX: evitar “glass” no painel de notificações (iOS/Android) */
-@media (max-width: 820px) {
-  .hNotifPanelOverlay::before {
-    background: rgba(2, 6, 23, 0.35) !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-  }
+/* o “sheet/panel” do mobile precisa ser sólido */
+.hNotifLayer__panel,
+.hNotifLayer__sheet,
+.hNotifMobile__panel,
+.hNotifMobile__sheet,
+.hNotifPanel__panel {
+  background: #ffffff !important;   /* NUNCA rgba aqui */
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
 
-  .hNotifLayer__panel {
-    background: #ffffff !important;
-    opacity: 1 !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-  }
-
-  /* se existir variação dark */
-  [data-theme="dark"] .hNotifLayer__panel,
-  .dark .hNotifLayer__panel {
-    background: #121216 !important;
-    opacity: 1 !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-  }
+  /* evita composição “glass” em mobile */
+  isolation: isolate;
+  transform: translateZ(0);
 }
+
+/* lista também sólida (evita vazamento visual entre cards) */
+.hNotifLayer__list,
+.hNotifPanel__list {
+  background: #ffffff !important;
+}
+
