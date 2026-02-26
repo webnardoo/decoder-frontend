@@ -3,7 +3,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import { inferModeFromPath, NavMode } from "./navigation/useNavMode";
@@ -13,8 +13,6 @@ import { useNotifications } from "./notifications/useNotifications";
 import NotificationsDesktop from "./notifications/NotificationsDesktop";
 import NotificationsMobile from "./notifications/NotificationsMobile";
 import NotificationsPanel from "./notifications/NotificationsPanel";
-
-
 
 import "./MarketingTopNav.css";
 
@@ -72,6 +70,26 @@ export default function MarketingTopNav({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
 
+  // ✅ CRÍTICO (mobile): trava scroll/touch do fundo enquanto qualquer camada de notif estiver aberta
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const isOpen = dropdownOpen || mobileOpen || panelOpen;
+    if (!isOpen) return;
+
+    const body = document.body;
+    const prevOverflow = body.style.overflow;
+    const prevTouchAction = (body.style as any).touchAction as string | undefined;
+
+    body.style.overflow = "hidden";
+    (body.style as any).touchAction = "none";
+
+    return () => {
+      body.style.overflow = prevOverflow;
+      (body.style as any).touchAction = prevTouchAction ?? "";
+    };
+  }, [dropdownOpen, mobileOpen, panelOpen]);
+
   async function openDropdownDesktop() {
     await load(5);
     setDropdownOpen(true);
@@ -81,6 +99,7 @@ export default function MarketingTopNav({
     await load(50);
     setMobileOpen(true);
     setDropdownOpen(false);
+    setPanelOpen(false);
   }
 
   async function openPanelAll() {
@@ -102,9 +121,7 @@ export default function MarketingTopNav({
   }
 
   return (
-    
     <>
-
       <header className="hTopNav" data-topnav="NEW_TOPNAV_MODULE">
         <div className="hTopNav__inner">
           <Link href="/" className="hTopNav__brand" aria-label="Hitch.ai">
