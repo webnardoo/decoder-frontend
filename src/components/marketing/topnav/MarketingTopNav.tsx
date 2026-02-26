@@ -86,21 +86,17 @@ export default function MarketingTopNav({
 
   // fecha overlays ao trocar de rota
   // trava scroll do body enquanto qualquer overlay de notif estiver aberto
-  useEffect(() => {
-    const anyOverlayOpen = dropdownOpen || mobileOpen || panelOpen;
-    if (!anyOverlayOpen) return;
+useEffect(() => {
+  const anyOverlayOpen = dropdownOpen || mobileOpen || panelOpen;
+  if (!anyOverlayOpen) return;
 
-    const prevOverflow = document.body.style.overflow;
-    const prevTouchAction = document.body.style.touchAction;
+  const prevOverflow = document.body.style.overflow;
+  document.body.style.overflow = "hidden";
 
-    document.body.style.overflow = "hidden";
-    document.body.style.touchAction = "none";
-
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      document.body.style.touchAction = prevTouchAction;
-    };
-  }, [dropdownOpen, mobileOpen, panelOpen]);
+  return () => {
+    document.body.style.overflow = prevOverflow;
+  };
+}, [dropdownOpen, mobileOpen, panelOpen]);
 
   const openDropdownDesktop = useCallback(async () => {
     await load(5);
