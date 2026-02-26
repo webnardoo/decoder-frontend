@@ -524,13 +524,14 @@ html[data-theme="dark"] .hNotifLayer__backdrop {
   top: 64px; /* altura padrão do TopNav */
   bottom: 0;
 
-  background: #ffffff;
+background-color: #ffffff !important;
   opacity: 1 !important;
   border-left: 0;
   border-right: 0;
 
   transform: translateX(100%);
   animation: hitchSlideInRight 220ms ease-out forwards;
+  will-change: transform;
 
   display: flex;
   flex-direction: column;
@@ -539,10 +540,9 @@ html[data-theme="dark"] .hNotifLayer__backdrop {
 
   /* trava gestos e composição “glass” */
   backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+-webkit-backdrop-filter: none !important;
   filter: none !important;
   isolation: isolate;
-  transform: translateZ(0);
   overscroll-behavior: contain;
   touch-action: pan-y;
 }
@@ -559,12 +559,8 @@ html[data-theme="dark"] .hNotifLayer__sheet {
 
 /* animação */
 @keyframes hitchSlideInRight {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0%);
-  }
+  from { transform: translate3d(100%, 0, 0); }
+  to   { transform: translate3d(0%, 0, 0); }
 }
 
 .hNotifLayer__top {
