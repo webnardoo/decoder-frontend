@@ -3,7 +3,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import { inferModeFromPath, NavMode } from "./navigation/useNavMode";
@@ -13,6 +13,8 @@ import { useNotifications } from "./notifications/useNotifications";
 import NotificationsDesktop from "./notifications/NotificationsDesktop";
 import NotificationsMobile from "./notifications/NotificationsMobile";
 import NotificationsPanel from "./notifications/NotificationsPanel";
+
+import { useMediaQuery } from "@/shared/hooks/useMediaQuery";
 
 import "./MarketingTopNav.css";
 
@@ -63,62 +65,63 @@ export default function MarketingTopNav({
 
   const { theme, setThemeMode } = useTheme();
 
-  const { items, unread, loading, error, load, markAllAsRead, markOneAndNavigate, markReadOnly } =
-    useNotifications(inferredMode === "app" && showNotifications);
+  const {
+    items,
+    unread,
+    loading,
+    error,
+    load,
+    markAllAsRead,
+    markOneAndNavigate,
+    markReadOnly,
+  } = useNotifications(inferredMode === "app" && showNotifications);
+
+  const isMobile = useMediaQuery("(max-width: 819px)");
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
 
-  // ✅ CRÍTICO (mobile): trava scroll/touch do fundo enquanto qualquer camada de notif estiver aberta
+  // fecha qualquer overlay ao trocar de rota (evita estado “preso”)
   useEffect(() => {
-    if (typeof document === "undefined") return;
+    setDropdownOpen(false);
+    setMobileOpen(false);
+    setPanelOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
-    const isOpen = dropdownOpen || mobileOpen || panelOpen;
-    if (!isOpen) return;
-
-    const body = document.body;
-    const prevOverflow = body.style.overflow;
-    const prevTouchAction = (body.style as any).touchAction as string | undefined;
-
-    body.style.overflow = "hidden";
-    (body.style as any).touchAction = "none";
-
-    return () => {
-      body.style.overflow = prevOverflow;
-      (body.style as any).touchAction = prevTouchAction ?? "";
-    };
-  }, [dropdownOpen, mobileOpen, panelOpen]);
-
-  async function openDropdownDesktop() {
+  const openDropdownDesktop = useCallback(async () => {
     await load(5);
     setDropdownOpen(true);
-  }
+  }, [load]);
 
-  async function openMobileLayer() {
+  const openMobileLayer = useCallback(async () => {
     await load(50);
     setMobileOpen(true);
     setDropdownOpen(false);
     setPanelOpen(false);
-  }
+  }, [load]);
 
-  async function openPanelAll() {
+  const openPanelAll = useCallback(async () => {
     await load(50);
     setPanelOpen(true);
     setDropdownOpen(false);
     setMobileOpen(false);
-  }
+  }, [load]);
 
-  async function handleClickItem(n: any) {
-    await markOneAndNavigate(n, router);
-    setDropdownOpen(false);
-    setMobileOpen(false);
-    setPanelOpen(false);
-  }
+  const handleClickItem = useCallback(
+    async (n: any) => {
+      await markOneAndNavigate(n, router);
+      setDropdownOpen(false);
+      setMobileOpen(false);
+      setPanelOpen(false);
+    },
+    [markOneAndNavigate, router]
+  );
 
-  function closeDropdown() {
+  const closeDropdown = useCallback(() => {
     setDropdownOpen(false);
-  }
+  }, []);
 
   return (
     <>
@@ -163,15 +166,17 @@ export default function MarketingTopNav({
                       type="button"
                       aria-label="Notificações"
                       onClick={async () => {
-                        if (typeof window !== "undefined" && window.innerWidth < 820) {
+                        if (isMobile) {
                           await openMobileLayer();
-                        } else {
-                          if (dropdownOpen) {
-                            closeDropdown();
-                          } else {
-                            await openDropdownDesktop();
-                          }
+                          return;
                         }
+
+                        if (dropdownOpen) {
+                          closeDropdown();
+                          return;
+                        }
+
+                        await openDropdownDesktop();
                       }}
                     >
                       🔔
