@@ -3,7 +3,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import { inferModeFromPath, NavMode } from "./navigation/useNavMode";
@@ -82,7 +82,9 @@ export default function MarketingTopNav({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
 
-  // fecha qualquer overlay ao trocar de rota (evita estado “preso”)
+  const bellBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  // fecha overlays ao trocar de rota
   useEffect(() => {
     setDropdownOpen(false);
     setMobileOpen(false);
@@ -93,6 +95,8 @@ export default function MarketingTopNav({
   const openDropdownDesktop = useCallback(async () => {
     await load(5);
     setDropdownOpen(true);
+    setMobileOpen(false);
+    setPanelOpen(false);
   }, [load]);
 
   const openMobileLayer = useCallback(async () => {
@@ -163,20 +167,25 @@ export default function MarketingTopNav({
                 {showNotifications ? (
                   <div className="hTopNav__notif">
                     <button
+                      ref={bellBtnRef}
                       type="button"
                       aria-label="Notificações"
                       onClick={async () => {
                         if (isMobile) {
+                          if (mobileOpen) {
+                            setMobileOpen(false);
+                            return;
+                          }
                           await openMobileLayer();
                           return;
                         }
 
+                        // desktop
                         if (dropdownOpen) {
                           closeDropdown();
-                          return;
+                        } else {
+                          await openDropdownDesktop();
                         }
-
-                        await openDropdownDesktop();
                       }}
                     >
                       🔔
@@ -185,6 +194,7 @@ export default function MarketingTopNav({
 
                     {dropdownOpen ? (
                       <NotificationsDesktop
+                        anchorEl={bellBtnRef.current}
                         items={items}
                         unread={unread}
                         loading={loading}
