@@ -502,7 +502,7 @@ export default function BillingPlanPage() {
 
 <div className="mx-auto w-full max-w-6xl">
   {/* HEADER TOPO: título centralizado + voltar fixo à direita */}
-  <div className="relative flex items-start justify-center">
+  <div className="relative flex flex-col sm:flex-row items-center sm:items-start justify-center gap-3 sm:gap-0">
     {/* Botão Voltar preso à direita */}
     <div className="absolute right-0 top-0">
       <button
@@ -522,7 +522,7 @@ export default function BillingPlanPage() {
     </div>
 
     {/* Conteúdo central */}
-    <div className="text-center max-w-3xl px-2">
+    <div className="text-center max-w-3xl px-2 mt-12 sm:mt-0">
       <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-zinc-100">
         Escolha como deseja utilizar seus créditos
       </h1>
@@ -532,41 +532,6 @@ export default function BillingPlanPage() {
         <span className="text-zinc-200">Pacotes de Créditos</span> sob demanda ou opte por um{" "}
         <span className="text-zinc-200">Plano Mensal</span> recorrente. Ambas as opções funcionam juntas e oferecem total flexibilidade.
       </p>
-    </div>
-  </div>
-
-  {/* TABS */}
-  <div className="mt-4 flex items-center justify-center">
-    <div className="inline-flex rounded-full border border-white/10 bg-white/5 backdrop-blur p-1 gap-2">
-      <button
-        className={
-          creditsIsSelected
-            ? "px-5 py-2 rounded-full text-sm text-zinc-100 bg-white/10 border border-white/10"
-            : "px-5 py-2 rounded-full text-sm text-zinc-300 hover:text-zinc-100"
-        }
-        onClick={() => {
-          setTab("credits");
-          setErr(null);
-        }}
-        type="button"
-      >
-        Comprar Créditos
-      </button>
-
-      <button
-        className={
-          plansIsSelected
-            ? "px-5 py-2 rounded-full text-sm text-zinc-100 bg-white/10 border border-white/10"
-            : "px-5 py-2 rounded-full text-sm text-zinc-300 hover:text-zinc-100"
-        }
-        onClick={() => {
-          setTab("plans");
-          resetPixUi();
-        }}
-        type="button"
-      >
-        Planos Mensais
-      </button>
     </div>
   </div>
 
