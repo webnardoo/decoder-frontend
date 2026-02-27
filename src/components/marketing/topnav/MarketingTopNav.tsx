@@ -3,18 +3,20 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 
 import { inferModeFromPath, NavMode } from "./navigation/useNavMode";
 import { useTheme } from "./theme/useTheme";
 import { useNotifications } from "./notifications/useNotifications";
 
 import NotificationsDesktop from "./notifications/NotificationsDesktop";
-import NotificationsMobile from "./notifications/NotificationsMobile";
+import NotificationsMobileLayer from "./notifications/NotificationsMobileLayer";
 import NotificationsPanel from "./notifications/NotificationsPanel";
+import NotificationsToastTray from "./notifications/NotificationsToastTray";
 
 import { useMediaQuery } from "@/shared/hooks/useMediaQuery";
+import PixDetailsModal from "@/components/billing/pix/PixDetailsModal";
 
 import "./MarketingTopNav.css";
 
@@ -46,6 +48,17 @@ export type Props = {
   notificationsUnreadCount?: number;
 };
 
+type ToastItem = {
+  id: string;
+  title: string;
+  message?: string | null;
+  severity?: string | null;
+  createdAt?: string | null;
+};
+
+const TOAST_TTL_MS = 6000;
+const TOAST_MAX = 3;
+
 export default function MarketingTopNav({
   logoSrc = "/logo-hitchai.png",
   onPaidPlansClick,
@@ -59,22 +72,13 @@ export default function MarketingTopNav({
   showAccount = true,
   showNotifications = true,
 }: Props) {
-  const router = useRouter();
   const pathname = usePathname() || "/";
   const inferredMode: NavMode = mode ?? inferModeFromPath(pathname);
 
   const { theme, setThemeMode } = useTheme();
 
-  const {
-    items,
-    unread,
-    loading,
-    error,
-    load,
-    markAllAsRead,
-    markOneAndNavigate,
-    markReadOnly,
-  } = useNotifications(inferredMode === "app" && showNotifications);
+  const { items, unread, loading, error, load, markAllAsRead, markReadOnly, onToast } =
+    useNotifications(inferredMode === "app" && showNotifications);
 
   const isMobile = useMediaQuery("(max-width: 819px)");
 
@@ -84,19 +88,111 @@ export default function MarketingTopNav({
 
   const bellBtnRef = useRef<HTMLButtonElement | null>(null);
 
-  // fecha overlays ao trocar de rota
+  // ✅ Toast state
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const toastTimersRef = useRef<Map<string, any>>(new Map());
+
+  // ✅ PIX modal state
+  const [pixOpen, setPixOpen] = useState(false);
+  const [pixPaymentId, setPixPaymentId] = useState<string | null>(null);
+
+  const openPixModal = useCallback((paymentId: string) => {
+    const pid = String(paymentId || "").trim();
+    if (!pid) return;
+
+    setPixPaymentId(pid);
+    setPixOpen(true);
+
+    // fecha overlays de notificação
+    setDropdownOpen(false);
+    setMobileOpen(false);
+    setPanelOpen(false);
+  }, []);
+
+  const closePixModal = useCallback(() => {
+    setPixOpen(false);
+    setPixPaymentId(null);
+  }, []);
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+
+    const timers = toastTimersRef.current;
+    const handle = timers.get(id);
+    if (handle) clearTimeout(handle);
+    timers.delete(id);
+  }, []);
+
+  const scheduleDismiss = useCallback(
+    (id: string) => {
+      const timers = toastTimersRef.current;
+
+      const existing = timers.get(id);
+      if (existing) clearTimeout(existing);
+
+      const handle = setTimeout(() => {
+        dismissToast(id);
+      }, TOAST_TTL_MS);
+
+      timers.set(id, handle);
+    },
+    [dismissToast]
+  );
+
+  // ✅ assina realtime-toasts do hook
+  useEffect(() => {
+    if (inferredMode !== "app" || !showNotifications) return;
+
+    const unsubscribe = onToast((t) => {
+      const id = String(t?.id || "").trim();
+      if (!id) return;
+
+      setToasts((prev) => {
+        const next: ToastItem = {
+          id,
+          title: String(t?.title || "Notificação"),
+          message: t?.message ?? null,
+          severity: t?.severity ?? "info",
+          createdAt: new Date().toISOString(),
+        };
+
+        const without = prev.filter((x) => x.id !== id);
+        const merged = [next, ...without];
+        return merged.slice(0, TOAST_MAX);
+      });
+
+      scheduleDismiss(id);
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, [inferredMode, showNotifications, onToast, scheduleDismiss]);
+
+  // cleanup timers
+  useEffect(() => {
+    return () => {
+      toastTimersRef.current.forEach((h) => clearTimeout(h));
+      toastTimersRef.current.clear();
+    };
+  }, []);
+
   // trava scroll do body enquanto qualquer overlay de notif estiver aberto
-useEffect(() => {
-  const anyOverlayOpen = dropdownOpen || mobileOpen || panelOpen;
-  if (!anyOverlayOpen) return;
+  useEffect(() => {
+    const anyOverlayOpen = dropdownOpen || mobileOpen || panelOpen;
+    if (!anyOverlayOpen) return;
 
-  const prevOverflow = document.body.style.overflow;
-  document.body.style.overflow = "hidden";
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
-  return () => {
-    document.body.style.overflow = prevOverflow;
-  };
-}, [dropdownOpen, mobileOpen, panelOpen]);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [dropdownOpen, mobileOpen, panelOpen]);
+
+  const closeDropdown = useCallback(() => {
+    setDropdownOpen(false);
+  }, []);
 
   const openDropdownDesktop = useCallback(async () => {
     await load(5);
@@ -119,19 +215,27 @@ useEffect(() => {
     setMobileOpen(false);
   }, [load]);
 
+  // ✅ clique no item: marca como lida e fecha overlay
   const handleClickItem = useCallback(
     async (n: any) => {
-      await markOneAndNavigate(n, router);
+      const id = String(n?.id || "").trim();
+      if (id && !n?.readAt) {
+        await markReadOnly(id);
+      }
+
       setDropdownOpen(false);
       setMobileOpen(false);
       setPanelOpen(false);
     },
-    [markOneAndNavigate, router]
+    [markReadOnly]
   );
 
-  const closeDropdown = useCallback(() => {
-    setDropdownOpen(false);
-  }, []);
+  const shouldRenderApp = inferredMode === "app";
+  const shouldRenderMarketing = inferredMode === "marketing";
+
+  const showToastTray = useMemo(() => {
+    return shouldRenderApp && showNotifications && toasts.length > 0;
+  }, [shouldRenderApp, showNotifications, toasts.length]);
 
   return (
     <>
@@ -143,26 +247,16 @@ useEffect(() => {
           </Link>
 
           <div className="hTopNav__right">
-            {/* Theme Toggle */}
             <div className="hTopNav__theme" role="tablist" aria-label={`Tema atual: ${theme}`}>
-              <button
-                type="button"
-                onClick={() => setThemeMode("light")}
-                aria-selected={theme === "light"}
-              >
+              <button type="button" onClick={() => setThemeMode("light")} aria-selected={theme === "light"}>
                 Light
               </button>
-              <button
-                type="button"
-                onClick={() => setThemeMode("dark")}
-                aria-selected={theme === "dark"}
-              >
+              <button type="button" onClick={() => setThemeMode("dark")} aria-selected={theme === "dark"}>
                 Dark
               </button>
             </div>
 
-            {/* APP MODE */}
-            {inferredMode === "app" ? (
+            {shouldRenderApp ? (
               <>
                 {showAccount ? (
                   <Link className="hTopNav__cta" href={accountHref}>
@@ -186,7 +280,6 @@ useEffect(() => {
                           return;
                         }
 
-                        // desktop
                         if (dropdownOpen) {
                           closeDropdown();
                         } else {
@@ -212,6 +305,7 @@ useEffect(() => {
                         onHoverItemId={async (id) => {
                           await markReadOnly(id);
                         }}
+                        onPixOpen={openPixModal}
                       />
                     ) : null}
                   </div>
@@ -219,8 +313,7 @@ useEffect(() => {
               </>
             ) : null}
 
-            {/* MARKETING MODE */}
-            {inferredMode === "marketing" ? (
+            {shouldRenderMarketing ? (
               <>
                 <a href={primaryCtaHref} onClick={onPaidPlansClick}>
                   {primaryCtaLabel}
@@ -232,9 +325,10 @@ useEffect(() => {
         </div>
       </header>
 
-      {/* Mobile Layer */}
+      {showToastTray ? <NotificationsToastTray items={toasts} onDismiss={dismissToast} /> : null}
+
       {mobileOpen ? (
-        <NotificationsMobile
+        <NotificationsMobileLayer
           items={items}
           unread={unread}
           loading={loading}
@@ -242,10 +336,10 @@ useEffect(() => {
           onClose={() => setMobileOpen(false)}
           onClickItem={handleClickItem}
           onMarkAll={markAllAsRead}
+          onPixOpen={openPixModal}
         />
       ) : null}
 
-      {/* Full Panel */}
       {panelOpen ? (
         <NotificationsPanel
           items={items}
@@ -255,8 +349,12 @@ useEffect(() => {
           onClose={() => setPanelOpen(false)}
           onClickItem={handleClickItem}
           onMarkAll={markAllAsRead}
+          onPixOpen={openPixModal}
         />
       ) : null}
+
+      {/* ✅ Modal PIX global */}
+      <PixDetailsModal open={pixOpen} paymentId={pixPaymentId} onClose={closePixModal} />
     </>
   );
 }
