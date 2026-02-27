@@ -40,6 +40,16 @@ export async function GET(
   { params }: { params: { paymentId: string } }
 ) {
   try {
+    // probe opcional (sem criar outro GET)
+    const urlObj = new URL(req.url);
+    const probe = urlObj.searchParams.get("probe") === "1";
+    if (probe) {
+      return NextResponse.json(
+        { ok: true, probe: "pix_proxy_hit" },
+        { status: 200 }
+      );
+    }
+
     const paymentId = String(params?.paymentId || "").trim();
     if (!paymentId) {
       return NextResponse.json(
