@@ -29,14 +29,37 @@ function getBackendBaseUrl(): {
   return { base: "http://localhost:4100", source: "fallback" };
 }
 
-function pickHeaders(req: Request): HeadersInit {
-  const cookie = req.headers.get("cookie") || "";
-  const accept = req.headers.get("accept") || "application/json";
-  const authorization = req.headers.get("authorization") || "";
+function extractTokenFromCookie(req: Request): string | null {
+  const cookieHeader = req.headers.get("cookie");
+  if (!cookieHeader) return null;
 
-  const h: Record<string, string> = { Accept: accept };
-  if (cookie) h.Cookie = cookie;
-  if (authorization) h.Authorization = authorization;
+  const match = cookieHeader
+    .split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith("decoder_auth="));
+
+  if (!match) return null;
+
+  const raw = match.split("=")[1];
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
+function pickHeaders(req: Request): HeadersInit {
+  const accept = req.headers.get("accept") || "application/json";
+  const token = extractTokenFromCookie(req);
+
+  const h: Record<string, string> = {
+    Accept: accept,
+  };
+
+  if (token) {
+    h.Authorization = `Bearer ${token}`;
+  }
+
   return h;
 }
 
@@ -63,7 +86,6 @@ export async function GET(
 ) {
   const { base, source } = getBackendBaseUrl();
 
-  // timeout curto pra não “pendurar” function
   const controller = new AbortController();
   const timeoutMs = 10_000;
   const timeout = setTimeout(() => controller.abort("timeout"), timeoutMs);
@@ -87,10 +109,9 @@ export async function GET(
       signal: controller.signal,
     });
 
-    // ✅ PASS-THROUGH (stream) — não ler body, não parsear, não re-serializar
-    const contentType = res.headers.get("content-type") || "application/json; charset=utf-8";
+    const contentType =
+      res.headers.get("content-type") || "application/json; charset=utf-8";
 
-    // repassa apenas headers essenciais (evita conflito de encoding/length)
     const headers = new Headers();
     headers.set("content-type", contentType);
     headers.set("cache-control", "no-store");
@@ -98,7 +119,6 @@ export async function GET(
     headers.set("x-debug-base", safeBaseForDebug(base));
     headers.set("x-debug-base-source", source);
 
-    // IMPORTANTE: res.body pode ser null em alguns casos
     if (!res.body) {
       const raw = await res.text().catch(() => "");
       return new NextResponse(raw, { status: res.status, headers });
@@ -111,7 +131,9 @@ export async function GET(
   } catch (e: any) {
     const msg = String(e?.message || e || "unknown");
     const aborted =
-      msg.includes("aborted") || msg.includes("timeout") || String(e).includes("AbortError");
+      msg.includes("aborted") ||
+      msg.includes("timeout") ||
+      String(e).includes("AbortError");
 
     return jsonError(
       aborted ? 504 : 502,
