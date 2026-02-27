@@ -1,4 +1,4 @@
-// src/app/api/v1/billing/asaas/pix-checkout/route.ts
+// src/app/api/v1/billing/addons/asaas/pix-checkout/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";

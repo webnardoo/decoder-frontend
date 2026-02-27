@@ -110,7 +110,7 @@ export default function PixDetailsModal({ open, paymentId, onClose }: Props) {
       setData(null);
 
       try {
-        const res = await fetch(`/api/v1/billing/asaas/pix/${encodeURIComponent(pid)}`, {
+        const res = await fetch(`/api/v1/billing/addons/asaas/pix/${encodeURIComponent(pid)}`, {
           method: "GET",
           cache: "no-store",
           credentials: "include",

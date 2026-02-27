@@ -26,7 +26,9 @@ import AnalysisProgressModal, {
 
 import Button from "@/components/ui/Button";
 
+
 import { useCreditsBalanceRealtime } from "@/lib/credits-balance-realtime";
+
 
 type Mode = "AVULSA" | "CONVERSA";
 type QuickMode = "RESUMO" | "RESPONDER";
@@ -195,6 +197,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+
 function clampInt(n: number): number {
   if (!Number.isFinite(n)) return 0;
   return Math.max(0, Math.floor(n));
@@ -218,6 +221,7 @@ function parseBalanceNumber(label: any): number | null {
 function formatPtInt(n: number): string {
   return new Intl.NumberFormat("pt-BR").format(clampInt(n));
 }
+
 
 export default function HomePage() {
   const [mode, setMode] = useState<Mode>("AVULSA");
@@ -967,6 +971,7 @@ export default function HomePage() {
 
   const balanceLabel = typeof effectiveBalanceNum === "number" ? `${effectiveBalanceNum} créditos` : "—";
 
+
   const balanceNumber = useMemo(() => parseBalanceNumber(balanceLabel), [balanceLabel]);
 
   // ===== saldo animado (counting + highlight roxo) =====
@@ -1055,6 +1060,7 @@ export default function HomePage() {
   const balanceBumpClass = balanceBump
     ? "text-[var(--h-accent)] drop-shadow-[0_0_18px_rgba(108,99,255,0.35)]"
     : "";
+
 
   // ✅ condição do CTA dentro do card
   const showContextualBuyCredits = typeof effectiveBalanceNum === "number" && effectiveBalanceNum < 10;
@@ -1277,6 +1283,7 @@ export default function HomePage() {
           border-color: rgba(108, 99, 255, 0.75);
           box-shadow: 0 22px 62px rgba(0, 0, 0, 0.55), 0 0 56px rgba(108, 99, 255, 0.16);
         }
+
           /* saldo: highlight roxo quando aumenta */
 .balanceBump {
   color: var(--h-accent) !important;
@@ -1292,6 +1299,7 @@ export default function HomePage() {
   55%  { transform: translateY(0) scale(1.02); filter: brightness(1.06); }
   100% { transform: translateY(0) scale(1); filter: brightness(1); }
 }
+
       `}</style>
 
       <div className="px-6 py-8">
@@ -1363,7 +1371,9 @@ export default function HomePage() {
           />
 
           {isTrialGuided && showTrialStart && (
+
             <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/30">
+
               <div
                 ref={startModalRef}
                 role="dialog"
@@ -1387,7 +1397,9 @@ export default function HomePage() {
           )}
 
           {isTrialGuided && showTrialEnd && (
+
             <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/30">
+
               <div
                 ref={endModalRef}
                 role="dialog"
@@ -1446,6 +1458,7 @@ export default function HomePage() {
 
               <div className="text-xs text-[var(--h-muted)] sm:text-right">
                 Seu saldo atual de créditos é de:{" "}
+
                 <span
   className={[
     "font-semibold inline-block transition-colors duration-200",
@@ -1454,6 +1467,7 @@ export default function HomePage() {
 >
   {animatedBalanceLabel}
 </span>
+
               </div>
             </div>
 
@@ -1625,7 +1639,11 @@ function OkModal({
   if (!open) return null;
 
   return (
+
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30">
+
+
+
       <div
         ref={panelRef}
         role="dialog"

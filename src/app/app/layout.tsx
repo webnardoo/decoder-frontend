@@ -2,7 +2,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import "@/app/exp-site-v12/site.css";
@@ -15,7 +15,6 @@ import MarketingTopNav from "@/components/marketing/MarketingTopNav";
 import { AppFooter } from "@/components/app-footer";
 import { OnboardingRouteGuard } from "@/components/onboarding/OnboardingRouteGuard";
 
-import { useNotifications } from "@/components/marketing/topnav/notifications/useNotifications";
 import { CreditsBalanceRealtimeProvider } from "@/lib/credits-balance-realtime";
 
 type OnboardingStatus = {
@@ -54,49 +53,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const [showBuyCredits, setShowBuyCredits] = useState(false);
   const [unreadCount, setUnreadCount] = useState<number>(0);
 
-  // ✅ NOVO: saldo resolvido em memória (fonte única pro app todo)
+  // ✅ saldo inicial do app (sem SSE aqui para não duplicar stream; TopNav já faz SSE)
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
-
-  // ✅ SSE notifications (liga stream e expõe creditsBalance realtime)
-  const { onCreditsBalance } = useNotifications(!onAuth);
-
-  // ✅ evita re-registrar listener em re-renders
-  const unsubCreditsRef = useRef<null | (() => void)>(null);
-
-  // ✅ Listener: atualiza saldo e derivados (ex.: CTA)
-  useEffect(() => {
-    if (onAuth) {
-      if (unsubCreditsRef.current) {
-        unsubCreditsRef.current();
-        unsubCreditsRef.current = null;
-      }
-      setCreditsBalance(null);
-      return;
-    }
-
-    if (!onCreditsBalance) return;
-
-    if (unsubCreditsRef.current) {
-      unsubCreditsRef.current();
-      unsubCreditsRef.current = null;
-    }
-
-    unsubCreditsRef.current = onCreditsBalance(({ creditsBalance }) => {
-      const bal = typeof creditsBalance === "number" && Number.isFinite(creditsBalance) ? creditsBalance : null;
-
-      setCreditsBalance(bal);
-
-      const should = typeof bal === "number" && bal < 10;
-      setShowBuyCredits(should);
-    });
-
-    return () => {
-      if (unsubCreditsRef.current) {
-        unsubCreditsRef.current();
-        unsubCreditsRef.current = null;
-      }
-    };
-  }, [onAuth, onCreditsBalance]);
 
   useEffect(() => {
     let alive = true;
