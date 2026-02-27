@@ -6,11 +6,7 @@ import { createPortal } from "react-dom";
 import type { NotificationItem } from "./notifications.service";
 import { timeAgo } from "@/shared/utils/date/timeAgo";
 
-<div style={{position:"fixed", top:0, left:0, zIndex:999999, background:"#f00", color:"#fff", padding:4}}>
-  Desk_COMPONENT_RENDERED
-</div>
-
-type Props = {
+export type NotificationsPanelProps = {
   items: NotificationItem[];
   unread: number;
   loading: boolean;
@@ -20,7 +16,28 @@ type Props = {
   onClickItem: (n: NotificationItem) => void | Promise<void>;
 
   onClose: () => void;
+
+  // ✅ PIX: abrir modal com paymentId
+  onPixOpen?: (paymentId: string) => void;
 };
+
+function hasPixHint(n: NotificationItem): boolean {
+  const type = String(n?.entityType || "").toUpperCase();
+  const id = String(n?.entityId || "").trim();
+  if (type === "PAYMENT" && id) return true;
+
+  const msg = String(n?.message || "");
+  return /pay_[a-z0-9]+/i.test(msg);
+}
+
+function extractPixPaymentId(n: NotificationItem): string | null {
+  const id = String(n?.entityId || "").trim();
+  if (id) return id;
+
+  const msg = String(n?.message || "");
+  const m = msg.match(/(pay_[a-z0-9]+)/i);
+  return m?.[1] ? String(m[1]) : null;
+}
 
 export default function NotificationsPanel({
   items,
@@ -30,7 +47,8 @@ export default function NotificationsPanel({
   onMarkAll,
   onClickItem,
   onClose,
-}: Props) {
+  onPixOpen,
+}: NotificationsPanelProps) {
   const [mounted, setMounted] = useState(false);
 
   const unreadCount = unread ?? 0;
@@ -55,11 +73,7 @@ export default function NotificationsPanel({
 
   return createPortal(
     <div className="hNotifPanelOverlay" role="presentation" onPointerDown={onClose}>
-      <div
-  className="hNotifLayer__panel" onPointerDown={(e) => e.stopPropagation()}
-  
-  
->
+      <div className="hNotifLayer__panel" onPointerDown={(e) => e.stopPropagation()}>
         <div className="hNotifPanel__head">
           <div className="hNotifPanel__title">
             Notificações {unreadCount > 0 ? `(${unreadCount})` : ""}
@@ -93,29 +107,67 @@ export default function NotificationsPanel({
               const isUnread = !n.readAt;
               const createdLabel = n.createdAt ? timeAgo(n.createdAt) : "";
 
-              return (
-                <button
-                  key={n.id}
-                  type="button"
-                  className={`hNotifPanel__item ${isUnread ? "isUnread" : "isRead"}`}
-                  onClick={() => onClickItem(n)}
-                >
-                  <div className="hNotifPanel__itemTop">
-                    <div className="hNotifPanel__itemTitle">
-                      {n.title || "Notificação"}
-                    </div>
-                    <div className="hNotifPanel__itemTime">{createdLabel}</div>
-                  </div>
+              const showPixLink = Boolean(onPixOpen) && hasPixHint(n);
+              const pixPaymentId = showPixLink ? extractPixPaymentId(n) : null;
 
-                  {n.message ? (
-                    <div className="hNotifPanel__itemMsg">{n.message}</div>
+              return (
+                <div
+                  key={n.id}
+                  className={`hNotifPanel__itemWrap ${isUnread ? "isUnread" : "isRead"}`}
+                >
+                  <button
+                    type="button"
+                    className={`hNotifPanel__item ${isUnread ? "isUnread" : "isRead"}`}
+                    onClick={() => onClickItem(n)}
+                  >
+                    <div className="hNotifPanel__itemTop">
+                      <div className="hNotifPanel__itemTitle">{n.title || "Notificação"}</div>
+                      <div className="hNotifPanel__itemTime">{createdLabel}</div>
+                    </div>
+
+                    {n.message ? <div className="hNotifPanel__itemMsg">{n.message}</div> : null}
+                  </button>
+
+                  {showPixLink && pixPaymentId ? (
+                    <button
+                      type="button"
+                      className="hNotifPanel__itemLink"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onPixOpen?.(pixPaymentId);
+                      }}
+                      aria-label="Acessar dados do Pix"
+                    >
+                      Acesse os dados do Pix aqui
+                    </button>
                   ) : null}
-                </button>
+                </div>
               );
             })}
           </div>
         )}
       </div>
+
+      <style jsx global>{`
+        .hNotifPanel__itemLink {
+          margin-top: 8px;
+          padding: 0;
+          border: 0;
+          background: transparent;
+          cursor: pointer;
+          text-align: left;
+          text-decoration: underline;
+          font-weight: 600;
+        }
+        .hNotifPanel__itemLink:hover {
+          opacity: 0.85;
+        }
+        .hNotifPanel__itemWrap {
+          display: flex;
+          flex-direction: column;
+        }
+      `}</style>
     </div>,
     document.body
   );

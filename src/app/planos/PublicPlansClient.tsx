@@ -524,49 +524,54 @@ export default function PublicPlansClient() {
   }
 
   return (
-    <main className="flex-1 px-4 py-10 md:py-12">
+    <main className="flex-1 px-4 py-6 md:py-8">
       <div className="mx-auto w-full max-w-6xl">
-        <div className="text-center space-y-4">
-          <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-zinc-100">
-            Escolha como deseja utilizar seus créditos
-          </h1>
-          <p className="text-sm md:text-base text-zinc-400 max-w-3xl mx-auto">
-            Adquira <span className="text-zinc-200">Pacotes de Créditos</span> sob demanda ou opte por um{" "}
-            <span className="text-zinc-200">Plano Mensal</span> recorrente. Ambas as opções funcionam juntas e oferecem total flexibilidade.
-          </p>
+  {/* HEADER TOPO (mais alto) */}
+  <div className="text-center">
+    <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-zinc-100">
+      Escolha como deseja utilizar seus créditos
+    </h1>
 
-          <div className="pt-2 flex items-center justify-center">
-            <div className="inline-flex rounded-full border border-white/10 bg-white/5 backdrop-blur p-1 gap-2">
-              <button
-                className={
-                  creditsIsSelected
-                    ? "px-5 py-2 rounded-full text-sm text-zinc-100 bg-white/10 border border-white/10"
-                    : "px-5 py-2 rounded-full text-sm text-zinc-300 hover:text-zinc-100"
-                }
-                onClick={() => {
-                  setTab("credits");
-                  setErr(null);
-                }}
-                type="button"
-              >
-                Comprar Créditos
-              </button>
-              <button
-                className={
-                  plansIsSelected
-                    ? "px-5 py-2 rounded-full text-sm text-zinc-100 bg-white/10 border border-white/10"
-                    : "px-5 py-2 rounded-full text-sm text-zinc-300 hover:text-zinc-100"
-                }
-                onClick={() => {
-                  setTab("plans");
-                  resetPixUi();
-                }}
-                type="button"
-              >
-                Planos Mensais
-              </button>
-            </div>
-          </div>
+    <p className="mt-2 text-sm md:text-base text-zinc-400 max-w-3xl mx-auto">
+      Adquira <span className="text-zinc-200">Pacotes de Créditos</span> sob demanda ou opte por um{" "}
+      <span className="text-zinc-200">Plano Mensal</span> recorrente. Ambas as opções funcionam juntas e oferecem total flexibilidade.
+    </p>
+  </div>
+
+  {/* TABS (centralizado abaixo do header) */}
+  <div className="mt-4 flex items-center justify-center">
+    <div className="inline-flex rounded-full border border-white/10 bg-white/5 backdrop-blur p-1 gap-2">
+      <button
+        className={
+          creditsIsSelected
+            ? "px-5 py-2 rounded-full text-sm text-zinc-100 bg-white/10 border border-white/10"
+            : "px-5 py-2 rounded-full text-sm text-zinc-300 hover:text-zinc-100"
+        }
+        onClick={() => {
+          setTab("credits");
+          setErr(null);
+        }}
+        type="button"
+      >
+        Comprar Créditos
+      </button>
+
+      <button
+        className={
+          plansIsSelected
+            ? "px-5 py-2 rounded-full text-sm text-zinc-100 bg-white/10 border border-white/10"
+            : "px-5 py-2 rounded-full text-sm text-zinc-300 hover:text-zinc-100"
+        }
+        onClick={() => {
+          setTab("plans");
+          resetPixUi();
+        }}
+        type="button"
+      >
+        Planos Mensais
+      </button>
+    </div>
+ 
         </div>
 
         {err && plansIsSelected && (

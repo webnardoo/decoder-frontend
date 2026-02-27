@@ -1,3 +1,4 @@
+// src/components/marketing/topnav/notifications/NotificationsMobileLayer.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -5,7 +6,7 @@ import { createPortal } from "react-dom";
 import type { NotificationItem } from "./notifications.service";
 import { timeAgo } from "@/shared/utils/date/timeAgo";
 
-type Props = {
+export type NotificationsMobileLayerProps = {
   items: NotificationItem[];
   unread: number;
   loading: boolean;
@@ -14,17 +15,32 @@ type Props = {
   onClose: () => void;
   onClickItem: (n: NotificationItem) => void | Promise<void>;
   onMarkAll: () => void | Promise<void>;
+
+  // ✅ PIX: abrir modal com paymentId
+  onPixOpen?: (paymentId: string) => void;
 };
 
-export default function NotificationsMobile({
-  items,
-  unread,
-  loading,
-  error,
-  onClose,
-  onClickItem,
-  onMarkAll,
-}: Props) {
+function hasPixHint(n: NotificationItem): boolean {
+  const type = String(n?.entityType || "").toUpperCase();
+  const id = String(n?.entityId || "").trim();
+  if (type === "PAYMENT" && id) return true;
+
+  const msg = String(n?.message || "");
+  return /pay_[a-z0-9]+/i.test(msg);
+}
+
+function extractPixPaymentId(n: NotificationItem): string | null {
+  const id = String(n?.entityId || "").trim();
+  if (id) return id;
+
+  const msg = String(n?.message || "");
+  const m = msg.match(/(pay_[a-z0-9]+)/i);
+  return m?.[1] ? String(m[1]) : null;
+}
+
+const NotificationsMobileLayer: React.FC<NotificationsMobileLayerProps> = (props) => {
+  const { items, unread, loading, error, onClose, onClickItem, onMarkAll, onPixOpen } = props;
+
   const [mounted, setMounted] = useState(false);
 
   const unreadCount = unread ?? 0;
@@ -72,7 +88,7 @@ export default function NotificationsMobile({
         onClick={onClose}
       />
 
-      {/* sheet: superfície sólida + scroll interno (classe que seu CSS espera) */}
+      {/* sheet: superfície sólida + scroll interno */}
       <div className="hNotifLayer__sheet" onClick={(e) => e.stopPropagation()}>
         <div className="hNotifLayer__top">
           <button type="button" className="hNotifLayer__back" onClick={onClose} aria-label="Fechar">
@@ -83,12 +99,7 @@ export default function NotificationsMobile({
             Notificações {unreadCount > 0 ? `(${unreadCount})` : ""}
           </div>
 
-          <button
-            type="button"
-            className="hNotifLayer__close"
-            onClick={onClose}
-            aria-label="Fechar"
-          >
+          <button type="button" className="hNotifLayer__close" onClick={onClose} aria-label="Fechar">
             ✕
           </button>
         </div>
@@ -107,34 +118,45 @@ export default function NotificationsMobile({
                 const isUnread = !n.readAt;
                 const key = id ? id : `notif_${idx}`;
 
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    className={`hNotifLayer__item ${isUnread ? "isUnread" : "isRead"}`}
-                    onClick={() => onClickItem(n)}
-                  >
-                    <div className="hNotifLayer__itemTop">
-                      <div className="hNotifLayer__itemTitle">{n.title || "Notificação"}</div>
-                      <div className="hNotifLayer__itemTime">
-                        {n.createdAt ? timeAgo(n.createdAt) : ""}
-                      </div>
-                    </div>
+                const showPixLink = Boolean(onPixOpen) && hasPixHint(n);
+                const pixPaymentId = showPixLink ? extractPixPaymentId(n) : null;
 
-                    {n.message ? <div className="hNotifLayer__itemMsg">{n.message}</div> : null}
-                  </button>
+                return (
+                  <div key={key} className={`hNotifLayer__itemWrap ${isUnread ? "isUnread" : "isRead"}`}>
+                    <button
+                      type="button"
+                      className={`hNotifLayer__item ${isUnread ? "isUnread" : "isRead"}`}
+                      onClick={() => onClickItem(n)}
+                    >
+                      <div className="hNotifLayer__itemTop">
+                        <div className="hNotifLayer__itemTitle">{n.title || "Notificação"}</div>
+                        <div className="hNotifLayer__itemTime">{n.createdAt ? timeAgo(n.createdAt) : ""}</div>
+                      </div>
+
+                      {n.message ? <div className="hNotifLayer__itemMsg">{n.message}</div> : null}
+                    </button>
+
+                    {showPixLink && pixPaymentId ? (
+                      <button
+                        type="button"
+                        className="hNotifLayer__pixLink"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onPixOpen?.(pixPaymentId);
+                        }}
+                      >
+                        Acesse os dados do Pix aqui
+                      </button>
+                    ) : null}
+                  </div>
                 );
               })}
             </div>
           )}
 
           <div className="hNotifLayer__footer">
-            <button
-              type="button"
-              className="hNotifLayer__all"
-              onClick={onMarkAll}
-              disabled={!hasUnread}
-            >
+            <button type="button" className="hNotifLayer__all" onClick={onMarkAll} disabled={!hasUnread}>
               Marcar como lidas
             </button>
           </div>
@@ -143,4 +165,6 @@ export default function NotificationsMobile({
     </div>,
     document.body
   );
-}
+};
+
+export default NotificationsMobileLayer;

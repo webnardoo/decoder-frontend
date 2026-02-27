@@ -211,14 +211,10 @@ type AddOnUi = {
     badgeBorderSelected: string;
     badgeTextSelected: string;
 
-    check: string; // cor do ✓
+    check: string;
   };
 };
 
-// Cores alinhadas aos cards dos planos mensais:
-// Starter -> Standard (azul)
-// Medium  -> Pro (violeta)
-// Essential -> Ilimitado (âmbar)
 const ADDONS: AddOnUi[] = [
   {
     code: "addon_starter",
@@ -235,16 +231,12 @@ const ADDONS: AddOnUi[] = [
         "radial-gradient(closest-side, rgba(59,130,246,0.28), rgba(59,130,246,0.0))",
       bg:
         "linear-gradient(180deg, rgba(59,130,246,0.10), rgba(255,255,255,0.035))",
-
-      // ✅ mais contraste (chips estavam lavados)
       badgeBg: "bg-blue-500/18",
       badgeBorder: "border-blue-300/38",
       badgeText: "text-blue-500",
-
       badgeBgSelected: "bg-blue-500/26",
       badgeBorderSelected: "border-blue-200/48",
       badgeTextSelected: "text-blue-500",
-
       check: "text-blue-200",
     },
   },
@@ -263,16 +255,12 @@ const ADDONS: AddOnUi[] = [
         "radial-gradient(closest-side, rgba(245,158,11,0.28), rgba(245,158,11,0.0))",
       bg:
         "linear-gradient(180deg, rgba(245,158,11,0.10), rgba(255,255,255,0.035))",
-
-      // ✅ + contraste (e +10% no badge do Essential)
       badgeBg: "bg-amber-300/48",
       badgeBorder: "border-amber-200/78",
       badgeText: "text-amber-950",
-
       badgeBgSelected: "bg-amber-200/70",
       badgeBorderSelected: "border-amber-100/90",
       badgeTextSelected: "text-amber-950",
-
       check: "text-amber-200",
     },
   },
@@ -291,16 +279,12 @@ const ADDONS: AddOnUi[] = [
         "radial-gradient(closest-side, rgba(139,92,246,0.28), rgba(139,92,246,0.0))",
       bg:
         "linear-gradient(180deg, rgba(139,92,246,0.10), rgba(255,255,255,0.035))",
-
-      // ✅ mais contraste (chips estavam lavados)
       badgeBg: "bg-violet-500/18",
       badgeBorder: "border-violet-300/38",
       badgeText: "text-violet-500",
-
       badgeBgSelected: "bg-violet-500/26",
       badgeBorderSelected: "border-violet-200/48",
       badgeTextSelected: "text-violet-500",
-
       check: "text-violet-200",
     },
   },
@@ -512,77 +496,107 @@ export default function BillingPlanPage() {
   const plansIsSelected = tab === "plans";
 
   return (
-    <main className="flex-1 px-4 py-10 md:py-12">
-      <div className="mx-auto w-full max-w-6xl">
-        <div className="text-center space-y-4">
-          <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-zinc-100">
-            Escolha como deseja utilizar seus créditos
-          </h1>
-          <p className="text-sm md:text-base text-zinc-400 max-w-3xl mx-auto">
-            Adquira{" "}
-            <span className="text-zinc-200">Pacotes de Créditos</span> sob
-            demanda ou opte por um{" "}
-            <span className="text-zinc-200">Plano Mensal</span> recorrente.
-            Ambas as opções funcionam juntas e oferecem total flexibilidade.
-          </p>
+    // ✅ MENOS ESPAÇO NO TOPO (antes: py-10 md:py-12)
+<main className="flex-1 px-4 pt-4 pb-10 md:pt-6 md:pb-12">
+  
 
-          <div className="pt-2 flex items-center justify-center">
-            <div className="inline-flex rounded-full border border-white/10 bg-white/5 backdrop-blur p-1 gap-2">
-              <button
-                className={
-                  creditsIsSelected
-                    ? "px-5 py-2 rounded-full text-sm text-zinc-100 bg-white/10 border border-white/10"
-                    : "px-5 py-2 rounded-full text-sm text-zinc-300 hover:text-zinc-100"
-                }
-                onClick={() => {
-                  setTab("credits");
-                  setErr(null);
-                }}
-                type="button"
-              >
-                Comprar Créditos
-              </button>
-              <button
-                className={
-                  plansIsSelected
-                    ? "px-5 py-2 rounded-full text-sm text-zinc-100 bg-white/10 border border-white/10"
-                    : "px-5 py-2 rounded-full text-sm text-zinc-300 hover:text-zinc-100"
-                }
-                onClick={() => {
-                  setTab("plans");
-                  resetPixUi();
-                }}
-                type="button"
-              >
-                Planos Mensais
-              </button>
-            </div>
-          </div>
-        </div>
+<div className="mx-auto w-full max-w-6xl">
+  {/* HEADER TOPO: título centralizado + voltar fixo à direita */}
+  <div className="relative flex items-start justify-center">
+    {/* Botão Voltar preso à direita */}
+    <div className="absolute right-0 top-0">
+      <button
+        onClick={() => router.push("/app/app")}
+        type="button"
+        className="inline-flex items-center rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 ease-out active:scale-[0.98]"
+        style={{
+          border: "2px solid rgba(124,58,237,0.65)",
+          background: "rgba(124,58,237,0.08)",
+          color: "#000000",
+          boxShadow:
+            "0 0 0 1px rgba(124,58,237,0.35), 0 6px 20px rgba(124,58,237,0.25)",
+        }}
+      >
+        ← Voltar
+      </button>
+    </div>
 
+    {/* Conteúdo central */}
+    <div className="text-center max-w-3xl px-2">
+      <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-zinc-100">
+        Escolha como deseja utilizar seus créditos
+      </h1>
+
+      <p className="mt-2 text-sm md:text-base text-zinc-400">
+        Adquira{" "}
+        <span className="text-zinc-200">Pacotes de Créditos</span> sob demanda ou opte por um{" "}
+        <span className="text-zinc-200">Plano Mensal</span> recorrente. Ambas as opções funcionam juntas e oferecem total flexibilidade.
+      </p>
+    </div>
+  </div>
+
+  {/* TABS */}
+  <div className="mt-4 flex items-center justify-center">
+    <div className="inline-flex rounded-full border border-white/10 bg-white/5 backdrop-blur p-1 gap-2">
+      <button
+        className={
+          creditsIsSelected
+            ? "px-5 py-2 rounded-full text-sm text-zinc-100 bg-white/10 border border-white/10"
+            : "px-5 py-2 rounded-full text-sm text-zinc-300 hover:text-zinc-100"
+        }
+        onClick={() => {
+          setTab("credits");
+          setErr(null);
+        }}
+        type="button"
+      >
+        Comprar Créditos
+      </button>
+
+      <button
+        className={
+          plansIsSelected
+            ? "px-5 py-2 rounded-full text-sm text-zinc-100 bg-white/10 border border-white/10"
+            : "px-5 py-2 rounded-full text-sm text-zinc-300 hover:text-zinc-100"
+        }
+        onClick={() => {
+          setTab("plans");
+          resetPixUi();
+        }}
+        type="button"
+      >
+        Planos Mensais
+      </button>
+    </div>
+  </div>
+
+  {/* (daqui pra baixo, segue seu código igual) */}
         {err && plansIsSelected && (
-          <div className="mt-8 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2 text-sm text-red-200">
+          <div className="mt-6 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2 text-sm text-red-200">
             {err}
           </div>
         )}
 
         {pixErr && creditsIsSelected && (
-          <div className="mt-8 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2 text-sm text-zinc-900">
-  {pixErr}
-</div>
+          <div className="mt-6 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2 text-sm text-zinc-900">
+            {pixErr}
+          </div>
         )}
 
         {creditsIsSelected && (
-          <section className="mt-10">
+          // ✅ MENOS ESPAÇO ANTES DA SEÇÃO (antes: mt-10)
+          <section className="mt-5">
             <div className="mx-auto max-w-4xl text-center">
               <div className="text-sm font-semibold text-zinc-200">
                 Expanda sua capacidade no seu ritmo
               </div>
-              <div className="mt-2 text-sm text-zinc-400">
+              {/* ✅ MENOS ESPAÇO ENTRE LINHAS (antes: mt-2) */}
+              <div className="mt-1 text-sm text-zinc-400">
                 Sem assinatura. Sem renovação automática. Sem prazo para
                 utilizar.
               </div>
-              <div className="mt-4 text-sm text-zinc-400 leading-relaxed">
+              {/* ✅ MENOS ESPAÇO (antes: mt-4) */}
+              <div className="mt-3 text-sm text-zinc-400 leading-relaxed">
                 Os Pacotes de Créditos oferecem flexibilidade para ampliar seu
                 uso sempre que desejar — seja para intensificar análises em um
                 período específico ou reforçar seu saldo a qualquer momento.
@@ -591,13 +605,12 @@ export default function BillingPlanPage() {
               </div>
             </div>
 
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+            {/* ✅ GRID MAIS PERTO (antes: mt-8) */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
               {ADDONS.map((a) => {
                 const isSelected = a.code === selectedAddOn;
 
-                // Não-selecionado: mais "flat premium"
                 const flatShadow = "shadow-[0_10px_26px_rgba(0,0,0,0.18)]";
-                // Selecionado: salta de verdade
                 const selectedShadow = "shadow-[0_22px_72px_rgba(0,0,0,0.58)]";
 
                 const scaleClass = isSelected ? "scale-[1.04]" : "scale-100";
@@ -632,7 +645,7 @@ export default function BillingPlanPage() {
                       aria-hidden
                       className={[
                         "absolute -bottom-24 left-1/2 -translate-x-1/2 w-[520px] h-[240px] blur-2xl",
-                        isSelected ? "opacity-90" : "opacity-28", // menos glow no repouso
+                        isSelected ? "opacity-90" : "opacity-28",
                         "transition-all duration-200 ease-out",
                       ].join(" ")}
                       style={{ background: a.accent.glow }}
@@ -670,7 +683,6 @@ export default function BillingPlanPage() {
                             Selecionado
                           </div>
                         ) : (
-                          // ✅ botão de não-selecionado mais "quieto" (outline-only e menos contraste)
                           <div className="inline-flex items-center rounded-full px-3 py-1 text-[11px] border border-white/10 bg-transparent text-zinc-500">
                             Selecionar
                           </div>
@@ -704,13 +716,16 @@ export default function BillingPlanPage() {
                             <span className={a.accent.check}>✔</span> Compra única
                           </li>
                           <li className="flex items-center gap-2">
-                            <span className={a.accent.check}>✔</span> Créditos permanentes
+                            <span className={a.accent.check}>✔</span> Créditos
+                            permanentes
                           </li>
                           <li className="flex items-center gap-2">
-                            <span className={a.accent.check}>✔</span> Compatível com plano mensal
+                            <span className={a.accent.check}>✔</span> Compatível
+                            com plano mensal
                           </li>
                           <li className="flex items-center gap-2">
-                            <span className={a.accent.check}>✔</span> Liberação automática após confirmação
+                            <span className={a.accent.check}>✔</span> Liberação
+                            automática após confirmação
                           </li>
                         </ul>
                       </div>
@@ -720,7 +735,8 @@ export default function BillingPlanPage() {
               })}
             </div>
 
-            <div className="mt-8 mx-auto max-w-3xl">
+            {/* ✅ BOX DO PIX MAIS PRA CIMA (antes: mt-8) */}
+            <div className="mt-6 mx-auto max-w-3xl">
               <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-5 md:p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -736,19 +752,21 @@ export default function BillingPlanPage() {
                 </div>
 
                 {pixStep !== "idle" && (
-                  <div className="mt-4">
-                    <div className="text-xs text-zinc-400">
+                  <div className="mt-3">
+                    <div className="text-xs text-zinc-500">
                       Informe seu CPF/CNPJ para emissão do pagamento.
                     </div>
+
                     <div className="mt-2 flex flex-col md:flex-row gap-3">
                       <input
                         value={cpfCnpj}
                         onChange={(e) => setCpfCnpj(e.target.value)}
                         autoFocus
                         placeholder="CPF/CNPJ"
-                        className="w-full md:flex-1 rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-white/20"
                         inputMode="numeric"
+                        className="w-full md:flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none focus:border-zinc-300 focus:ring-0"
                       />
+
                       <div className="text-xs text-zinc-500 md:w-[220px] md:self-center">
                         Somente para emissão do pagamento no Asaas.
                       </div>
@@ -756,7 +774,8 @@ export default function BillingPlanPage() {
                   </div>
                 )}
 
-                <div className="mt-5 flex justify-center">
+                {/* ✅ MENOS ESPAÇO (antes: mt-5) */}
+                <div className="mt-4 flex justify-center">
                   <button
                     type="button"
                     onClick={() => void onPixPrimaryClick()}
@@ -780,30 +799,20 @@ export default function BillingPlanPage() {
                 </div>
 
                 {pixStep === "ready" && pixRes && (pixRes as any)?.ok === true && (
-                  <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4 md:p-5">
+                  <div className="mt-5 rounded-2xl border border-white/10 bg-white p-4 md:p-5">
                     <div className="flex items-center justify-between gap-4">
-                      <div className="text-sm font-semibold text-zinc-100">
+                      <div className="text-sm font-semibold text-zinc-900">
                         PIX gerado com sucesso
                       </div>
-                      {(pixRes as any)?.payment?.invoiceUrl ? (
-                        <a
-                          className="text-xs text-zinc-300 hover:text-zinc-100 underline underline-offset-4"
-                          href={(pixRes as any).payment.invoiceUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Abrir fatura
-                        </a>
-                      ) : null}
                     </div>
 
                     <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <div className="text-xs text-zinc-400">Copia e cola</div>
+                        <div className="text-xs text-zinc-600">Copia e cola</div>
                         <textarea
                           readOnly
                           value={String((pixRes as any)?.pixQrCode?.payload ?? "")}
-                          className="mt-2 w-full h-[120px] rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs text-zinc-200 outline-none"
+                          className="mt-2 w-full h-[120px] rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-900 outline-none focus:border-zinc-300"
                         />
                         <div className="mt-2 text-[11px] text-zinc-500">
                           Use no app do seu banco para pagar.
@@ -811,8 +820,8 @@ export default function BillingPlanPage() {
                       </div>
 
                       <div>
-                        <div className="text-xs text-zinc-400">QR Code</div>
-                        <div className="mt-2 rounded-xl border border-white/10 bg-black/30 p-3 flex items-center justify-center min-h-[160px]">
+                        <div className="text-xs text-zinc-600">QR Code</div>
+                        <div className="mt-2 rounded-xl border border-zinc-200 bg-white p-3 flex items-center justify-center min-h-[160px]">
                           {(pixRes as any)?.pixQrCode?.encodedImage ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
@@ -830,7 +839,7 @@ export default function BillingPlanPage() {
                         </div>
                         <div className="mt-2 text-[11px] text-zinc-500">
                           Expiração:{" "}
-                          <span className="text-zinc-300">
+                          <span className="text-zinc-700">
                             {String((pixRes as any)?.pixQrCode?.expirationDate ?? "—")}
                           </span>
                         </div>
