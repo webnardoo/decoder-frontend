@@ -30,7 +30,7 @@ function getBackendBaseUrl(): {
 }
 
 function extractTokenFromCookie(req: Request): string | null {
-  const cookieHeader = req.headers.get("cookie");
+  const cookieHeader = req.headers.get("cookie") || "";
   if (!cookieHeader) return null;
 
   const match = cookieHeader
@@ -40,7 +40,7 @@ function extractTokenFromCookie(req: Request): string | null {
 
   if (!match) return null;
 
-  const raw = match.split("=")[1];
+  const raw = match.split("=").slice(1).join("="); // preserva '=' no token, se houver
   try {
     return decodeURIComponent(raw);
   } catch {
@@ -50,34 +50,27 @@ function extractTokenFromCookie(req: Request): string | null {
 
 function pickHeaders(req: Request): HeadersInit {
   const accept = req.headers.get("accept") || "application/json";
-  const token = extractTokenFromCookie(req);
+  const tokenFromCookie = extractTokenFromCookie(req);
+  const authorization = req.headers.get("authorization") || "";
 
-  const h: Record<string, string> = {
-    Accept: accept,
-  };
+  const h: Record<string, string> = { Accept: accept };
 
-  if (token) {
-    h.Authorization = `Bearer ${token}`;
-  }
+  // Prioridade: Authorization explícito do client, senão cookie decoder_auth
+  if (authorization) h.Authorization = authorization;
+  else if (tokenFromCookie) h.Authorization = `Bearer ${tokenFromCookie}`;
 
   return h;
 }
 
-function jsonError(
-  status: number,
-  payload: Record<string, any>,
-  debugHeaders?: Record<string, string>
-) {
-  return NextResponse.json(
-    { ok: false, ...payload },
-    {
-      status,
-      headers: {
-        "content-type": "application/json; charset=utf-8",
-        ...(debugHeaders || {}),
-      },
-    }
-  );
+function withStep(payload: any, step: string, extra?: any) {
+  return {
+    ...payload,
+    debug: {
+      ...(payload?.debug || {}),
+      step,
+      ...(extra || {}),
+    },
+  };
 }
 
 export async function GET(
@@ -86,6 +79,7 @@ export async function GET(
 ) {
   const { base, source } = getBackendBaseUrl();
 
+  // timeout curto pra não “pendurar” function
   const controller = new AbortController();
   const timeoutMs = 10_000;
   const timeout = setTimeout(() => controller.abort("timeout"), timeoutMs);
@@ -93,10 +87,9 @@ export async function GET(
   try {
     const paymentId = String(ctx?.params?.paymentId || "").trim();
     if (!paymentId) {
-      return jsonError(
-        400,
-        { error: "paymentId_required" },
-        { "x-debug-step": "validate_params" }
+      return NextResponse.json(
+        withStep({ ok: false, error: "paymentId_required" }, "validate_params"),
+        { status: 400, headers: { "x-debug-step": "validate_params" } }
       );
     }
 
@@ -109,6 +102,7 @@ export async function GET(
       signal: controller.signal,
     });
 
+    // ✅ PASS-THROUGH (stream) — não ler body, não parsear, não re-serializar
     const contentType =
       res.headers.get("content-type") || "application/json; charset=utf-8";
 
@@ -119,8 +113,14 @@ export async function GET(
     headers.set("x-debug-base", safeBaseForDebug(base));
     headers.set("x-debug-base-source", source);
 
+    // Só pra facilitar diagnóstico sem expor token:
+    const tokenPresent =
+      Boolean(req.headers.get("authorization")) || Boolean(extractTokenFromCookie(req));
+    headers.set("x-debug-auth-present", tokenPresent ? "1" : "0");
+
     if (!res.body) {
       const raw = await res.text().catch(() => "");
+      headers.set("x-debug-step", "passthrough_no_body");
       return new NextResponse(raw, { status: res.status, headers });
     }
 
@@ -135,19 +135,25 @@ export async function GET(
       msg.includes("timeout") ||
       String(e).includes("AbortError");
 
-    return jsonError(
-      aborted ? 504 : 502,
+    return NextResponse.json(
+      withStep(
+        {
+          ok: false,
+          error: aborted ? "proxy_timeout" : "proxy_failed",
+          message: msg,
+          baseHost: safeBaseForDebug(base),
+          baseSource: source,
+          nodeEnv: String(process.env.NODE_ENV || ""),
+        },
+        "catch"
+      ),
       {
-        error: aborted ? "proxy_timeout" : "proxy_failed",
-        message: msg,
-        baseHost: safeBaseForDebug(base),
-        baseSource: source,
-        nodeEnv: String(process.env.NODE_ENV || ""),
-      },
-      {
-        "x-debug-step": "catch",
-        "x-debug-base": safeBaseForDebug(base),
-        "x-debug-base-source": source,
+        status: aborted ? 504 : 502,
+        headers: {
+          "x-debug-step": "catch",
+          "x-debug-base": safeBaseForDebug(base),
+          "x-debug-base-source": source,
+        },
       }
     );
   } finally {
