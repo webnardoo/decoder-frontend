@@ -11,6 +11,24 @@ export type NotificationItem = {
   readAt?: string | null;
   channel?: string | null;
   source?: string | null;
+
+  // ✅ NOVO: necessário para “PIX gerado” consultar depois (cross-device)
+  entityType?: string | null; // ex: "PAYMENT"
+  entityId?: string | null; // ex: payment.id do Asaas
+};
+
+export type PixDetails = {
+  ok: true;
+  provider: "ASAAS";
+  paymentId: string;
+  invoiceUrl?: string | null;
+  value?: number | null;
+  dueDate?: string | null; // YYYY-MM-DD (se vier)
+  pixQrCode: {
+    encodedImage?: string | null; // base64
+    payload?: string | null; // copia e cola
+    expirationDate?: string | null; // ISO (se vier)
+  };
 };
 
 /**
@@ -52,8 +70,8 @@ export async function fetchNotifications(limit: number): Promise<NotificationIte
     if (!res.ok) return [];
 
     const data = await res.json().catch(() => null);
-    if (Array.isArray(data?.items)) return data.items;
-    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.items)) return data.items as NotificationItem[];
+    if (Array.isArray(data)) return data as NotificationItem[];
     return [];
   } catch {
     return [];
@@ -134,6 +152,41 @@ export async function postReadMany(ids: string[]): Promise<number | null> {
     const n = Number(data?.unreadCount);
     if (!Number.isFinite(n)) return null;
     return Math.max(0, Math.floor(n));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * ✅ CONSULTA PIX por paymentId (Asaas)
+ * FRONT via proxy real do Next (conforme sua árvore):
+ *   GET /api/billing/addons/asaas/pix/:paymentId
+ *
+ * (mapeia para o BACK:
+ *   GET /api/v1/billing/asaas/pix/:paymentId)
+ */
+export async function fetchPixDetails(
+  paymentId: string,
+  signal?: AbortSignal
+): Promise<PixDetails | null> {
+  try {
+    const pid = String(paymentId || "").trim();
+    if (!pid) return null;
+
+    const res = await fetch(`/api/billing/addons/asaas/pix/${encodeURIComponent(pid)}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      credentials: "include",
+      signal,
+    });
+
+    if (!res.ok) return null;
+
+    const data = await res.json().catch(() => null);
+    if (data?.ok !== true) return null;
+
+    return data as PixDetails;
   } catch {
     return null;
   }

@@ -1,3 +1,4 @@
+/*src/app/app/layout.tsx*/
 "use client";
 
 import type { ReactNode } from "react";
@@ -6,6 +7,9 @@ import { usePathname } from "next/navigation";
 
 import "@/app/exp-site-v12/site.css";
 import "@/app/exp-site-v12/exp.css";
+
+// ✅ CSS global do modal (App Router exige importar em layout/page)
+import "@/components/billing/pix/PixDetailsModal.css";
 
 import MarketingTopNav from "@/components/marketing/MarketingTopNav";
 import { AppFooter } from "@/components/app-footer";
@@ -44,17 +48,13 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   const onAuth = isPublicAuthPath(pathname);
 
-  // ✅ condição do CTA "Comprar crédito" (TopNav)
   const [showBuyCredits, setShowBuyCredits] = useState(false);
-
-  // ✅ badge de notificações
   const [unreadCount, setUnreadCount] = useState<number>(0);
 
   useEffect(() => {
     let alive = true;
 
     async function load() {
-      // Em telas públicas/auth: nunca mostrar CTA nem badge
       if (onAuth) {
         if (alive) {
           setShowBuyCredits(false);
@@ -64,14 +64,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       }
 
       try {
-        // 1) onboarding/status => decide se mostra "Comprar crédito"
-        // 2) notifications/unread-count => badge
         const [onbRes, unreadRes] = await Promise.all([
           fetch("/api/onboarding/status", { cache: "no-store" }).catch(() => null),
           fetch("/api/notifications/unread-count", { cache: "no-store" }).catch(() => null),
         ]);
 
-        // --- onboarding
         if (!onbRes || !onbRes.ok) {
           if (alive) setShowBuyCredits(false);
         } else {
@@ -81,7 +78,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           if (alive) setShowBuyCredits(should);
         }
 
-        // --- unread count
         if (!unreadRes || !unreadRes.ok) {
           if (alive) setUnreadCount(0);
         } else {
@@ -115,7 +111,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           showBuyCredits={showBuyCredits}
           buyCreditsPulse={showBuyCredits}
           showAccount={true}
-          // ✅ badge
           showNotifications={true}
           notificationsHref="/app/notifications"
           notificationsUnreadCount={unreadCount}
