@@ -1,0 +1,123 @@
+.hNotifTray {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translate3d(-50%, 0, 0);
+  width: min(980px, calc(100vw - 40px));
+  z-index: 9999;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.hNotifTray__item {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+
+  padding: 14px 16px;
+  border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
+
+  opacity: 1;
+  filter: none;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  animation: hNotifTraySlideIn 220ms ease-out both;
+}
+
+@keyframes hNotifTraySlideIn {
+  from { transform: translate3d(0, -14px, 0); opacity: 0.001; }
+  to   { transform: translate3d(0, 0, 0);     opacity: 1; }
+}
+
+/* Tema */
+.hNotifTray[data-theme="light"] .hNotifTray__item {
+  background: #ffffff;
+  border: 1px solid rgba(10, 10, 10, 0.08);
+}
+
+.hNotifTray[data-theme="dark"] .hNotifTray__item {
+  background: #0b0b0b;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+/* Centralizar texto */
+.hNotifTray__content {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.hNotifTray__title {
+  font-weight: 400; /* ✅ sem negrito */
+  font-size: 15px;
+  line-height: 1.2;
+  margin: 0 0 4px 0;
+}
+
+.hNotifTray__msg {
+  font-weight: 400; /* ✅ sem negrito */
+  font-size: 13px;
+  line-height: 1.25;
+  opacity: 1;
+}
+
+/* Close */
+.hNotifTray__close {
+  background: transparent;
+  border: 0;
+  padding: 6px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  line-height: 1;
+  font-size: 18px;
+  opacity: 0.9;
+  color: currentColor;
+}
+
+.hNotifTray__close:hover { opacity: 1; }
+
+/* =========================
+   CORES (PT + EN + fallback por severity)
+   ========================= */
+
+/* VERDE: PIX gerado/confirmado/recebido */
+.hNotifTray__item.nt-PIX_CREATED,
+.hNotifTray__item.nt-PIX_CONFIRMED,
+.hNotifTray__item.nt-PAYMENT_RECEIVED,
+.hNotifTray__item.nt-PIX_GERADO,
+.hNotifTray__item.nt-PIX_CONFIRMADO,
+.hNotifTray__item.nt-PAGAMENTO_RECEBIDO {
+  color: #16a34a;
+}
+
+/* VERMELHO: PIX expirou/cancelado/falhou + payment overdue/deleted/refunded */
+.hNotifTray__item.nt-PIX_EXPIRED,
+.hNotifTray__item.nt-PIX_CANCELED,
+.hNotifTray__item.nt-PIX_FAILED,
+.hNotifTray__item.nt-PAYMENT_OVERDUE,
+.hNotifTray__item.nt-PAYMENT_DELETED,
+.hNotifTray__item.nt-PAYMENT_REFUNDED,
+.hNotifTray__item.nt-PIX_EXPIROU,
+.hNotifTray__item.nt-PIX_CANCELADO,
+.hNotifTray__item.nt-PIX_FALHOU,
+.hNotifTray__item.nt-PAGAMENTO_VENCIDO,
+.hNotifTray__item.nt-PAGAMENTO_EXCLUIDO,
+.hNotifTray__item.nt-PAGAMENTO_ESTORNADO {
+  color: #dc2626;
+}
+
+/* Fallback por severity (se type vier vazio ou desconhecido) */
+.hNotifTray__item[data-ntype="UNKNOWN"][data-sev="success"],
+.hNotifTray__item[data-ntype="UNKNOWN"][data-sev="info"] {
+  color: #16a34a;
+}
+
+.hNotifTray__item[data-ntype="UNKNOWN"][data-sev="warning"],
+.hNotifTray__item[data-ntype="UNKNOWN"][data-sev="error"] {
+  color: #dc2626;
+}
