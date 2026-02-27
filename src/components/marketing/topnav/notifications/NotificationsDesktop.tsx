@@ -24,7 +24,52 @@ type Props = {
 
   // ✅ âncora (sino) para posicionar o dropdown corretamente
   anchorEl?: HTMLElement | null;
+
+  // ✅ novo: abre modal PIX
+  onPixOpen?: (paymentId: string) => void;
 };
+
+function extractPaymentId(n: NotificationItem): string {
+  // 1) Fonte canônica: entityId (quando o backend já manda paymentId Asaas)
+  const byEntity = String((n as any)?.entityId ?? "").trim();
+  if (byEntity) return byEntity;
+
+  // 2) Fallback: actionUrl (pode vir em formatos diferentes)
+  const url = String((n as any)?.actionUrl ?? "").trim();
+  if (!url) return "";
+
+  // Aceitar:
+  // - .../pix/pay_XXXX
+  // - .../pix/pay/pay_XXXX
+  // - .../pix/XXXX
+  // - .../pix/pay_XXXX?...
+  // - .../pix/pay/pay_XXXX?...
+  //
+  // Estratégia:
+  // a) tenta capturar explicitamente pay_...
+  let m = url.match(/\/pix\/(?:pay\/)?(pay_[^/?#]+)/i);
+  if (m?.[1]) return String(m[1]).trim();
+
+  // b) tenta capturar /pix/<segmento> (mas evita retornar literal "pay")
+  m = url.match(/\/pix\/([^/?#]+)/i);
+  const seg = m?.[1] ? String(m[1]).trim() : "";
+  if (!seg) return "";
+
+  // Se veio "pay" (ex: /pix/pay/<id>), tenta pegar o próximo segmento
+  if (seg.toLowerCase() === "pay") {
+    const m2 = url.match(/\/pix\/pay\/([^/?#]+)/i);
+    return m2?.[1] ? String(m2[1]).trim() : "";
+  }
+
+  return seg;
+}
+
+function hasPixHint(n: NotificationItem): boolean {
+  const t = String(n?.title ?? "").toLowerCase();
+  const m = String(n?.message ?? "").toLowerCase();
+  const et = String((n as any)?.entityType ?? "").toLowerCase();
+  return t.includes("pix") || m.includes("pix") || et === "payment";
+}
 
 export default function NotificationsDesktop({
   items,
@@ -37,6 +82,7 @@ export default function NotificationsDesktop({
   onRequestClose,
   onHoverItemId,
   anchorEl,
+  onPixOpen,
 }: Props) {
   const [mounted, setMounted] = useState(false);
   const [pos, setPos] = useState<{ top: number; right: number }>({ top: 74, right: 16 });
@@ -171,6 +217,9 @@ export default function NotificationsDesktop({
 
               const key = id ? id : `notif_${idx}`;
 
+              const showPixLink = Boolean(onPixOpen) && hasPixHint(n);
+              const pixPaymentId = showPixLink ? extractPaymentId(n) : "";
+
               return (
                 <button
                   key={key}
@@ -187,6 +236,22 @@ export default function NotificationsDesktop({
                   </div>
 
                   {n.message ? <div className="hNotifDrop__itemMsg">{n.message}</div> : null}
+
+                  {showPixLink ? (
+                    <button
+                      type="button"
+                      className="hNotifDrop__pixLink"
+                      disabled={!pixPaymentId}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (!pixPaymentId) return;
+                        onPixOpen?.(pixPaymentId);
+                      }}
+                    >
+                      Acesse os dados do Pix aqui
+                    </button>
+                  ) : null}
                 </button>
               );
             })}
