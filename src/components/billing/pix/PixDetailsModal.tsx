@@ -52,14 +52,17 @@ export default function PixDetailsModal({ open, paymentId, onClose }: Props) {
       setData(null);
 
       try {
-        // ✅ usa o proxy que já existe no Front:
-        // /api/v1/billing/addons/asaas/pix/[paymentId]
-        const res = await fetch(`/api/v1/billing/addons/asaas/pix/${encodeURIComponent(pid)}`, {
-          method: "GET",
-          cache: "no-store",
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        });
+        // ✅ contrato canônico:
+        // /api/v1/billing/asaas/pix/:paymentId
+        const res = await fetch(
+          `/api/v1/billing/asaas/pix/${encodeURIComponent(pid)}`,
+          {
+            method: "GET",
+            cache: "no-store",
+            credentials: "include",
+            headers: { Accept: "application/json" },
+          }
+        );
 
         if (!res.ok) {
           const t = await res.text().catch(() => "");
