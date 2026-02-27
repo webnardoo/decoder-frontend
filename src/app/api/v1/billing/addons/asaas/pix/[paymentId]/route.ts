@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 function safeBaseForDebug(base: string): string {
   try {
@@ -31,45 +32,53 @@ function getBackendBaseUrl(): {
 function pickHeaders(req: Request): HeadersInit {
   const cookie = req.headers.get("cookie") || "";
   const accept = req.headers.get("accept") || "application/json";
+  const authorization = req.headers.get("authorization") || "";
 
   const h: Record<string, string> = { Accept: accept };
   if (cookie) h.Cookie = cookie;
+  if (authorization) h.Authorization = authorization;
   return h;
 }
 
-function withStep(payload: any, step: string, extra?: any) {
-  return {
-    ...payload,
-    debug: {
-      ...(payload?.debug || {}),
-      step,
-      ...(extra || {}),
-    },
-  };
+function jsonError(
+  status: number,
+  payload: Record<string, any>,
+  debugHeaders?: Record<string, string>
+) {
+  return NextResponse.json(
+    { ok: false, ...payload },
+    {
+      status,
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        ...(debugHeaders || {}),
+      },
+    }
+  );
 }
 
 export async function GET(
   req: Request,
-  ctx: { params: Promise<{ paymentId: string }> }
+  ctx: { params: { paymentId: string } }
 ) {
   const { base, source } = getBackendBaseUrl();
 
-  // ✅ timeout curto pra evitar “function hanging”
+  // timeout curto pra não “pendurar” function
   const controller = new AbortController();
   const timeoutMs = 10_000;
   const timeout = setTimeout(() => controller.abort("timeout"), timeoutMs);
 
   try {
-    const { paymentId } = await ctx.params;
-    const pid = String(paymentId || "").trim();
-    if (!pid) {
-      return NextResponse.json(
-        withStep({ ok: false, error: "paymentId_required" }, "validate_params"),
-        { status: 400, headers: { "x-debug-step": "validate_params" } }
+    const paymentId = String(ctx?.params?.paymentId || "").trim();
+    if (!paymentId) {
+      return jsonError(
+        400,
+        { error: "paymentId_required" },
+        { "x-debug-step": "validate_params" }
       );
     }
 
-    const url = `${base}/api/v1/billing/asaas/pix/${encodeURIComponent(pid)}`;
+    const url = `${base}/api/v1/billing/asaas/pix/${encodeURIComponent(paymentId)}`;
 
     const res = await fetch(url, {
       method: "GET",
@@ -78,71 +87,45 @@ export async function GET(
       signal: controller.signal,
     });
 
-    const contentType = res.headers.get("content-type") || "";
-    const status = res.status;
+    // ✅ PASS-THROUGH (stream) — não ler body, não parsear, não re-serializar
+    const contentType = res.headers.get("content-type") || "application/json; charset=utf-8";
 
-    // ⚠️ lê como text primeiro pra medir tamanho e evitar crashes em json()
-    const raw = await res.text().catch(() => "");
-    const rawBytes = raw.length;
+    // repassa apenas headers essenciais (evita conflito de encoding/length)
+    const headers = new Headers();
+    headers.set("content-type", contentType);
+    headers.set("cache-control", "no-store");
+    headers.set("x-debug-step", "passthrough");
+    headers.set("x-debug-base", safeBaseForDebug(base));
+    headers.set("x-debug-base-source", source);
 
-    // se vier JSON, tenta parsear
-    if (contentType.includes("application/json")) {
-      const data = (() => {
-        try {
-          return JSON.parse(raw);
-        } catch {
-          return null;
-        }
-      })();
-
-      return NextResponse.json(
-        data,
-        {
-          status,
-          headers: {
-            "x-debug-step": "return_json",
-            "x-debug-base": safeBaseForDebug(base),
-            "x-debug-base-source": source,
-            "x-debug-raw-bytes": String(rawBytes),
-          },
-        }
-      );
+    // IMPORTANTE: res.body pode ser null em alguns casos
+    if (!res.body) {
+      const raw = await res.text().catch(() => "");
+      return new NextResponse(raw, { status: res.status, headers });
     }
 
-    // fallback não-json
-    return new NextResponse(raw, {
-      status,
-      headers: {
-        "content-type": contentType || "text/plain; charset=utf-8",
-        "x-debug-step": "return_text",
-        "x-debug-base": safeBaseForDebug(base),
-        "x-debug-base-source": source,
-        "x-debug-raw-bytes": String(rawBytes),
-      },
+    return new NextResponse(res.body, {
+      status: res.status,
+      headers,
     });
   } catch (e: any) {
     const msg = String(e?.message || e || "unknown");
-    const aborted = msg.includes("aborted") || msg.includes("timeout");
+    const aborted =
+      msg.includes("aborted") || msg.includes("timeout") || String(e).includes("AbortError");
 
-    return NextResponse.json(
-      withStep(
-        {
-          ok: false,
-          error: aborted ? "proxy_timeout" : "proxy_failed",
-          message: msg,
-          baseHost: safeBaseForDebug(base),
-          baseSource: source,
-          nodeEnv: String(process.env.NODE_ENV || ""),
-        },
-        "catch"
-      ),
+    return jsonError(
+      aborted ? 504 : 502,
       {
-        status: aborted ? 504 : 502,
-        headers: {
-          "x-debug-step": "catch",
-          "x-debug-base": safeBaseForDebug(base),
-          "x-debug-base-source": source,
-        },
+        error: aborted ? "proxy_timeout" : "proxy_failed",
+        message: msg,
+        baseHost: safeBaseForDebug(base),
+        baseSource: source,
+        nodeEnv: String(process.env.NODE_ENV || ""),
+      },
+      {
+        "x-debug-step": "catch",
+        "x-debug-base": safeBaseForDebug(base),
+        "x-debug-base-source": source,
       }
     );
   } finally {
