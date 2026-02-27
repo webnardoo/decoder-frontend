@@ -11,7 +11,6 @@ function extractMessage(data: any): string | null {
   );
 }
 
-// ✅ regra permanente: nicknameDefined OU dialogueNickname preenchido
 function hasDialogueNickname(status: any): boolean {
   const byFlag = status?.nicknameDefined === true;
   const byValue =
@@ -20,18 +19,14 @@ function hasDialogueNickname(status: any): boolean {
 }
 
 function computePaidPostVerifyTarget(status: any): string {
-  const subscriptionActive = status?.subscriptionActive === true;
-  if (subscriptionActive) return "/app";
-
+  // ✅ regra nova: onboarding não depende de assinatura/plano
   const nickOk = hasDialogueNickname(status);
-  if (!nickOk) return "/app/onboarding/identity?next=%2Fapp%2Fbilling%2Fplan";
-
-  return "/app/billing/plan";
+  if (!nickOk) return "/app/onboarding/identity";
+  return "/app";
 }
 
 function readPendingPasswordFromSession(): string {
   try {
-    // ✅ compat: PAID antigo e chaves atuais do projeto
     return (
       sessionStorage.getItem("signup_pending_password") ||
       sessionStorage.getItem("decoder_pending_verify_password") ||
@@ -42,7 +37,6 @@ function readPendingPasswordFromSession(): string {
   }
 }
 
-// ✅ aceita undefined (Next types)
 function sanitizeEmail(v: string | null | undefined): string {
   return String(v || "").trim();
 }
@@ -69,14 +63,14 @@ function SignupVerifyInner() {
   const router = useRouter();
   const sp = useSearchParams();
 
-  // ⚠️ next é preferência, nunca autoridade. Mantemos só para fallback extremo.
+  // next param vira fallback apenas para rotas dentro de /app (não aponta billing)
   const nextParam = sp?.get("next") ?? null;
   const fallbackNext = useMemo(() => {
     const raw = typeof nextParam === "string" ? nextParam.trim() : "";
-    if (!raw) return "/app/billing/plan";
-    if (raw === "/") return "/app/billing/plan";
-    if (raw.startsWith("/app")) return raw;
-    return "/app/billing/plan";
+    if (!raw) return "/app";
+    if (raw === "/") return "/app";
+    if (raw.startsWith("/app") && !raw.startsWith("/app/billing")) return raw;
+    return "/app";
   }, [nextParam]);
 
   const [email, setEmail] = useState(sanitizeEmail(sp?.get("email")));
@@ -118,11 +112,7 @@ function SignupVerifyInner() {
       const pendingPass = readPendingPasswordFromSession().trim();
 
       if (!pendingPass || pendingPass.length < 6) {
-        router.replace(
-          `/app/login?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent(
-            "/app/billing/plan",
-          )}`,
-        );
+        router.replace(`/app/login?email=${encodeURIComponent(eMail)}&next=${encodeURIComponent("/app")}`);
         return;
       }
 
@@ -135,13 +125,12 @@ function SignupVerifyInner() {
 
       const loginData = await loginRes.json().catch(() => ({}));
       if (!loginRes.ok) {
-        const msg =
-          extractMessage(loginData) || "E-mail verificado, mas falha ao entrar. Faça login.";
+        const msg = extractMessage(loginData) || "E-mail verificado, mas falha ao entrar. Faça login.";
         setError(msg);
         return;
       }
 
-      // 3) ✅ REGRA PACOTE 4 (PAID): status → decisão → redirect (guard reforça)
+      // 3) status → decisão → redirect
       setInfo("E-mail confirmado. Continuando…");
 
       const stRes = await fetch("/api/onboarding/status", {
@@ -156,7 +145,7 @@ function SignupVerifyInner() {
         : await stRes.text().catch(() => null);
 
       if (!stRes.ok || !stBody || typeof stBody !== "object") {
-        router.replace(fallbackNext || "/app/billing/plan");
+        router.replace(fallbackNext || "/app");
         return;
       }
 
@@ -223,9 +212,7 @@ function SignupVerifyInner() {
 
           <form onSubmit={onVerify} className="space-y-4">
             <div className="space-y-2">
-              <label className="label" htmlFor="email2">
-                E-mail
-              </label>
+              <label className="label" htmlFor="email2">E-mail</label>
               <input
                 id="email2"
                 className="input"
@@ -238,9 +225,7 @@ function SignupVerifyInner() {
             </div>
 
             <div className="space-y-2">
-              <label className="label" htmlFor="code">
-                Código
-              </label>
+              <label className="label" htmlFor="code">Código</label>
               <input
                 id="code"
                 className="input"

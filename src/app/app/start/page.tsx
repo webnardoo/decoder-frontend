@@ -1,3 +1,4 @@
+// src/app/app/start/page.tsx
 "use client";
 
 import { useEffect } from "react";
@@ -19,42 +20,19 @@ export default function StartPage() {
   useEffect(() => {
     if (loading || !status) return;
 
-    if (
+    const stage = String(status.onboardingStage || "").toUpperCase().trim();
+    const nickMissing =
       status.nicknameDefined !== true ||
-      String(status.onboardingStage || "").toUpperCase().trim() === "NICKNAME_REQUIRED" ||
-      String(status.onboardingStage || "").toUpperCase().trim() === "IDENTITY_REQUIRED"
-    ) {
+      stage === "NICKNAME_REQUIRED" ||
+      stage === "IDENTITY_REQUIRED";
+
+    // ✅ Nova regra: onboarding só depende de nickname
+    if (nickMissing) {
       router.replace(`${APP_BASE}/onboarding/identity`);
       return;
     }
 
-    const stage = String(status.onboardingStage || "").toUpperCase().trim();
-
-    if (stage === "TRIAL_ACTIVE") {
-      router.replace(APP_BASE);
-      return;
-    }
-
-    if (stage === "PAYMENT_PENDING") {
-      router.replace(`${APP_BASE}/billing/pending`);
-      return;
-    }
-
-    if (stage === "PAYMENT_FAILED") {
-      router.replace(`${APP_BASE}/billing/failed`);
-      return;
-    }
-
-    if (stage === "PAYMENT_REQUIRED" || stage === "PLAN_SELECTION_REQUIRED") {
-      router.replace(`${APP_BASE}/billing/plan`);
-      return;
-    }
-
-    if (stage === "TUTORIAL_REQUIRED") {
-      router.replace(`${APP_BASE}/tutorial`);
-      return;
-    }
-
+    // ✅ Se tem nickname, entra no app. Sem billing no onboarding.
     router.replace(APP_BASE);
   }, [loading, status, router]);
 

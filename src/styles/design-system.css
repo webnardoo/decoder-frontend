@@ -1,0 +1,98 @@
+/* src/styles/design-system.css */
+
+/* =========================================================
+   DESIGN SYSTEM — Fonte única de tokens (MKT -> APP)
+   - Tokens semânticos: --ds-*
+   - Tema global via html[data-theme="light|dark"]
+   - NÃO usa .mkt nem .app (é base universal)
+   ========================================================= */
+
+html[data-theme="light"] {
+  /* Core palette (MKT light) */
+  --ds-bg: #eef2f6;
+  --ds-bg-2: #f7f9fc;
+  --ds-text: #0b1220;
+  --ds-muted: rgba(11, 18, 32, 0.62);
+  --ds-muted-2: rgba(11, 18, 32, 0.68);
+
+  /* Accent (MKT) */
+  --ds-accentSolid: #5a46ff;
+  --ds-accent-border: rgba(90, 70, 255, 0.42);
+
+  --ds-accent: #5a46ff;
+  --ds-accent-hover: #4a39e6;
+  --ds-accent-pressed: #3f31c7;
+
+  /* Neutrals */
+  --ds-stroke: rgba(15, 23, 42, 0.10);
+  --ds-stroke-soft: rgba(15, 23, 42, 0.07);
+
+  /* Surfaces */
+  --ds-card: rgba(255, 255, 255, 0.92);
+  --ds-card-2: rgba(255, 255, 255, 0.98);
+
+  /* Bar (services bar) */
+  --ds-bar: #1f242b;
+  --ds-bar-stroke: rgba(255, 255, 255, 0.10);
+  --ds-bar-text: rgba(255, 255, 255, 0.92);
+  --ds-bar-muted: rgba(255, 255, 255, 0.74);
+
+  /* Radius scale */
+  --ds-r-xl: 22px;
+  --ds-r-lg: 18px;
+  --ds-r-md: 14px;
+
+  /* Elevation scale (base do MKT) */
+  --ds-shadow-1: 0 10px 22px rgba(15, 23, 42, 0.08);
+  --ds-shadow-2: 0 20px 40px rgba(15, 23, 42, 0.08);
+  --ds-shadow-3: 0 26px 60px rgba(15, 23, 42, 0.10);
+
+  /* Accent glow */
+  --ds-glow-accent-1: 0 0 28px rgba(90, 70, 255, 0.16);
+  --ds-glow-accent-2: 0 0 44px rgba(90, 70, 255, 0.26);
+}
+
+html[data-theme="dark"] {
+  /* Core palette (MKT dark) */
+  --ds-bg: #0a0c10;
+  --ds-bg-2: #0d1016;
+  --ds-text: rgba(255, 255, 255, 0.92);
+  --ds-muted: rgba(255, 255, 255, 0.70);
+  --ds-muted-2: rgba(255, 255, 255, 0.64);
+
+  /* Accent (igual) */
+  --ds-accentSolid: #5a46ff;
+  --ds-accent-border: rgba(90, 70, 255, 0.42);
+
+  --ds-accent: #5a46ff;
+  --ds-accent-hover: #4a39e6;
+  --ds-accent-pressed: #3f31c7;
+
+  /* Neutrals */
+  --ds-stroke: rgba(255, 255, 255, 0.12);
+  --ds-stroke-soft: rgba(255, 255, 255, 0.08);
+
+  /* Surfaces */
+  --ds-card: rgba(255, 255, 255, 0.06);
+  --ds-card-2: rgba(255, 255, 255, 0.08);
+
+  /* Bar */
+  --ds-bar: #0f131a;
+  --ds-bar-stroke: rgba(255, 255, 255, 0.10);
+  --ds-bar-text: rgba(255, 255, 255, 0.92);
+  --ds-bar-muted: rgba(255, 255, 255, 0.74);
+
+  /* Radius scale */
+  --ds-r-xl: 22px;
+  --ds-r-lg: 18px;
+  --ds-r-md: 14px;
+
+  /* Elevation scale (dark) */
+  --ds-shadow-1: none;
+  --ds-shadow-2: 0 20px 40px rgba(0, 0, 0, 0.35);
+  --ds-shadow-3: 0 26px 60px rgba(0, 0, 0, 0.45);
+
+  /* Accent glow */
+  --ds-glow-accent-1: 0 0 58px rgba(90, 70, 255, 0.35);
+  --ds-glow-accent-2: 0 0 78px rgba(90, 70, 255, 0.48);
+}

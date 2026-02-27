@@ -24,6 +24,8 @@ import AnalysisProgressModal, {
   type AnalysisStepKey,
 } from "@/components/analysis/AnalysisProgressModal";
 
+import Button from "@/components/ui/Button";
+
 type Mode = "AVULSA" | "CONVERSA";
 type QuickMode = "RESUMO" | "RESPONDER";
 
@@ -65,7 +67,6 @@ const MIN_CHARS_NORMAL = 60;
 const TRIAL_MIN = 60;
 const TRIAL_MAX = 200;
 
-// ✅ Mensagem neutra padrão (nunca mencionar IA)
 const GENERIC_ANALYZE_FAIL = "Não foi possível concluir sua análise. Tente novamente.";
 
 function sleep(ms: number) {
@@ -73,12 +74,7 @@ function sleep(ms: number) {
 }
 
 function isApiError(x: any): x is ApiError {
-  return (
-    x &&
-    typeof x === "object" &&
-    typeof x.code === "string" &&
-    typeof x.message === "string"
-  );
+  return x && typeof x === "object" && typeof x.code === "string" && typeof x.message === "string";
 }
 
 function isInsufficientCreditsPayload(payload: any): boolean {
@@ -123,13 +119,7 @@ function getFocusableWithin(container: HTMLElement | null): HTMLElement[] {
 
   const isFocusable = (el: HTMLElement) => {
     const tag = el.tagName;
-    if (
-      tag === "BUTTON" ||
-      tag === "A" ||
-      tag === "INPUT" ||
-      tag === "TEXTAREA" ||
-      tag === "SELECT"
-    )
+    if (tag === "BUTTON" || tag === "A" || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT")
       return true;
 
     const ti = el.getAttribute("tabindex");
@@ -180,11 +170,7 @@ function buildBaseSteps(): StepView[] {
   ];
 }
 
-function setStep(
-  steps: StepView[],
-  key: StepView["key"],
-  status: StepView["status"]
-) {
+function setStep(steps: StepView[], key: StepView["key"], status: StepView["status"]) {
   return steps.map((s) => (s.key === key ? { ...s, status } : s));
 }
 
@@ -197,24 +183,21 @@ function buildManualAnalysisSteps(): AnalysisStepView[] {
   ];
 }
 
-function setManualStep(
-  steps: AnalysisStepView[],
-  key: AnalysisStepKey,
-  status: AnalysisStepView["status"]
-) {
+function setManualStep(steps: AnalysisStepView[], key: AnalysisStepKey, status: AnalysisStepView["status"]) {
   return steps.map((s) => (s.key === key ? { ...s, status } : s));
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-[11px] font-semibold tracking-[0.16em] text-[var(--h-subtle)] uppercase">{children}</div>
+  );
 }
 
 export default function HomePage() {
   const [mode, setMode] = useState<Mode>("AVULSA");
-
   const [quickMode, setQuickMode] = useState<QuickMode | null>(null);
-  const [relationshipType, setRelationshipType] = useState<RelationshipType | null>(
-    null
-  );
-
+  const [relationshipType, setRelationshipType] = useState<RelationshipType | null>(null);
   const [resultQuickMode, setResultQuickMode] = useState<QuickMode>("RESUMO");
-
   const [conversaId, setConversaId] = useState<string>("");
 
   const [conversation, setConversation] = useState("");
@@ -251,19 +234,14 @@ export default function HomePage() {
   const [progressError, setProgressError] = useState<string | null>(null);
 
   const [analysisProgressOpen, setAnalysisProgressOpen] = useState(false);
-  const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgressStatus | null>(
-    null
-  );
-  const [analysisProgressError, setAnalysisProgressError] = useState<string | null>(
-    null
-  );
+  const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgressStatus | null>(null);
+  const [analysisProgressError, setAnalysisProgressError] = useState<string | null>(null);
 
   const [modeRelModalOpen, setModeRelModalOpen] = useState(false);
 
   function openModeRelModal() {
     setModeRelModalOpen(true);
   }
-
   function closeModeRelModal() {
     setModeRelModalOpen(false);
   }
@@ -275,9 +253,7 @@ export default function HomePage() {
     setAnalysisProgressError(null);
   }
 
-  const textReadOnly =
-    importOpen || importFiles.length > 0 || progressOpen || importSending;
-
+  const textReadOnly = importOpen || importFiles.length > 0 || progressOpen || importSending;
   const [skipOnboardingOnce, setSkipOnboardingOnce] = useState(false);
 
   function resetSelectionsToNull() {
@@ -314,9 +290,7 @@ export default function HomePage() {
       const data = (await res.json()) as OnboardingStatus;
       setOnboarding(data);
 
-      if (typeof data?.creditsBalance === "number") {
-        setCreditsBalance(data.creditsBalance);
-      }
+      if (typeof data?.creditsBalance === "number") setCreditsBalance(data.creditsBalance);
 
       if (skipOnboardingOnce) {
         setShowTrialStart(false);
@@ -333,12 +307,9 @@ export default function HomePage() {
         return;
       }
 
-      const isTrialActive =
-        data?.onboardingStage === "TRIAL_ACTIVE" && data?.trialGuided === true;
+      const isTrialActive = data?.onboardingStage === "TRIAL_ACTIVE" && data?.trialGuided === true;
 
-      if (isTrialActive && data?.trialStartPopupPending === true) {
-        setShowTrialStart(true);
-      }
+      if (isTrialActive && data?.trialStartPopupPending === true) setShowTrialStart(true);
       if (!isTrialActive) {
         setShowTrialStart(false);
         setShowTrialEnd(false);
@@ -360,14 +331,13 @@ export default function HomePage() {
     onboarding?.trialActive === true &&
     onboarding?.trialCompleted !== true;
 
-  const effectiveText = isTrialGuided
-    ? clampTextForTrial(conversation)
-    : conversation;
+  const effectiveText = isTrialGuided ? clampTextForTrial(conversation) : conversation;
 
   const chars = effectiveText.length;
   const minChars = isTrialGuided ? TRIAL_MIN : MIN_CHARS_NORMAL;
-  const charsOk = chars >= minChars;
-  const charsClass = charsOk ? "text-emerald-400" : "text-red-400";
+
+  const charsToneClass =
+    chars === 0 ? "text-[var(--h-muted)]" : chars < minChars ? "text-red-500" : "text-emerald-600";
 
   const canClickAnalyze = useMemo(() => !loading, [loading]);
 
@@ -377,9 +347,7 @@ export default function HomePage() {
 
   async function ackTrialStart() {
     try {
-      await fetch("/api/onboarding/trial/start/ack", { method: "POST" }).catch(
-        () => null
-      );
+      await fetch("/api/onboarding/trial/start/ack", { method: "POST" }).catch(() => null);
     } finally {
       setShowTrialStart(false);
       setStepId("S1_SELECT_SUMMARY_MODE");
@@ -389,9 +357,7 @@ export default function HomePage() {
 
   async function finishTrial() {
     try {
-      await fetch("/api/onboarding/trial/complete/ack", { method: "POST" }).catch(
-        () => null
-      );
+      await fetch("/api/onboarding/trial/complete/ack", { method: "POST" }).catch(() => null);
     } finally {
       setShowTrialEnd(false);
       setStepId(null);
@@ -474,7 +440,6 @@ export default function HomePage() {
     return true;
   }
 
-  // ✅ Sanitiza mensagem para nunca vazar detalhes de backend
   function userFacingAnalyzeError(r: ApiError): string {
     if (!r) return GENERIC_ANALYZE_FAIL;
 
@@ -483,7 +448,6 @@ export default function HomePage() {
     if (r.code === "RATE_LIMIT") return "Muitas tentativas. Tente novamente em instantes.";
     if (r.code === "SERVER_ERROR") return "Erro temporário do sistema. Tente novamente.";
 
-    // ✅ qualquer falha de analyze → sempre neutro
     return GENERIC_ANALYZE_FAIL;
   }
 
@@ -496,16 +460,13 @@ export default function HomePage() {
     if (inConversaMode && !hasConversaSelected) {
       setBanner({
         title: "Selecione uma conversa",
-        reason:
-          "No modo dentro de uma conversa, a análise precisa estar vinculada a uma conversa.",
+        reason: "No modo dentro de uma conversa, a análise precisa estar vinculada a uma conversa.",
         fix: "Selecione uma conversa e tente novamente.",
       });
       return;
     }
 
-    if (!validateModeAndRelationshipOrPopup()) {
-      return;
-    }
+    if (!validateModeAndRelationshipOrPopup()) return;
 
     const usedQuickMode = quickMode as QuickMode;
 
@@ -555,13 +516,9 @@ export default function HomePage() {
 
         if (origin === "MANUAL") {
           setAnalysisProgressError(msg);
-          const base = analysisProgress?.steps?.length
-            ? analysisProgress.steps
-            : buildManualAnalysisSteps();
+          const base = analysisProgress?.steps?.length ? analysisProgress.steps : buildManualAnalysisSteps();
           const failed: AnalysisProgressStatus = {
-            steps: base.map((s) =>
-              s.status === "RUNNING" ? { ...s, status: "ERROR" } : s
-            ),
+            steps: base.map((s) => (s.status === "RUNNING" ? { ...s, status: "ERROR" } : s)),
           };
           setAnalysisProgress(failed);
         }
@@ -576,32 +533,19 @@ export default function HomePage() {
           return;
         }
 
-        if (r.status === 409) {
-          await refreshOnboarding();
-        }
+        if (r.status === 409) await refreshOnboarding();
 
         if (typeof r.status === "number" && r.status >= 500) {
-          setBanner({
-            title: "Falha ao analisar",
-            reason: msg,
-            fix: "Tente novamente em instantes.",
-          });
+          setBanner({ title: "Falha ao analisar", reason: msg, fix: "Tente novamente em instantes." });
           return;
         }
 
-        setBanner({
-          title: "Falha ao analisar",
-          reason: msg,
-          fix: "Tente novamente.",
-        });
+        setBanner({ title: "Falha ao analisar", reason: msg, fix: "Tente novamente." });
         return;
       }
 
       if (origin === "MANUAL") {
-        let mSteps = analysisProgress?.steps?.length
-          ? analysisProgress.steps
-          : buildManualAnalysisSteps();
-
+        let mSteps = analysisProgress?.steps?.length ? analysisProgress.steps : buildManualAnalysisSteps();
         mSteps = setManualStep(mSteps, "ANALYZE", "DONE");
         mSteps = setManualStep(mSteps, "CONSOLIDATE", "RUNNING");
         setAnalysisProgress({ steps: mSteps });
@@ -612,9 +556,7 @@ export default function HomePage() {
       setResultQuickMode(usedQuickMode);
       setResult(data);
 
-      if (typeof data?.creditsBalanceAfter === "number") {
-        setCreditsBalance(data.creditsBalanceAfter);
-      }
+      if (typeof data?.creditsBalanceAfter === "number") setCreditsBalance(data.creditsBalanceAfter);
 
       saveHistoryItem({
         id: crypto.randomUUID(),
@@ -630,10 +572,7 @@ export default function HomePage() {
       resetSelectionsToNull();
 
       if (origin === "MANUAL") {
-        let mSteps = analysisProgress?.steps?.length
-          ? analysisProgress.steps
-          : buildManualAnalysisSteps();
-
+        let mSteps = analysisProgress?.steps?.length ? analysisProgress.steps : buildManualAnalysisSteps();
         mSteps = setManualStep(mSteps, "CONSOLIDATE", "DONE");
         mSteps = setManualStep(mSteps, "DONE", "DONE");
         setAnalysisProgress({ steps: mSteps });
@@ -641,22 +580,6 @@ export default function HomePage() {
         await sleep(450);
         setAnalysisProgressOpen(false);
       }
-    } catch (e: any) {
-      if (origin === "MANUAL") {
-        setAnalysisProgressError(GENERIC_ANALYZE_FAIL);
-
-        const base = analysisProgress?.steps?.length
-          ? analysisProgress.steps
-          : buildManualAnalysisSteps();
-        const failed: AnalysisProgressStatus = {
-          steps: base.map((s) =>
-            s.status === "RUNNING" ? { ...s, status: "ERROR" } : s
-          ),
-        };
-        setAnalysisProgress(failed);
-      }
-
-      throw e;
     } finally {
       setLoading(false);
     }
@@ -669,9 +592,7 @@ export default function HomePage() {
   function openNativePicker() {
     setBanner(null);
     setImportError(null);
-
     if (!validateModeAndRelationshipOrPopup()) return;
-
     try {
       fileInputRef.current?.click();
     } catch {}
@@ -735,30 +656,12 @@ export default function HomePage() {
       fd.append("relationshipType", String(relationshipType || ""));
       fd.append("quickMode", String(quickMode || ""));
 
-      const startRes = await fetch("/api/ocr/pipeline/start", {
-        method: "POST",
-        body: fd,
-        cache: "no-store",
-      });
-
+      const startRes = await fetch("/api/ocr/pipeline/start", { method: "POST", body: fd, cache: "no-store" });
       const startPayload = await startRes.json().catch(() => null);
-      if (!startRes.ok) {
-        throw new Error(
-          String(
-            startPayload?.message ??
-              startPayload?.error ??
-              "Falha ao iniciar processamento."
-          )
-        );
-      }
+      if (!startRes.ok) throw new Error(String(startPayload?.message ?? startPayload?.error ?? "Falha ao iniciar."));
 
-      const pipelineId = String(
-        startPayload?.pipelineId ?? startPayload?.jobId ?? startPayload?.id ?? ""
-      ).trim();
-
-      if (!pipelineId) {
-        throw new Error("Falha ao iniciar processamento: id não retornado.");
-      }
+      const pipelineId = String(startPayload?.pipelineId ?? startPayload?.jobId ?? startPayload?.id ?? "").trim();
+      if (!pipelineId) throw new Error("Falha ao iniciar processamento: id não retornado.");
 
       const startedAt = Date.now();
       const timeoutMs = 180000;
@@ -769,23 +672,14 @@ export default function HomePage() {
         qs.set("pipelineId", pipelineId);
         qs.set("jobId", pipelineId);
 
-        const stRes = await fetch(`/api/ocr/pipeline/status?${qs.toString()}`, {
-          cache: "no-store",
-        });
-
+        const stRes = await fetch(`/api/ocr/pipeline/status?${qs.toString()}`, { cache: "no-store" });
         const stPayload = await stRes.json().catch(() => null);
-        if (!stRes.ok) {
-          throw new Error(
-            String(stPayload?.message ?? stPayload?.error ?? "Falha ao consultar status.")
-          );
-        }
+        if (!stRes.ok) throw new Error(String(stPayload?.message ?? stPayload?.error ?? "Falha ao consultar status."));
 
         const status = coercePipelineStatus(stPayload?.status ?? stPayload?.state);
 
         const rawSteps: any[] = Array.isArray(stPayload?.steps) ? stPayload.steps : [];
-        const hasRunning = rawSteps.some(
-          (s: any) => coercePipelineStatus(s?.status ?? s?.state) === "RUNNING"
-        );
+        const hasRunning = rawSteps.some((s: any) => coercePipelineStatus(s?.status ?? s?.state) === "RUNNING");
 
         if (rawSteps.length) {
           const map = new Map<string, StepView["status"]>();
@@ -793,34 +687,18 @@ export default function HomePage() {
             const k = String(s?.key ?? s?.id ?? "").toUpperCase().trim();
             const v = coercePipelineStatus(s?.status ?? s?.state);
             const sv: StepView["status"] =
-              v === "DONE"
-                ? "DONE"
-                : v === "RUNNING"
-                ? "RUNNING"
-                : v === "ERROR"
-                ? "ERROR"
-                : "PENDING";
+              v === "DONE" ? "DONE" : v === "RUNNING" ? "RUNNING" : v === "ERROR" ? "ERROR" : "PENDING";
             if (k) map.set(k, sv);
           }
 
-          steps = steps.map((cur) => ({
-            ...cur,
-            status: map.get(cur.key) ?? cur.status,
-          }));
-
+          steps = steps.map((cur) => ({ ...cur, status: map.get(cur.key) ?? cur.status }));
           setProgress({ steps });
         } else {
           setProgress({ steps });
         }
 
         if (status === "ERROR") {
-          throw new Error(
-            String(
-              stPayload?.error?.message ??
-                stPayload?.message ??
-                "Não foi possível processar os prints."
-            )
-          );
+          throw new Error(String(stPayload?.error?.message ?? stPayload?.message ?? "Não foi possível processar."));
         }
 
         if (status === "DONE") {
@@ -831,9 +709,7 @@ export default function HomePage() {
         await sleep(hasRunning ? 650 : 850);
       }
 
-      if (!extractedText) {
-        throw new Error("Tempo excedido ao processar os prints.");
-      }
+      if (!extractedText) throw new Error("Tempo excedido ao processar os prints.");
 
       steps = setStep(steps, "EXTRACT", "DONE");
       steps = setStep(steps, "ORGANIZE", "DONE");
@@ -873,25 +749,9 @@ export default function HomePage() {
     if (!list.length) return;
 
     const files = list.slice(0, 3);
-
     setImportFiles(files);
     setImportError(null);
     setImportOpen(true);
-  }
-
-  async function onSendImport() {
-    setBanner(null);
-    setImportError(null);
-
-    if (!validateModeAndRelationshipOrPopup()) return;
-
-    if (!importFiles.length) {
-      setImportError("Selecione os prints antes de enviar.");
-      return;
-    }
-
-    setImportOpen(false);
-    await startPipelineAndAutoAnalyze(importFiles);
   }
 
   function closeProgressOnError() {
@@ -907,7 +767,6 @@ export default function HomePage() {
     if (showTrialStart) return;
 
     if (mode !== "AVULSA") setMode("AVULSA");
-
     if (!stepId) markStepIfNull("S1_SELECT_SUMMARY_MODE");
 
     const hasText = effectiveText.length >= TRIAL_MIN;
@@ -929,20 +788,10 @@ export default function HomePage() {
     }
 
     if (stepId === "R2_CLICK_ANALYZE_REPLY") {
-      if (hasResult && quickMode === "RESPONDER")
-        setStepId("R3_REVIEW_REPLY_SUGGESTIONS");
+      if (hasResult && quickMode === "RESPONDER") setStepId("R3_REVIEW_REPLY_SUGGESTIONS");
       return;
     }
-  }, [
-    isTrialGuided,
-    showTrialStart,
-    stepId,
-    effectiveText,
-    quickMode,
-    relationshipType,
-    result,
-    mode,
-  ]);
+  }, [isTrialGuided, showTrialStart, stepId, effectiveText, quickMode, relationshipType, result, mode]);
 
   const currentStep: GuidedOverlayStep | null = useMemo(() => {
     if (!isTrialGuided || showTrialStart) return null;
@@ -1075,280 +924,532 @@ export default function HomePage() {
 
   const nicknameLabel = (onboarding?.dialogueNickname ?? "").toString().trim() || "—";
 
-  const balanceLabel =
+  const effectiveBalanceNum =
     typeof creditsBalance === "number"
-      ? `${creditsBalance} créditos`
+      ? creditsBalance
       : typeof onboarding?.creditsBalance === "number"
-      ? `${onboarding.creditsBalance} créditos`
-      : "—";
+      ? onboarding.creditsBalance
+      : null;
+
+  const balanceLabel = typeof effectiveBalanceNum === "number" ? `${effectiveBalanceNum} créditos` : "—";
+
+  // ✅ condição do CTA dentro do card
+  const showContextualBuyCredits = typeof effectiveBalanceNum === "number" && effectiveBalanceNum < 10;
+
+  const modeToggleWrapClass = "themeToggle";
 
   return (
-    <div className="p-6 space-y-8">
-      <GuidedOverlay
-        enabled={overlayEnabled}
-        step={currentStep}
-        onAdvance={onOverlayAdvance}
-        onBlockedClick={() => {
-          blockedClicksRef.current += 1;
-        }}
-      />
+    <>
+      <style jsx global>{`
+        html {
+          --h-control-bg: rgba(2, 6, 23, 0.03);
+          --h-control-bg-hover: rgba(2, 6, 23, 0.06);
+          --h-control-border: rgba(2, 6, 23, 0.1);
+          --h-control-border-hover: rgba(108, 99, 255, 0.55);
 
-      <OkModal
-        open={modeRelModalOpen}
-        title="Selecione modo e tipo de relação"
-        lines={[
-          "Antes de importar, selecione o modo e o tipo de relação. O processo seguirá automaticamente até o resultado.",
-          "Selecione as opções e tente novamente.",
-        ]}
-        onClose={closeModeRelModal}
-      />
+          --h-pill-border: rgba(2, 6, 23, 0.14);
+          --h-pill-bg-active: rgba(255, 255, 255, 0.92);
+          --h-pill-text: rgba(2, 6, 23, 0.85);
+          --h-pill-text-muted: rgba(2, 6, 23, 0.62);
+          --h-accent: #6c63ff;
+        }
 
-      <AnalysisProgressModal
-        open={analysisProgressOpen}
-        status={analysisProgress}
-        errorMessage={analysisProgressError}
-        onClose={analysisProgressError ? closeManualAnalysisProgressOnError : null}
-      />
+        html[data-theme="dark"] {
+          --h-control-bg: rgba(255, 255, 255, 0.06);
+          --h-control-bg-hover: rgba(255, 255, 255, 0.1);
+          --h-control-border: rgba(255, 255, 255, 0.14);
+          --h-control-border-hover: rgba(108, 99, 255, 0.42);
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/jpg"
-        multiple
-        className="hidden"
-        onChange={onFilesSelected}
-      />
+          --h-pill-border: rgba(255, 255, 255, 0.16);
+          --h-pill-bg-active: rgba(255, 255, 255, 0.14);
+          --h-pill-text: rgba(255, 255, 255, 0.92);
+          --h-pill-text-muted: rgba(255, 255, 255, 0.75);
+        }
 
-      <OcrFilesSortModal
-        open={importOpen}
-        files={importFiles}
-        onClose={() => {
-          if (importSending) return;
-          setImportOpen(false);
-          setImportFiles([]);
-          setImportError(null);
-        }}
-        onCancel={() => {
-          if (importSending) return;
-          setImportOpen(false);
-          setImportFiles([]);
-          setImportError(null);
-        }}
-        onSubmit={(orderedFiles: File[]) => {
-          setImportFiles(orderedFiles);
-          void (async () => {
-            setImportOpen(false);
-            await startPipelineAndAutoAnalyze(orderedFiles);
-          })();
-        }}
-      />
+        html:not([data-theme="dark"]) .import-prints-button {
+          background: #ffffff;
+          color: var(--h-text);
+          border: 1px solid rgba(2, 6, 23, 0.18);
+          box-shadow: 0 18px 54px rgba(2, 6, 23, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.65) inset;
+        }
+        html:not([data-theme="dark"]) .import-prints-button:hover {
+          border-color: rgba(108, 99, 255, 0.75);
+          box-shadow: 0 24px 64px rgba(2, 6, 23, 0.14), 0 0 52px rgba(108, 99, 255, 0.12);
+        }
+        html[data-theme="dark"] .import-prints-button {
+          background: var(--h-control-bg);
+          color: var(--h-text);
+          border: 1px solid var(--h-control-border);
+          box-shadow: 0 18px 54px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+        }
+        html[data-theme="dark"] .import-prints-button:hover {
+          background: var(--h-control-bg-hover);
+          border-color: var(--h-control-border-hover);
+          box-shadow: 0 24px 64px rgba(0, 0, 0, 0.62), 0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+            0 0 52px rgba(108, 99, 255, 0.18);
+        }
 
-      <OcrProgressModal
-        open={progressOpen}
-        status={progress as any}
-        errorMessage={progressError}
-        onClose={progressError ? closeProgressOnError : () => {}}
-      />
+        html:not([data-theme="dark"]) .hitch-textarea {
+          background: #ffffff;
+          color: #18181b;
+          border-color: rgba(2, 6, 23, 0.18);
+          box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 10px 24px rgba(2, 6, 23, 0.06);
+        }
+        html:not([data-theme="dark"]) .hitch-textarea::placeholder {
+          color: rgba(161, 161, 170, 1);
+        }
+        html:not([data-theme="dark"]) .hitch-textarea:disabled {
+          background: rgba(244, 244, 245, 0.7);
+          color: rgba(82, 82, 91, 1);
+        }
+        html[data-theme="dark"] .hitch-textarea {
+          background: rgba(255, 255, 255, 0.06);
+          color: var(--h-text);
+          border-color: rgba(255, 255, 255, 0.14);
+          box-shadow: none;
+        }
+        html[data-theme="dark"] .hitch-textarea::placeholder {
+          color: rgba(255, 255, 255, 0.6);
+        }
 
-      {isTrialGuided && showTrialStart && (
-        <div className="fixed inset-0 z-9998 flex items-center justify-center bg-black/60">
-          <div
-            ref={startModalRef}
-            role="dialog"
-            aria-modal="true"
-            tabIndex={-1}
-            onKeyDown={(e) => focusTrapKeydown(e, startModalRef.current)}
-            className="w-[min(520px,calc(100%-24px))] rounded-2xl border border-zinc-800 bg-zinc-950 p-5"
-          >
-            <div className="text-lg font-semibold">Seja bem vindo a degustação do Hitch.Ai</div>
-            <div className="text-sm text-zinc-300 mt-2">
-              Você fará 1 análise (Receber análise) e 1 geração de respostas (Opções de respostas).
-            </div>
+        html:not([data-theme="dark"]) .hitch-textarea[readonly] {
+          background: rgba(250, 250, 250, 1);
+        }
+        html[data-theme="dark"] .hitch-textarea[readonly] {
+          background: rgba(255, 255, 255, 0.04);
+        }
 
-            <div className="mt-4 flex gap-2">
-              <button
-                ref={startBtnRef}
-                className="btn btn-cta"
-                type="button"
-                onClick={ackTrialStart}
+        .h-pill {
+          box-sizing: border-box;
+          height: 40px;
+          padding: 0 16px;
+          border-radius: 999px;
+          border: 2px solid var(--h-pill-border);
+          background: transparent;
+          color: var(--h-pill-text);
+          font-size: 14px;
+          font-weight: 600;
+          line-height: 1;
+          transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease, color 160ms ease;
+        }
+        .h-pill:hover {
+          border-color: var(--h-accent);
+        }
+        .h-pill:focus-visible {
+          outline: 2px solid rgba(108, 99, 255, 0.35);
+          outline-offset: 3px;
+        }
+
+        .h-pill--active {
+          border-color: var(--h-accent);
+          background: var(--h-pill-bg-active);
+          box-shadow: 0 6px 18px rgba(108, 99, 255, 0.25);
+        }
+
+        .themeToggle .h-pill {
+          border-color: rgba(0, 0, 0, 0);
+        }
+        html[data-theme="dark"] .themeToggle .h-pill {
+          border-color: rgba(255, 255, 255, 0);
+        }
+        .themeToggle .h-pill:hover {
+          border-color: var(--h-accent);
+        }
+        .themeToggle .h-pill--active {
+          border-color: var(--h-accent);
+        }
+
+        .h-cta {
+          box-sizing: border-box;
+          width: 100%;
+          min-height: 56px;
+          border-radius: 999px;
+          padding: 16px 24px;
+          font-weight: 700;
+          border: 2px solid var(--h-accent);
+          background: #ffffff;
+          color: var(--h-pill-text);
+          box-shadow: 0 14px 40px rgba(108, 99, 255, 0.25);
+          transition: box-shadow 180ms ease, background 180ms ease;
+        }
+        .h-cta:hover {
+          background: rgba(247, 246, 255, 1);
+          box-shadow: 0 18px 50px rgba(108, 99, 255, 0.35);
+        }
+        html[data-theme="dark"] .h-cta {
+          background: rgba(255, 255, 255, 0.1);
+          color: var(--h-pill-text);
+          box-shadow: 0 14px 44px rgba(108, 99, 255, 0.22);
+        }
+        html[data-theme="dark"] .h-cta:hover {
+          background: rgba(255, 255, 255, 0.14);
+          box-shadow: 0 18px 56px rgba(108, 99, 255, 0.28);
+        }
+
+        /* CTA contextual (apenas quando saldo baixo) */
+        .buyCreditsCta {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          height: 38px;
+          padding: 0 14px;
+          border-radius: 999px;
+          border: 1px solid rgba(108, 99, 255, 0.55);
+          background: rgba(255, 255, 255, 0.65);
+          color: rgba(2, 6, 23, 0.82);
+          font-weight: 700;
+          font-size: 13px;
+          letter-spacing: 0.01em;
+          box-shadow: 0 10px 26px rgba(108, 99, 255, 0.14);
+          backdrop-filter: blur(10px);
+          transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease;
+        }
+
+        .buyCreditsCta::after {
+          content: "";
+          position: absolute;
+          inset: -12px;
+          border-radius: 999px;
+          border: 2px solid rgba(108, 99, 255, 0.32);
+          opacity: 0;
+          animation: buyCtaPulse 1.05s ease-out infinite;
+          z-index: -1;
+          pointer-events: none;
+          box-shadow: 0 0 0 0 rgba(108, 99, 255, 0);
+        }
+
+        @keyframes buyCtaPulse {
+          0% {
+            transform: scale(0.88);
+            opacity: 0.05;
+            box-shadow: 0 0 0 0 rgba(108, 99, 255, 0);
+          }
+          35% {
+            opacity: 0.95;
+            box-shadow: 0 0 48px 10px rgba(108, 99, 255, 0.18);
+          }
+          100% {
+            transform: scale(1.18);
+            opacity: 0;
+            box-shadow: 0 0 72px 18px rgba(108, 99, 255, 0);
+          }
+        }
+
+        .buyCreditsCta:hover {
+          border-color: rgba(108, 99, 255, 0.78);
+          background: rgba(108, 99, 255, 0.07);
+          box-shadow: 0 14px 34px rgba(108, 99, 255, 0.2);
+          transform: translateY(-1px);
+        }
+
+        html[data-theme="dark"] .buyCreditsCta {
+          background: rgba(255, 255, 255, 0.1);
+          color: rgba(255, 255, 255, 0.92);
+          border-color: rgba(108, 99, 255, 0.5);
+          box-shadow: 0 10px 26px rgba(108, 99, 255, 0.14);
+        }
+        html[data-theme="dark"] .buyCreditsCta:hover {
+          background: rgba(255, 255, 255, 0.14);
+          border-color: rgba(108, 99, 255, 0.75);
+          box-shadow: 0 22px 62px rgba(0, 0, 0, 0.55), 0 0 56px rgba(108, 99, 255, 0.16);
+        }
+      `}</style>
+
+      <div className="px-6 py-8">
+        <div className="mx-auto w-full max-w-[1120px] space-y-8">
+          <GuidedOverlay
+            enabled={overlayEnabled}
+            step={currentStep}
+            onAdvance={onOverlayAdvance}
+            onBlockedClick={() => {
+              blockedClicksRef.current += 1;
+            }}
+          />
+
+          <OkModal
+            open={modeRelModalOpen}
+            title="Selecione modo e tipo de relação"
+            lines={[
+              "Antes de importar, selecione o modo e o tipo de relação. O processo seguirá automaticamente até o resultado.",
+              "Selecione as opções e tente novamente.",
+            ]}
+            onClose={closeModeRelModal}
+          />
+
+          <AnalysisProgressModal
+            open={analysisProgressOpen}
+            status={analysisProgress}
+            errorMessage={analysisProgressError}
+            onClose={analysisProgressError ? closeManualAnalysisProgressOnError : null}
+          />
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/jpg"
+            multiple
+            className="hidden"
+            onChange={onFilesSelected}
+          />
+
+          <OcrFilesSortModal
+            open={importOpen}
+            files={importFiles}
+            onClose={() => {
+              if (importSending) return;
+              setImportOpen(false);
+              setImportFiles([]);
+              setImportError(null);
+            }}
+            onCancel={() => {
+              if (importSending) return;
+              setImportOpen(false);
+              setImportFiles([]);
+              setImportError(null);
+            }}
+            onSubmit={(orderedFiles: File[]) => {
+              setImportFiles(orderedFiles);
+              void (async () => {
+                setImportOpen(false);
+                await startPipelineAndAutoAnalyze(orderedFiles);
+              })();
+            }}
+          />
+
+          <OcrProgressModal
+            open={progressOpen}
+            status={progress as any}
+            errorMessage={progressError}
+            onClose={progressError ? closeProgressOnError : () => {}}
+          />
+
+          {isTrialGuided && showTrialStart && (
+            <div className="fixed inset-0 z-9998 flex items-center justify-center bg-black/30">
+              <div
+                ref={startModalRef}
+                role="dialog"
+                aria-modal="true"
+                tabIndex={-1}
+                onKeyDown={(e) => focusTrapKeydown(e, startModalRef.current)}
+                className="w-[min(520px,calc(100%-24px))] rounded-2xl border border-[var(--h-border)] bg-[var(--h-card)] p-5 shadow-[0_22px_66px_rgba(0,0,0,0.18)]"
               >
-                Começar
-              </button>
+                <div className="text-lg font-semibold text-[var(--h-text)]">Seja bem-vindo à degustação do Hitch.ai</div>
+                <div className="text-sm text-[var(--h-subtle)] mt-2 leading-relaxed">
+                  Você fará 1 análise (Receber análise) e 1 geração de respostas (Opções de respostas).
+                </div>
+
+                <div className="mt-4 flex gap-2">
+                  <Button ref={startBtnRef} variant="cta" type="button" onClick={ackTrialStart}>
+                    Começar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isTrialGuided && showTrialEnd && (
+            <div className="fixed inset-0 z-9998 flex items-center justify-center bg-black/30">
+              <div
+                ref={endModalRef}
+                role="dialog"
+                aria-modal="true"
+                tabIndex={-1}
+                onKeyDown={(e) => focusTrapKeydown(e, endModalRef.current)}
+                className="w-[min(520px,calc(100%-24px))] rounded-2xl border border-[var(--h-border)] bg-[var(--h-card)] p-5 shadow-[0_22px_66px_rgba(0,0,0,0.18)]"
+              >
+                <div className="text-lg font-semibold text-[var(--h-text)]">Degustação concluída</div>
+                <div className="text-sm text-[var(--h-subtle)] mt-2 leading-relaxed">
+                  Agora o próximo passo é escolher um plano para continuar usando.
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <Button ref={finishBtnRef} variant="cta" type="button" onClick={finishTrial}>
+                    Concluir degustação
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ✅ Header do app (SEM CTA comprar crédito fora do card) */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex flex-col gap-2">
+              <h1 className="text-2xl font-semibold tracking-tight">Hitch.ai</h1>
+              <p className="text-sm text-black/60">Cole o diálogo e receba uma leitura clara do contexto.</p>
             </div>
           </div>
-        </div>
-      )}
 
-      {isTrialGuided && showTrialEnd && (
-        <div className="fixed inset-0 z-9998 flex items-center justify-center bg-black/60">
-          <div
-            ref={endModalRef}
-            role="dialog"
-            aria-modal="true"
-            tabIndex={-1}
-            onKeyDown={(e) => focusTrapKeydown(e, endModalRef.current)}
-            className="w-[min(520px,calc(100%-24px))] rounded-2xl border border-zinc-800 bg-zinc-950 p-5"
-          >
-            <div className="text-lg font-semibold">Degustação concluída</div>
-            <div className="text-sm text-zinc-300 mt-2">
-              Agora o próximo passo é escolher um plano para continuar usando.
-            </div>
-            <div className="mt-4 flex gap-2">
-              <button
-                ref={finishBtnRef}
-                className="btn btn-cta"
-                type="button"
-                onClick={finishTrial}
-              >
-                Concluir degustação
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          {/* ✅ Card Nickname + Saldo + CTA contextual */}
+          <div className="rounded-2xl border border-[var(--h-border)] bg-[var(--h-card)] px-4 py-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--h-muted)] min-w-0">
+                <span className="whitespace-normal">Você será identificado nos diálogos como</span>
 
-      <div className="flex items-center justify-between gap-4">
-        <div className="space-y-2">
-          <h1 className="text-[28px] font-semibold tracking-[-0.02em]">Hitch.ai</h1>
-          <p className="text-sm text-zinc-300/80 leading-relaxed">
-            Cole o diálogo e receba uma leitura clara do contexto.
-          </p>
-        </div>
+                <div className="relative group shrink-0">
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[var(--h-border)] bg-[rgba(2,6,23,0.03)] text-[11px] font-semibold text-[var(--h-muted)] cursor-default">
+                    i
+                  </span>
 
-        <div className="flex items-center gap-2">
-          <Link className="btn" href="/app/conta">
-            Conta
-          </Link>
-        </div>
-      </div>
+                  <div className="pointer-events-none absolute left-0 top-7 z-20 hidden w-[320px] rounded-2xl border border-[var(--h-border)] bg-[var(--h-card)] p-3 text-xs text-[var(--h-subtle)] shadow-[0_18px_55px_rgba(0,0,0,0.18)] group-hover:block">
+                    <div className="font-semibold mb-1 text-[var(--h-text)]">Por que isso é obrigatório?</div>
+                    <p className="leading-relaxed">
+                      O sistema usa esse nome para separar você da outra pessoa no diálogo.
+                      <br />
+                      Se o nome não corresponder ao que aparece na conversa, a interpretação do contexto fica incorreta e
+                      a qualidade da análise e, principalmente, das respostas sugeridas será comprometida.
+                    </p>
+                  </div>
+                </div>
 
-      <div className="card card-premium p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 rounded-2xl border border-[rgba(255,255,255,0.10)] bg-white/2 px-4 py-3">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-200/80 min-w-0">
-            <span className="whitespace-normal">Você será identificado nos diálogos como</span>
+                <span className="inline-flex items-center rounded-xl border border-[var(--h-border)] bg-[rgba(2,6,23,0.03)] px-3 py-1 text-[11px] font-semibold text-[var(--h-text)]">
+                  {nicknameLabel}
+                </span>
+              </div>
 
-            <div className="relative group shrink-0">
-              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-white/3 text-[11px] font-semibold text-zinc-200/80 cursor-default">
-                i
-              </span>
-
-              <div className="pointer-events-none absolute left-0 top-7 z-20 hidden w-[320px] rounded-2xl border border-white/10 bg-black/90 p-3 text-xs text-zinc-200/90 shadow-[0_18px_55px_rgba(0,0,0,0.65)] group-hover:block">
-                <div className="font-semibold mb-1 text-zinc-100">Por que isso é obrigatório?</div>
-                <p className="text-zinc-200/80 leading-relaxed">
-                  O sistema usa esse nome para separar você da outra pessoa no diálogo.
-                  <br />
-                  Se o nome não corresponder ao que aparece na conversa, a interpretação do contexto fica incorreta e a qualidade da análise e, principalmente, das respostas sugeridas será comprometida.
-                </p>
+              <div className="text-xs text-[var(--h-muted)] sm:text-right">
+                Seu saldo atual de créditos é de:{" "}
+                <span className="text-[var(--h-text)] font-semibold">{balanceLabel}</span>
               </div>
             </div>
 
-            <span className="inline-flex items-center rounded-xl border border-white/10 bg-white/3 px-3 py-1 text-[11px] font-semibold text-zinc-100/90">
-              {nicknameLabel}
-            </span>
+            {showContextualBuyCredits ? (
+              <div className="mt-3 flex justify-end">
+                <Link href="/app/billing/plan" className="buyCreditsCta">
+                  Comprar mais créditos
+                </Link>
+              </div>
+            ) : null}
           </div>
 
-          <div className="text-xs text-zinc-300/80 text-left sm:text-right w-full sm:w-auto wrap-break-word">
-            Seu saldo atual de créditos é de:{" "}
-            <span className="text-zinc-100 font-semibold">{balanceLabel}</span>
-          </div>
-        </div>
-
-        <div className="flex justify-end">
-          <button
-            type="button"
-            className="btn"
-            onClick={openNativePicker}
-            disabled={loading || importSending || progressOpen}
-          >
-            Importar prints
-          </button>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="label">Texto</div>
-          <div className={`text-xs font-medium ${charsClass}`}>
-            {chars} caracteres
-            {isTrialGuided ? ` (trial: ${TRIAL_MIN}–${TRIAL_MAX})` : ""}
-          </div>
-        </div>
-
-        <textarea
-          data-tour-id="quick-textarea"
-          className="input min-h-52 resize-none"
-          value={effectiveText}
-          onChange={(e) => {
-            const raw = e.target.value;
-            setConversation(isTrialGuided ? clampTextForTrial(raw) : raw);
-          }}
-          placeholder="Cole o diálogo aqui…"
-          disabled={loading}
-          readOnly={textReadOnly}
-        />
-
-        <div className="label">Modo</div>
-
-        <div className="segmented w-fit gap-1">
-          <button
-            data-tour-id="quick-mode-summary"
-            className={`btn-seg ${quickMode === "RESUMO" ? "btn-seg-active" : ""}`}
-            onClick={() => setQuickMode("RESUMO")}
-            disabled={loading}
-            type="button"
-          >
-            Receber análise
-          </button>
-
-          <button
-            data-tour-id="quick-mode-reply"
-            className={`btn-seg ${quickMode === "RESPONDER" ? "btn-seg-active" : ""}`}
-            onClick={() => {
-              setQuickMode("RESPONDER");
-              setResult(null);
-              setBanner(null);
-            }}
-            disabled={loading}
-            type="button"
-          >
-            Opções de respostas
-          </button>
-        </div>
-
-        <div className="label pt-2">Tipo de relação</div>
-        <div className="flex flex-wrap gap-2" data-tour-id="quick-relationship-option">
-          {relationshipOptions.map((opt) => (
+          <div className="flex items-center justify-end">
             <button
-              key={opt.value}
-              className={`chip ${relationshipType === opt.value ? "chip-active" : ""}`}
-              onClick={() => setRelationshipType(opt.value)}
-              disabled={loading}
               type="button"
+              onClick={openNativePicker}
+              disabled={loading || importSending || progressOpen}
+              className={[
+                "import-prints-button",
+                "rounded-full",
+                "px-4 py-2",
+                "text-sm font-medium",
+                "transition-all duration-200",
+                "disabled:opacity-60 disabled:cursor-not-allowed",
+              ].join(" ")}
             >
-              {opt.label}
+              Importar prints
             </button>
-          ))}
-        </div>
-
-        <button
-          data-tour-id="quick-analyze-button"
-          className="btn-cta w-full mt-2"
-          onClick={onAnalyze}
-          disabled={!canClickAnalyze}
-          type="button"
-        >
-          {loading ? "Analisando…" : "Analisar"}
-        </button>
-
-        {banner && (
-          <div className="rounded-2xl border border-zinc-800/70 bg-black/30 p-4 text-sm">
-            <div className="font-medium">{banner.title}</div>
-            <div className="text-zinc-300/80">{banner.reason}</div>
-            {banner.fix && <div className="text-zinc-300/70">{banner.fix}</div>}
           </div>
-        )}
-      </div>
 
-      {result && <ResultView data={result} quickMode={resultQuickMode as any} />}
-    </div>
+          <div className="rounded-2xl border border-[var(--h-border)] bg-[var(--h-card)] p-4 space-y-4 overflow-visible">
+            <div className="relative">
+              <textarea
+                data-tour-id="quick-textarea"
+                className={[
+                  "input min-h-52 resize-none hitch-textarea",
+                  "focus:outline-none focus:ring-2 focus:ring-[rgba(99,102,241,0.25)]",
+                  "disabled:opacity-60",
+                ].join(" ")}
+                value={effectiveText}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setConversation(isTrialGuided ? clampTextForTrial(raw) : raw);
+                }}
+                placeholder="Cole o diálogo aqui…"
+                disabled={loading}
+                readOnly={textReadOnly}
+              />
+
+              <div className={`pointer-events-none absolute bottom-3 right-3 text-xs font-semibold ${charsToneClass}`}>
+                {chars} caracteres
+                {isTrialGuided ? ` (trial: ${TRIAL_MIN}–${TRIAL_MAX})` : ""}
+              </div>
+            </div>
+
+            <SectionLabel>Modo</SectionLabel>
+
+            <div className={modeToggleWrapClass} role="tablist" aria-label="Modo de análise">
+              <button
+                type="button"
+                data-tour-id="quick-mode-summary"
+                className={["h-pill", quickMode === "RESUMO" ? "h-pill--active" : ""].join(" ")}
+                onClick={() => setQuickMode("RESUMO")}
+                role="tab"
+                aria-selected={quickMode === "RESUMO"}
+                disabled={loading}
+              >
+                Receber análise
+              </button>
+
+              <button
+                type="button"
+                data-tour-id="quick-mode-reply"
+                className={["h-pill", quickMode === "RESPONDER" ? "h-pill--active" : ""].join(" ")}
+                onClick={() => {
+                  setQuickMode("RESPONDER");
+                  setResult(null);
+                  setBanner(null);
+                }}
+                role="tab"
+                aria-selected={quickMode === "RESPONDER"}
+                disabled={loading}
+              >
+                Opções de respostas
+              </button>
+            </div>
+
+            <div className="pt-2">
+              <SectionLabel>Tipo de relação</SectionLabel>
+            </div>
+
+            <div
+              className="flex flex-nowrap gap-2 overflow-x-auto whitespace-nowrap pb-1"
+              data-tour-id="quick-relationship-option"
+            >
+              {relationshipOptions.map((opt) => {
+                const active = relationshipType === opt.value;
+
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setRelationshipType(opt.value)}
+                    disabled={loading}
+                    className={["h-pill", active ? "h-pill--active" : ""].join(" ")}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-6">
+              <button
+                data-tour-id="quick-analyze-button"
+                type="button"
+                onClick={onAnalyze}
+                disabled={!canClickAnalyze}
+                className={[
+                  "h-cta",
+                  "disabled:opacity-60 disabled:cursor-not-allowed",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(108,99,255,0.35)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--h-bg)]",
+                ].join(" ")}
+              >
+                {loading ? "Analisando…" : "Analisar"}
+              </button>
+            </div>
+
+            {banner && (
+              <div className="rounded-2xl border border-[var(--h-border)] bg-white/70 p-4 text-sm shadow-[0_12px_34px_rgba(0,0,0,0.08)]">
+                <div className="font-medium text-[var(--h-text)]">{banner.title}</div>
+                <div className="text-[var(--h-subtle)]">{banner.reason}</div>
+                {banner.fix && <div className="text-[var(--h-muted)]">{banner.fix}</div>}
+              </div>
+            )}
+          </div>
+
+          {result && <ResultView data={result} quickMode={resultQuickMode as any} />}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -1379,26 +1480,26 @@ function OkModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/70">
+    <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/30">
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         tabIndex={-1}
-        className="w-[min(520px,calc(100%-24px))] rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-[0_18px_55px_rgba(0,0,0,0.65)]"
+        className="w-[min(520px,calc(100%-24px))] rounded-2xl border border-[var(--h-border)] bg-[var(--h-card)] p-5 shadow-[0_22px_66px_rgba(0,0,0,0.18)]"
       >
-        <div className="text-lg font-semibold text-zinc-100">{title}</div>
+        <div className="text-lg font-semibold text-[var(--h-text)]">{title}</div>
 
-        <div className="mt-3 space-y-2 text-sm text-zinc-200/80 leading-relaxed">
+        <div className="mt-3 space-y-2 text-sm text-[var(--h-subtle)] leading-relaxed">
           {lines.map((l, i) => (
             <p key={i}>{l}</p>
           ))}
         </div>
 
         <div className="mt-5 flex justify-end">
-          <button ref={okRef} type="button" className="btn btn-primary" onClick={onClose}>
+          <Button ref={okRef} type="button" onClick={onClose} className="rounded-2xl">
             OK
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -34,7 +34,9 @@ export default function RegisterPage() {
                 <Link className="btnGhost" href="/exp-site-v12">
                   Voltar ao site
                 </Link>
-                <Link className="btn" href="/exp-site-v12/planos">
+
+                {/* ✅ padronizado com o site */}
+                <Link className="btn btnSecondary btnPlans" href="/exp-site-v12/planos">
                   Ver planos
                 </Link>
               </div>

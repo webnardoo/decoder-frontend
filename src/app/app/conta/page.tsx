@@ -1,3 +1,4 @@
+// src/app/app/conta/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -71,6 +72,26 @@ export default function ContaPage() {
 
   const [loggingOut, setLoggingOut] = useState(false);
 
+  // -----------------------------
+  // ✅ PADRÃO CTA (igual ao "Analisar")
+  // (NÃO mexer — já validado)
+  // -----------------------------
+  const BTN_BASE =
+    "h-cta inline-flex items-center justify-center select-none " +
+    "rounded-full font-semibold transition " +
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(108,99,255,0.25)] " +
+    "focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--h-bg)] " +
+    "disabled:opacity-60 disabled:cursor-not-allowed";
+
+  const BTN_PILL = "h-cta--pill px-6 h-11";
+  const BTN_PILL_ACTIVE = "h-cta--active";
+  const BTN_PILL_DANGER = "h-cta--danger";
+  const BTN_PILL_SOLID = "h-cta--solid"; // opcional (não usado aqui)
+
+  function pillClass(active: boolean) {
+    return `${BTN_BASE} ${BTN_PILL} ${active ? BTN_PILL_ACTIVE : ""}`;
+  }
+
   async function loadOnboardingStatus() {
     setLoadingProfile(true);
     setProfileMsg(null);
@@ -111,7 +132,6 @@ export default function ContaPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message || "Falha ao salvar nickname.");
 
-      // ✅ refresh do perfil + volta a read-only após salvar
       await loadOnboardingStatus();
       setIsEditingNickname(false);
       setNicknameSavedOpen(true);
@@ -125,14 +145,11 @@ export default function ContaPage() {
   function startEditNickname() {
     if (savingNickname || loggingOut || loadingProfile) return;
     setProfileMsg(null);
-
-    // garante snapshot atual antes de editar
     setNicknameSnapshot(String(nickname ?? ""));
     setIsEditingNickname(true);
   }
 
   function cancelEditNickname() {
-    // desfaz mudança local e volta read-only
     setProfileMsg(null);
     setNickname(nicknameSnapshot);
     setIsEditingNickname(false);
@@ -158,6 +175,44 @@ export default function ContaPage() {
     }
   }
 
+  function clearClientAuthStorage() {
+    const localTokenKeys = [
+      "accessToken",
+      "token",
+      "decoder_access_token",
+      "decoder_accessToken",
+      "decoder_token",
+      "hint_jwt",
+      "refreshToken",
+      "jwt",
+      "session",
+      "hitch_token",
+      "hitch_access_token",
+      "hitch_refresh_token",
+    ];
+
+    const sessionKeys = [
+      "hitch_last_stripe_session_id",
+      "hitch_skip_onboarding_once",
+      "hitch_journey",
+      "decoder_pending_verify_email",
+      "decoder_pending_verify_password",
+      "decoder_pending_verify_next",
+      "decoder_login_error",
+      "signup_pending_email",
+      "signup_pending_password",
+      "signup_pending_next",
+    ];
+
+    try {
+      for (const k of localTokenKeys) window.localStorage.removeItem(k);
+    } catch {}
+
+    try {
+      for (const k of sessionKeys) window.sessionStorage.removeItem(k);
+    } catch {}
+  }
+
   async function handleLogout() {
     if (loggingOut) return;
     setLoggingOut(true);
@@ -165,7 +220,6 @@ export default function ContaPage() {
     setPlanMsg(null);
 
     try {
-      // 1) derruba sessão (cookies) no servidor Next
       const res = await fetch("/api/auth/logout", {
         method: "POST",
         cache: "no-store",
@@ -176,28 +230,7 @@ export default function ContaPage() {
         throw new Error(data?.message || "Falha ao sair.");
       }
 
-      // 2) limpa storages do client (seguro; evita tokens em localStorage/sessionStorage)
-      try {
-        sessionStorage.clear();
-      } catch {}
-      try {
-        // remove chaves comuns sem nukar tudo (mais conservador)
-        const keys = [
-          "token",
-          "accessToken",
-          "refreshToken",
-          "jwt",
-          "session",
-          "decoder_token",
-          "hitch_token",
-          "hitch_access_token",
-          "hitch_refresh_token",
-          "hitch_refresh_token",
-        ];
-        for (const k of keys) localStorage.removeItem(k);
-      } catch {}
-
-      // 3) vai para Home MKT (app/page => "/")
+      clearClientAuthStorage();
       router.replace("/");
       router.refresh();
     } catch (e: any) {
@@ -215,40 +248,26 @@ export default function ContaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ se sair do tab profile, garante read-only
   useEffect(() => {
     if (tab !== "profile") setIsEditingNickname(false);
   }, [tab]);
 
-  // ✅ ao entrar/sair do tab plano, reseta card de cancelamento
   useEffect(() => {
     if (tab !== "plano") setShowCancelPlanCard(false);
   }, [tab]);
 
-  // --------- labels defensivos ---------
-
   const planName = useMemo(
-    () =>
-      billingMe?.plan?.name ||
-      status?.subscription?.planName ||
-      status?.planName ||
-      "—",
+    () => billingMe?.plan?.name || status?.subscription?.planName || status?.planName || "—",
     [billingMe, status]
   );
 
   const billingCycleLabel = useMemo(() => {
-    const raw =
-      billingMe?.billingCycle ||
-      status?.subscription?.billingCycle ||
-      status?.billingCycle;
+    const raw = billingMe?.billingCycle || status?.subscription?.billingCycle || status?.billingCycle;
     return raw ? capitalize(String(raw)) : "—";
   }, [billingMe, status]);
 
   const planMonthlyCreditsLabel = useMemo(() => {
-    const v =
-      billingMe?.plan?.monthlyCredits ??
-      status?.subscription?.monthlyCredits ??
-      status?.creditsPerMonth;
+    const v = billingMe?.plan?.monthlyCredits ?? status?.subscription?.monthlyCredits ?? (status as any)?.creditsPerMonth;
     return v == null ? "—" : String(v);
   }, [billingMe, status]);
 
@@ -256,8 +275,8 @@ export default function ContaPage() {
     const v =
       billingMe?.creditsBalance ??
       status?.creditsBalance ??
-      status?.balance ??
-      status?.credits?.balance;
+      (status as any)?.balance ??
+      (status as any)?.credits?.balance;
     return v == null ? "—" : String(v);
   }, [billingMe, status]);
 
@@ -266,7 +285,7 @@ export default function ContaPage() {
       billingMe?.renewAt ||
       billingMe?.renewalAt ||
       status?.renewAt ||
-      status?.renewalAt ||
+      (status as any)?.renewalAt ||
       status?.subscription?.renewAt ||
       status?.subscription?.renewalAt;
     return raw ? formatDate(raw) : "—";
@@ -274,13 +293,106 @@ export default function ContaPage() {
 
   const disableAll = loadingProfile || savingNickname || loadingPlan || loggingOut;
 
-  // ✅ Texto revisado (gramática/ortografia)
   const cancelPlanText =
     'Para cancelar seu plano, envie um e-mail para hitchai@hitchai.online, com o assunto "Cancelamento de Plano". No corpo do e-mail, informe o e-mail cadastrado (o mesmo que você usa para entrar no Hitch.ai).';
 
   return (
     <div className="app-main">
-      {/* ✅ Pop-up de sucesso do nickname */}
+      {/* CSS do padrão CTA (mesmo do "Analisar") + correção de contraste dos CAMPOS no tema dark */}
+      <style jsx global>{`
+        /* Fallback seguro caso --h-accent ou --h-pill-text não existam */
+        html {
+          --h-accent-fallback: #6c63ff;
+          --h-pill-text: var(--h-text);
+        }
+
+        .h-cta {
+          box-sizing: border-box;
+          border: 2px solid var(--h-accent, var(--h-accent-fallback));
+          background: #ffffff;
+          color: var(--h-pill-text);
+          box-shadow: 0 14px 40px rgba(108, 99, 255, 0.25);
+          transition: box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, color 180ms ease;
+        }
+
+        .h-cta:hover {
+          border-color: var(--h-accent, var(--h-accent-fallback));
+          background: #f7f6ff;
+          color: var(--h-pill-text);
+          box-shadow: 0 18px 50px rgba(108, 99, 255, 0.32);
+        }
+
+        .h-cta:active {
+          background: #f3f1ff;
+          box-shadow: 0 14px 44px rgba(108, 99, 255, 0.28);
+          transform: translateY(0px);
+        }
+
+        .h-cta--active {
+          box-shadow: 0 0 0 2px rgba(108, 99, 255, 0.55), 0 14px 40px rgba(108, 99, 255, 0.25);
+        }
+
+        .h-cta--danger {
+          border-color: rgba(248, 113, 113, 0.65);
+          color: rgb(220, 38, 38);
+          box-shadow: 0 14px 40px rgba(248, 113, 113, 0.16);
+        }
+
+        .h-cta--danger:hover {
+          border-color: rgba(239, 68, 68, 0.85);
+          background: rgba(254, 242, 242, 1);
+          box-shadow: 0 18px 50px rgba(239, 68, 68, 0.18);
+        }
+
+        .h-cta--solid {
+          background: var(--h-accent, var(--h-accent-fallback));
+          color: #fff;
+          border-color: var(--h-accent, var(--h-accent-fallback));
+          box-shadow: 0 14px 44px rgba(108, 99, 255, 0.28);
+        }
+
+        .h-cta--solid:hover {
+          background: var(--h-accent, var(--h-accent-fallback));
+          filter: brightness(0.98);
+          box-shadow: 0 18px 56px rgba(108, 99, 255, 0.34);
+        }
+
+        /* Dark: CTA (mantém o padrão já validado) */
+        html[data-theme="dark"] .h-cta {
+          background: rgba(255, 255, 255, 0.1);
+          color: rgba(255, 255, 255, 0.92);
+          border-color: rgba(108, 99, 255, 0.62);
+          box-shadow: 0 18px 54px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+        }
+
+        html[data-theme="dark"] .h-cta:hover {
+          background: rgba(255, 255, 255, 0.14);
+          border-color: rgba(108, 99, 255, 0.72);
+          box-shadow: 0 24px 64px rgba(0, 0, 0, 0.62), 0 0 52px rgba(108, 99, 255, 0.18);
+        }
+
+        html[data-theme="dark"] .h-cta--active {
+          box-shadow: 0 0 0 2px rgba(108, 99, 255, 0.35), 0 18px 54px rgba(0, 0, 0, 0.55);
+        }
+
+        /* =========================================================
+           ✅ CORREÇÃO PEDIDA: contraste dos CAMPOS no tema DARK
+           (InfoRow + Card de Cancelamento). Sem tocar em botões.
+           ========================================================= */
+        html[data-theme="dark"] .conta-field {
+          background: rgba(255, 255, 255, 0.06) !important;
+          border-color: rgba(255, 255, 255, 0.14) !important;
+        }
+
+        html[data-theme="dark"] .conta-field .conta-field-label {
+          color: rgba(255, 255, 255, 0.72) !important;
+        }
+
+        html[data-theme="dark"] .conta-field .conta-field-value {
+          color: rgba(255, 255, 255, 0.92) !important;
+        }
+      `}</style>
+
       <GuardSelectionModal
         open={nicknameSavedOpen}
         title="Atualizado com sucesso"
@@ -293,15 +405,13 @@ export default function ContaPage() {
         <div className="card card-premium p-5 md:p-6">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <div className="text-base font-semibold text-white/90">Conta</div>
-              <div className="text-sm text-white/55">
-                Perfil e detalhes do seu plano
-              </div>
+              <div className="text-base font-semibold text-[var(--h-text)]">Conta</div>
+              <div className="text-sm text-[var(--h-subtitle)]">Perfil e detalhes do seu plano</div>
             </div>
 
             <button
               type="button"
-              className="btn"
+              className={`${BTN_BASE} ${BTN_PILL}`}
               onClick={() => router.replace("/app")}
               disabled={disableAll}
             >
@@ -312,30 +422,32 @@ export default function ContaPage() {
           <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-[260px_1fr]">
             {/* Sidebar */}
             <div className="card p-3">
-              <div className="mt-3 flex flex-col gap-2">
+              <div className="mt-3 flex flex-col gap-3">
                 <button
-                  className={tab === "profile" ? "btn btn-primary" : "btn"}
-                  onClick={() => setTab("profile")}
                   type="button"
+                  onClick={() => setTab("profile")}
+                  className={pillClass(tab === "profile")}
+                  disabled={disableAll}
                 >
                   Profile
                 </button>
 
                 <button
-                  className={tab === "plano" ? "btn btn-primary" : "btn"}
-                  onClick={() => setTab("plano")}
                   type="button"
+                  onClick={() => setTab("plano")}
+                  className={pillClass(tab === "plano")}
+                  disabled={disableAll}
                 >
                   Plano
                 </button>
 
-                {/* 🔹 Separador visual */}
-                <div className="my-2 h-px w-full bg-white/10" />
+                <div className="my-2 h-px w-full bg-[var(--h-border)]" />
 
                 <button
-                  className="btn text-red-300 hover:text-red-200 hover:border-red-400/40"
-                  onClick={handleLogout}
                   type="button"
+                  onClick={handleLogout}
+                  className={`${BTN_BASE} ${BTN_PILL} ${BTN_PILL_DANGER}`}
+                  disabled={loggingOut}
                 >
                   Sair
                 </button>
@@ -348,18 +460,16 @@ export default function ContaPage() {
                 <>
                   <label className="label">Nickname</label>
                   <input
-                    className={`input ${
-                      !isEditingNickname ? "text-white/20 cursor-default" : "text-white"
-                    }`}
+                    className={`input ${!isEditingNickname ? "cursor-default text-[var(--h-subtitle)]" : "text-[var(--h-text)]"}`}
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
                     readOnly={!isEditingNickname}
                     disabled={loadingProfile || savingNickname || loggingOut}
                   />
 
-                  <div className="mt-4 flex gap-3">
+                  <div className="mt-4 flex flex-wrap gap-3">
                     <button
-                      className="btn-cta"
+                      className={`${BTN_BASE} ${BTN_PILL} ${BTN_PILL_ACTIVE}`}
                       onClick={saveNickname}
                       disabled={!isEditingNickname || savingNickname || loggingOut}
                       type="button"
@@ -369,7 +479,7 @@ export default function ContaPage() {
 
                     {!isEditingNickname ? (
                       <button
-                        className="btn"
+                        className={`${BTN_BASE} ${BTN_PILL}`}
                         onClick={startEditNickname}
                         disabled={savingNickname || loggingOut || loadingProfile}
                         type="button"
@@ -378,7 +488,7 @@ export default function ContaPage() {
                       </button>
                     ) : (
                       <button
-                        className="btn"
+                        className={`${BTN_BASE} ${BTN_PILL}`}
                         onClick={cancelEditNickname}
                         disabled={savingNickname || loggingOut}
                         type="button"
@@ -388,14 +498,12 @@ export default function ContaPage() {
                     )}
                   </div>
 
-                  {profileMsg && (
-                    <div className="mt-3 text-sm text-white/60">{profileMsg}</div>
-                  )}
+                  {profileMsg && <div className="mt-3 text-sm text-[var(--h-subtitle)]">{profileMsg}</div>}
                 </>
               ) : (
                 <>
                   {!showCancelPlanCard ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                       <InfoRow label="Plano atual" value={planName} />
                       <InfoRow label="Ciclo" value={billingCycleLabel} />
                       <InfoRow label="Créditos do plano" value={planMonthlyCreditsLabel} />
@@ -403,43 +511,41 @@ export default function ContaPage() {
                       <InfoRow label="Renovação" value={renewalLabel} />
                     </div>
                   ) : (
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-4">
-                      <div className="text-xs font-semibold tracking-wide text-white/45">
+                    <div className="conta-field rounded-2xl border border-[var(--h-border)] bg-white/80 px-4 py-4">
+                      <div className="conta-field-label text-xs font-semibold tracking-wide text-[var(--h-subtitle)]">
                         CANCELAMENTO DE PLANO
                       </div>
-                      <div className="mt-2 text-sm text-white/85 leading-relaxed">
+                      <div className="conta-field-value mt-2 text-sm leading-relaxed text-[var(--h-text)]">
                         {cancelPlanText}
                       </div>
                     </div>
                   )}
 
-                  {planMsg && (
-                    <div className="mt-3 text-sm text-white/60">{planMsg}</div>
-                  )}
+                  {planMsg && <div className="mt-3 text-sm text-[var(--h-subtitle)]">{planMsg}</div>}
 
-                  <div className="mt-4 flex gap-3">
+                  <div className="mt-5 flex flex-wrap gap-3">
                     <button
-                      className="btn"
+                      type="button"
+                      className={`${BTN_BASE} ${BTN_PILL}`}
                       onClick={loadBillingMe}
                       disabled={loadingPlan || loggingOut}
-                      type="button"
                     >
                       Atualizar
                     </button>
 
                     <button
-                      className="btn"
-                      onClick={() => setShowCancelPlanCard(true)}
                       type="button"
+                      className={`${BTN_BASE} ${BTN_PILL}`}
+                      onClick={() => setShowCancelPlanCard(true)}
                       disabled={loggingOut}
                     >
                       Cancelar plano
                     </button>
 
                     <button
-                      className="btn"
-                      onClick={() => router.push("/app/billing/plan")}
                       type="button"
+                      className={`${BTN_BASE} ${BTN_PILL} ${BTN_PILL_ACTIVE}`}
+                      onClick={() => router.push("/app/billing/plan")}
                       disabled={loggingOut}
                     >
                       Atualizar plano
@@ -457,11 +563,11 @@ export default function ContaPage() {
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3">
-      <div className="text-xs font-semibold tracking-wide text-white/45">
+    <div className="conta-field rounded-2xl border border-[var(--h-border)] bg-white/80 px-4 py-3">
+      <div className="conta-field-label text-xs font-semibold tracking-wide text-[var(--h-subtitle)]">
         {label.toUpperCase()}
       </div>
-      <div className="mt-1 text-sm text-white/85">{value}</div>
+      <div className="conta-field-value mt-1 text-sm text-[var(--h-text)]">{value}</div>
     </div>
   );
 }

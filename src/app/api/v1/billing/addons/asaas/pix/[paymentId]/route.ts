@@ -1,86 +1,112 @@
 // src/app/api/v1/billing/addons/asaas/pix/[paymentId]/route.ts
 import { NextResponse } from "next/server";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function safeBaseForDebug(base: string): string {
-  // não expõe query, headers, tokens; só host/base
+function getBackendBaseUrl(): string {
+  const a = String(process.env.BACKEND_URL || "").trim().replace(/\/$/, "");
+  const b = String(process.env.NEXT_PUBLIC_API_BASE_URL || "")
+    .trim()
+    .replace(/\/$/, "");
+
+  if (a) return a;
+  if (b) return b;
+
+  return "http://localhost:4100";
+}
+
+function extractTokenFromCookie(req: Request): string | null {
+  const cookieHeader = req.headers.get("cookie") || "";
+  if (!cookieHeader) return null;
+
+  const match = cookieHeader
+    .split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith("decoder_auth="));
+
+  if (!match) return null;
+
+  const raw = match.split("=").slice(1).join("=");
   try {
-    const u = new URL(base);
-    return `${u.protocol}//${u.host}`;
+    return decodeURIComponent(raw);
   } catch {
-    return base;
+    return raw;
   }
 }
 
-function getBackendBaseUrl(): { base: string; source: "BACKEND_URL" | "NEXT_PUBLIC_API_BASE_URL" | "fallback" } {
-  const aRaw = String(process.env.BACKEND_URL || "").trim();
-  const bRaw = String(process.env.NEXT_PUBLIC_API_BASE_URL || "").trim();
-
-  const a = aRaw.replace(/\/$/, "");
-  const b = bRaw.replace(/\/$/, "");
-
-  const base = a || b;
-  if (a) return { base: a, source: "BACKEND_URL" };
-  if (b) return { base: b, source: "NEXT_PUBLIC_API_BASE_URL" };
-
-  return { base: "http://localhost:4100", source: "fallback" };
-}
-
-function pickHeaders(req: Request): HeadersInit {
-  const cookie = req.headers.get("cookie") || "";
-  const accept = req.headers.get("accept") || "application/json";
-
-  const h: Record<string, string> = { Accept: accept };
-  if (cookie) h.Cookie = cookie;
-  return h;
-}
-
-export async function GET(req: Request, ctx: { params: Promise<{ paymentId: string }> }) {
-  const { base, source } = getBackendBaseUrl();
-
+export async function GET(
+  req: Request,
+  context: { params: Promise<{ paymentId?: string }> | { paymentId?: string } }
+) {
   try {
-    const { paymentId } = await ctx.params;
-    const pid = String(paymentId || "").trim();
-    if (!pid) {
-      return NextResponse.json({ ok: false, error: "paymentId_required" }, { status: 400 });
+    // ✅ Next dev/turbo: params pode ser Promise
+    const resolvedParams =
+      typeof (context as any)?.params?.then === "function"
+        ? await (context.params as Promise<{ paymentId?: string }>)
+        : (context.params as { paymentId?: string });
+
+    const paymentId = String(resolvedParams?.paymentId || "").trim();
+
+    if (!paymentId) {
+      return NextResponse.json(
+        { ok: false, error: "paymentId_required" },
+        { status: 400 }
+      );
     }
 
-    const url = `${base}/api/v1/billing/asaas/pix/${encodeURIComponent(pid)}`;
+    const base = getBackendBaseUrl();
+    const token = extractTokenFromCookie(req);
 
-    const res = await fetch(url, {
-      method: "GET",
-      headers: pickHeaders(req),
-      cache: "no-store",
-    });
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+    };
 
-    const contentType = res.headers.get("content-type") || "";
-    const status = res.status;
+    if (token) headers.Authorization = `Bearer ${token}`;
 
-    if (contentType.includes("application/json")) {
-      const data = await res.json().catch(() => null);
-      return NextResponse.json(data, { status });
+    const controller = new AbortController();
+    const timeoutMs = 10_000;
+    const timeout = setTimeout(() => controller.abort("timeout"), timeoutMs);
+
+    const backendRes = await fetch(
+      `${base}/api/v1/billing/asaas/pix/${encodeURIComponent(paymentId)}`,
+      {
+        method: "GET",
+        headers,
+        cache: "no-store",
+        signal: controller.signal,
+      }
+    ).finally(() => clearTimeout(timeout));
+
+    const outHeaders = new Headers();
+    outHeaders.set(
+      "content-type",
+      backendRes.headers.get("content-type") ||
+        "application/json; charset=utf-8"
+    );
+    outHeaders.set("cache-control", "no-store");
+
+    if (!backendRes.body) {
+      const raw = await backendRes.text().catch(() => "");
+      return new NextResponse(raw, { status: backendRes.status, headers: outHeaders });
     }
 
-    const text = await res.text().catch(() => "");
-    return new NextResponse(text, {
-      status,
-      headers: { "content-type": contentType || "text/plain; charset=utf-8" },
+    return new NextResponse(backendRes.body, {
+      status: backendRes.status,
+      headers: outHeaders,
     });
-  } catch (e: any) {
-    // ✅ diagnóstico seguro (não vaza secrets)
+  } catch (err: any) {
+    const msg = String(err?.message || err || "unknown");
+    const aborted =
+      msg.includes("aborted") || msg.includes("timeout") || msg.includes("AbortError");
+
     return NextResponse.json(
       {
         ok: false,
-        error: "proxy_failed",
-        message: String(e?.message || e || "unknown"),
-        debug: {
-          baseHost: safeBaseForDebug(base),
-          baseSource: source,
-          nodeEnv: String(process.env.NODE_ENV || ""),
-        },
+        error: aborted ? "proxy_timeout" : "proxy_failed",
+        message: msg,
       },
-      { status: 502 }
+      { status: aborted ? 504 : 502 }
     );
   }
 }
