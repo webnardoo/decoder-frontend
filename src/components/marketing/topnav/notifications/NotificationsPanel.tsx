@@ -21,22 +21,45 @@ export type NotificationsPanelProps = {
   onPixOpen?: (paymentId: string) => void;
 };
 
-function hasPixHint(n: NotificationItem): boolean {
-  const type = String(n?.entityType || "").toUpperCase();
-  const id = String(n?.entityId || "").trim();
-  if (type === "PAYMENT" && id) return true;
+function isPixCreatedNotification(n: NotificationItem): boolean {
+  const t = String(n?.title ?? "").toLowerCase();
+  const m = String(n?.message ?? "").toLowerCase();
 
-  const msg = String(n?.message || "");
-  return /pay_[a-z0-9]+/i.test(msg);
+  const type = String((n as any)?.type ?? "").toLowerCase();
+  const code = String((n as any)?.code ?? "").toLowerCase();
+  const et = String((n as any)?.entityType ?? "").toLowerCase();
+
+  if (t.includes("pix gerado") || t.includes("pix criado")) return true;
+  if (m.includes("pix foi gerado") || m.includes("pix gerado") || m.includes("pix criado")) return true;
+
+  if (type.includes("pix_created") || type.includes("pix_gerado") || type.includes("pix_criado")) return true;
+  if (code.includes("pix_created") || code.includes("pix_gerado") || code.includes("pix_criado")) return true;
+
+  if (et === "payment" && (t.includes("gerado") || m.includes("gerado"))) return true;
+
+  return false;
 }
 
 function extractPixPaymentId(n: NotificationItem): string | null {
-  const id = String(n?.entityId || "").trim();
+  const id = String((n as any)?.entityId || "").trim();
   if (id) return id;
 
+  const url = String((n as any)?.actionUrl ?? "").trim();
+  if (url) {
+    let m = url.match(/\/pix\/(?:pay\/)?(pay_[^/?#]+)/i);
+    if (m?.[1]) return String(m[1]).trim();
+
+    m = url.match(/\/pix\/pay\/([^/?#]+)/i);
+    if (m?.[1]) return String(m[1]).trim();
+
+    m = url.match(/\/pix\/([^/?#]+)/i);
+    const seg = m?.[1] ? String(m[1]).trim() : "";
+    if (seg && seg.toLowerCase() !== "pay") return seg;
+  }
+
   const msg = String(n?.message || "");
-  const m = msg.match(/(pay_[a-z0-9]+)/i);
-  return m?.[1] ? String(m[1]) : null;
+  const m2 = msg.match(/(pay_[a-z0-9]+)/i);
+  return m2?.[1] ? String(m2[1]) : null;
 }
 
 export default function NotificationsPanel({
@@ -107,7 +130,8 @@ export default function NotificationsPanel({
               const isUnread = !n.readAt;
               const createdLabel = n.createdAt ? timeAgo(n.createdAt) : "";
 
-              const showPixLink = Boolean(onPixOpen) && hasPixHint(n);
+              // ✅ agora: link só aparece em NOTIFICAÇÃO DE PIX CRIADO
+              const showPixLink = Boolean(onPixOpen) && isPixCreatedNotification(n);
               const pixPaymentId = showPixLink ? extractPixPaymentId(n) : null;
 
               return (

@@ -60,11 +60,26 @@ function extractPaymentId(n: NotificationItem): string {
   return seg;
 }
 
-function hasPixHint(n: NotificationItem): boolean {
+function isPixCreatedNotification(n: NotificationItem): boolean {
   const t = String(n?.title ?? "").toLowerCase();
   const m = String(n?.message ?? "").toLowerCase();
+
+  const type = String((n as any)?.type ?? "").toLowerCase();
+  const code = String((n as any)?.code ?? "").toLowerCase();
   const et = String((n as any)?.entityType ?? "").toLowerCase();
-  return t.includes("pix") || m.includes("pix") || et === "payment";
+
+  // ✅ heurística segura: só “PIX gerado / criado”
+  if (t.includes("pix gerado") || t.includes("pix criado")) return true;
+  if (m.includes("pix foi gerado") || m.includes("pix gerado") || m.includes("pix criado")) return true;
+
+  // ✅ se o backend já tiver tipo/código explícito (caso exista)
+  if (type.includes("pix_created") || type.includes("pix_gerado") || type.includes("pix_criado")) return true;
+  if (code.includes("pix_created") || code.includes("pix_gerado") || code.includes("pix_criado")) return true;
+
+  // ✅ caso exista modelagem “PAYMENT” com mensagem de gerado (evita “expirou”)
+  if (et === "payment" && (t.includes("gerado") || m.includes("gerado"))) return true;
+
+  return false;
 }
 
 export default function NotificationsDesktop({
@@ -205,7 +220,8 @@ export default function NotificationsDesktop({
               const isUnread = !n.readAt;
               const key = id ? id : `notif_${idx}`;
 
-              const showPixLink = Boolean(onPixOpen) && hasPixHint(n);
+              // ✅ agora: link só aparece em NOTIFICAÇÃO DE PIX CRIADO
+              const showPixLink = Boolean(onPixOpen) && isPixCreatedNotification(n);
               const pixPaymentId = showPixLink ? extractPaymentId(n) : "";
 
               return (
