@@ -37,10 +37,11 @@ function extractTokenFromCookie(req: Request): string | null {
 
 export async function GET(
   req: Request,
-  context: { params: { paymentId: string } }
+  context: { params: { paymentId?: string } }
 ) {
   try {
-    const { paymentId } = context.params;
+    // ✅ garantir leitura segura do param
+    const paymentId = String(context?.params?.paymentId || "").trim();
 
     if (!paymentId) {
       return NextResponse.json(
@@ -56,9 +57,13 @@ export async function GET(
       Accept: "application/json",
     };
 
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
+    // ✅ repassa auth pro backend (cookie -> bearer)
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    // ✅ timeout curto pra evitar “function hanging”
+    const controller = new AbortController();
+    const timeoutMs = 10_000;
+    const timeout = setTimeout(() => controller.abort("timeout"), timeoutMs);
 
     const backendRes = await fetch(
       `${base}/api/v1/billing/asaas/pix/${encodeURIComponent(paymentId)}`,
@@ -66,26 +71,41 @@ export async function GET(
         method: "GET",
         headers,
         cache: "no-store",
+        signal: controller.signal,
       }
+    ).finally(() => clearTimeout(timeout));
+
+    // ✅ pass-through body (stream) + headers essenciais
+    const outHeaders = new Headers();
+    outHeaders.set(
+      "content-type",
+      backendRes.headers.get("content-type") ||
+        "application/json; charset=utf-8"
     );
+    outHeaders.set("cache-control", "no-store");
+
+    // se body vier null, cai pra text
+    if (!backendRes.body) {
+      const raw = await backendRes.text().catch(() => "");
+      return new NextResponse(raw, { status: backendRes.status, headers: outHeaders });
+    }
 
     return new NextResponse(backendRes.body, {
       status: backendRes.status,
-      headers: {
-        "content-type":
-          backendRes.headers.get("content-type") ||
-          "application/json; charset=utf-8",
-        "cache-control": "no-store",
-      },
+      headers: outHeaders,
     });
   } catch (err: any) {
+    const msg = String(err?.message || err || "unknown");
+    const aborted =
+      msg.includes("aborted") || msg.includes("timeout") || msg.includes("AbortError");
+
     return NextResponse.json(
       {
         ok: false,
-        error: "proxy_failed",
-        message: String(err?.message || err),
+        error: aborted ? "proxy_timeout" : "proxy_failed",
+        message: msg,
       },
-      { status: 500 }
+      { status: aborted ? 504 : 502 }
     );
   }
 }
