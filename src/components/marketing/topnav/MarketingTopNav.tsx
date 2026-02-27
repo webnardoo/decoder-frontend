@@ -215,7 +215,10 @@ export default function MarketingTopNav({
     setMobileOpen(false);
   }, [load]);
 
-  // ✅ clique no item: marca como lida e fecha overlay
+  // ✅ clique no item: marca como lida
+  // Regras:
+  // - Mobile: NÃO fecha a layer.
+  // - Desktop dropdown / Panel: fecha após marcar como lida.
   const handleClickItem = useCallback(
     async (n: any) => {
       const id = String(n?.id || "").trim();
@@ -223,11 +226,14 @@ export default function MarketingTopNav({
         await markReadOnly(id);
       }
 
+      // ✅ Mobile fica aberto; só o sino/backdrop/X fecham.
+      if (isMobile) return;
+
       setDropdownOpen(false);
       setMobileOpen(false);
       setPanelOpen(false);
     },
-    [markReadOnly]
+    [markReadOnly, isMobile]
   );
 
   const shouldRenderApp = inferredMode === "app";

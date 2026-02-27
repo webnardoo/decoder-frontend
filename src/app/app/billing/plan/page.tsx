@@ -324,10 +324,10 @@ export default function BillingPlanPage() {
   const isAuthed = useMemo(() => !loadingMe && me != null, [loadingMe, me]);
 
   const [selectedAddOn, setSelectedAddOn] = useState<AddOnUi["code"]>(
-    "addon_essential",
+    "addon_essential"
   );
   const [pixStep, setPixStep] = useState<"idle" | "cpf" | "loading" | "ready">(
-    "idle",
+    "idle"
   );
   const [cpfCnpj, setCpfCnpj] = useState<string>("");
   const [pixErr, setPixErr] = useState<string | null>(null);
@@ -393,11 +393,11 @@ export default function BillingPlanPage() {
   async function onSubscribe(
     planId: string,
     planCode: string,
-    planNameForMsg: string,
+    planNameForMsg: string
   ) {
     if (currentPlanKey && codeKey(planCode) === currentPlanKey) {
       setErr(
-        `Você já é assinante do plano ${planNameForMsg}. Selecione outro plano.`,
+        `Você já é assinante do plano ${planNameForMsg}. Selecione outro plano.`
       );
       return;
     }
@@ -422,7 +422,7 @@ export default function BillingPlanPage() {
         sessionStorage.setItem("hitch_last_billing_cycle", cycle);
         sessionStorage.setItem(
           "hitch_last_plan_value",
-          String(PRICE_NUMERIC_MAP[normalizedCode] ?? 0),
+          String(PRICE_NUMERIC_MAP[normalizedCode] ?? 0)
         );
       } catch {}
 
@@ -436,7 +436,7 @@ export default function BillingPlanPage() {
 
   const selected = useMemo(
     () => ADDONS.find((a) => a.code === selectedAddOn) ?? ADDONS[1],
-    [selectedAddOn],
+    [selectedAddOn]
   );
 
   function resetPixUi() {
@@ -497,45 +497,79 @@ export default function BillingPlanPage() {
 
   return (
     // ✅ MENOS ESPAÇO NO TOPO (antes: py-10 md:py-12)
-<main className="flex-1 px-4 pt-4 pb-10 md:pt-6 md:pb-12">
-  
+    <main className="flex-1 px-4 pt-4 pb-10 md:pt-6 md:pb-12">
+      <div className="mx-auto w-full max-w-6xl">
+        {/* HEADER TOPO: título centralizado + voltar fixo à direita */}
+        <div className="relative flex flex-col sm:flex-row items-center sm:items-start justify-center gap-3 sm:gap-0">
+          {/* Botão Voltar preso à direita */}
+          <div className="absolute right-0 top-0">
+            <button
+              onClick={() => router.push("/app/app")}
+              type="button"
+              className="inline-flex items-center rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 ease-out active:scale-[0.98]"
+              style={{
+                border: "2px solid rgba(124,58,237,0.65)",
+                background: "rgba(124,58,237,0.08)",
+                color: "#000000",
+                boxShadow:
+                  "0 0 0 1px rgba(124,58,237,0.35), 0 6px 20px rgba(124,58,237,0.25)",
+              }}
+            >
+              ← Voltar
+            </button>
+          </div>
 
-<div className="mx-auto w-full max-w-6xl">
-  {/* HEADER TOPO: título centralizado + voltar fixo à direita */}
-  <div className="relative flex flex-col sm:flex-row items-center sm:items-start justify-center gap-3 sm:gap-0">
-    {/* Botão Voltar preso à direita */}
-    <div className="absolute right-0 top-0">
-      <button
-        onClick={() => router.push("/app/app")}
-        type="button"
-        className="inline-flex items-center rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 ease-out active:scale-[0.98]"
-        style={{
-          border: "2px solid rgba(124,58,237,0.65)",
-          background: "rgba(124,58,237,0.08)",
-          color: "#000000",
-          boxShadow:
-            "0 0 0 1px rgba(124,58,237,0.35), 0 6px 20px rgba(124,58,237,0.25)",
-        }}
-      >
-        ← Voltar
-      </button>
-    </div>
+          {/* Conteúdo central */}
+          <div className="text-center max-w-3xl px-2 mt-12 sm:mt-0">
+            <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-zinc-100">
+              Escolha como deseja utilizar seus créditos
+            </h1>
 
-    {/* Conteúdo central */}
-    <div className="text-center max-w-3xl px-2 mt-12 sm:mt-0">
-      <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-zinc-100">
-        Escolha como deseja utilizar seus créditos
-      </h1>
+            <p className="mt-2 text-sm md:text-base text-zinc-400">
+              Adquira{" "}
+              <span className="text-zinc-200">Pacotes de Créditos</span> sob
+              demanda ou opte por um{" "}
+              <span className="text-zinc-200">Plano Mensal</span> recorrente.
+              Ambas as opções funcionam juntas e oferecem total flexibilidade.
+            </p>
+          </div>
+        </div>
 
-      <p className="mt-2 text-sm md:text-base text-zinc-400">
-        Adquira{" "}
-        <span className="text-zinc-200">Pacotes de Créditos</span> sob demanda ou opte por um{" "}
-        <span className="text-zinc-200">Plano Mensal</span> recorrente. Ambas as opções funcionam juntas e oferecem total flexibilidade.
-      </p>
-    </div>
-  </div>
+        {/* ✅ TABS (Comprar Créditos / Planos Mensais) */}
+        <div className="mt-4 flex items-center justify-center">
+          <div className="inline-flex rounded-full border border-white/10 bg-white/5 backdrop-blur p-1 gap-2">
+            <button
+              className={
+                creditsIsSelected
+                  ? "px-5 py-2 rounded-full text-sm text-zinc-100 bg-white/10 border border-white/10"
+                  : "px-5 py-2 rounded-full text-sm text-zinc-300 hover:text-zinc-100"
+              }
+              onClick={() => {
+                setTab("credits");
+                setErr(null);
+              }}
+              type="button"
+            >
+              Comprar Créditos
+            </button>
 
-  {/* (daqui pra baixo, segue seu código igual) */}
+            <button
+              className={
+                plansIsSelected
+                  ? "px-5 py-2 rounded-full text-sm text-zinc-100 bg-white/10 border border-white/10"
+                  : "px-5 py-2 rounded-full text-sm text-zinc-300 hover:text-zinc-100"
+              }
+              onClick={() => {
+                setTab("plans");
+                resetPixUi();
+              }}
+              type="button"
+            >
+              Planos Mensais
+            </button>
+          </div>
+        </div>
+
         {err && plansIsSelected && (
           <div className="mt-6 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2 text-sm text-red-200">
             {err}
@@ -678,7 +712,8 @@ export default function BillingPlanPage() {
                       <div className="mt-auto pt-5">
                         <ul className="text-xs text-zinc-300 space-y-1">
                           <li className="flex items-center gap-2">
-                            <span className={a.accent.check}>✔</span> Compra única
+                            <span className={a.accent.check}>✔</span> Compra
+                            única
                           </li>
                           <li className="flex items-center gap-2">
                             <span className={a.accent.check}>✔</span> Créditos
@@ -758,8 +793,8 @@ export default function BillingPlanPage() {
                     {pixStep === "loading"
                       ? "Gerando PIX…"
                       : pixStep === "cpf"
-                        ? "Confirmar e Gerar PIX"
-                        : "Pagar com PIX"}
+                      ? "Confirmar e Gerar PIX"
+                      : "Pagar com PIX"}
                   </button>
                 </div>
 
@@ -793,7 +828,7 @@ export default function BillingPlanPage() {
                               alt="QR Code PIX"
                               className="max-h-[220px] w-auto"
                               src={`data:image/png;base64,${String(
-                                (pixRes as any).pixQrCode.encodedImage,
+                                (pixRes as any).pixQrCode.encodedImage
                               )}`}
                             />
                           ) : (
@@ -849,14 +884,14 @@ export default function BillingPlanPage() {
                         codeKey(a.code) === "pro"
                           ? 2
                           : codeKey(a.code) === "unlimited"
-                            ? 3
-                            : 1;
+                          ? 3
+                          : 1;
                       const ob =
                         codeKey(b.code) === "pro"
                           ? 2
                           : codeKey(b.code) === "unlimited"
-                            ? 3
-                            : 1;
+                          ? 3
+                          : 1;
                       return oa - ob;
                     })
                     .map((p) => {
@@ -939,8 +974,8 @@ export default function BillingPlanPage() {
                                 {isCurrentPlan
                                   ? "Plano atual"
                                   : isChoosingThis
-                                    ? "Abrindo…"
-                                    : ui.cta}
+                                  ? "Abrindo…"
+                                  : ui.cta}
                               </button>
 
                               <div className="mt-2 text-xs text-zinc-400 text-center">
