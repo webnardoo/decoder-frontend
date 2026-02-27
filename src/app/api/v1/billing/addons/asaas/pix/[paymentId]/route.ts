@@ -1,20 +1,33 @@
-// src/app/api/billing/asaas/pix/[paymentId]/route.ts
+// src/app/api/v1/billing/addons/asaas/pix/[paymentId]/route.ts
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-function getBackendBaseUrl(): string {
-  // prioridade: BACKEND_URL (padrão do repo), fallback para NEXT_PUBLIC_API_BASE_URL
-  const a = String(process.env.BACKEND_URL || "").trim();
-  const b = String(process.env.NEXT_PUBLIC_API_BASE_URL || "").trim();
-  const base = a || b;
+function safeBaseForDebug(base: string): string {
+  // não expõe query, headers, tokens; só host/base
+  try {
+    const u = new URL(base);
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    return base;
+  }
+}
 
-  if (!base) return "http://localhost:4100";
-  return base.replace(/\/$/, "");
+function getBackendBaseUrl(): { base: string; source: "BACKEND_URL" | "NEXT_PUBLIC_API_BASE_URL" | "fallback" } {
+  const aRaw = String(process.env.BACKEND_URL || "").trim();
+  const bRaw = String(process.env.NEXT_PUBLIC_API_BASE_URL || "").trim();
+
+  const a = aRaw.replace(/\/$/, "");
+  const b = bRaw.replace(/\/$/, "");
+
+  const base = a || b;
+  if (a) return { base: a, source: "BACKEND_URL" };
+  if (b) return { base: b, source: "NEXT_PUBLIC_API_BASE_URL" };
+
+  return { base: "http://localhost:4100", source: "fallback" };
 }
 
 function pickHeaders(req: Request): HeadersInit {
-  // repassa cookie pra manter auth (JWT cookie/session)
   const cookie = req.headers.get("cookie") || "";
   const accept = req.headers.get("accept") || "application/json";
 
@@ -24,6 +37,8 @@ function pickHeaders(req: Request): HeadersInit {
 }
 
 export async function GET(req: Request, ctx: { params: Promise<{ paymentId: string }> }) {
+  const { base, source } = getBackendBaseUrl();
+
   try {
     const { paymentId } = await ctx.params;
     const pid = String(paymentId || "").trim();
@@ -31,7 +46,6 @@ export async function GET(req: Request, ctx: { params: Promise<{ paymentId: stri
       return NextResponse.json({ ok: false, error: "paymentId_required" }, { status: 400 });
     }
 
-    const base = getBackendBaseUrl();
     const url = `${base}/api/v1/billing/asaas/pix/${encodeURIComponent(pid)}`;
 
     const res = await fetch(url, {
@@ -54,9 +68,19 @@ export async function GET(req: Request, ctx: { params: Promise<{ paymentId: stri
       headers: { "content-type": contentType || "text/plain; charset=utf-8" },
     });
   } catch (e: any) {
+    // ✅ diagnóstico seguro (não vaza secrets)
     return NextResponse.json(
-      { ok: false, error: "proxy_failed", message: String(e?.message || e || "unknown") },
-      { status: 500 }
+      {
+        ok: false,
+        error: "proxy_failed",
+        message: String(e?.message || e || "unknown"),
+        debug: {
+          baseHost: safeBaseForDebug(base),
+          baseSource: source,
+          nodeEnv: String(process.env.NODE_ENV || ""),
+        },
+      },
+      { status: 502 }
     );
   }
 }

@@ -16,9 +16,13 @@ type Props = {
   onClickItem: (n: NotificationItem) => void | Promise<void>;
   onOpenAll?: () => void | Promise<void>;
 
+  // fecha ao clicar fora / ESC
   onRequestClose: () => void;
 
+  // ✅ hover marca como lida (sem navegar)
   onHoverItemId?: (id: string) => void | Promise<void>;
+
+  // ✅ âncora (sino) para posicionar o dropdown corretamente
   anchorEl?: HTMLElement | null;
 
   // ✅ novo: abre modal PIX
@@ -26,15 +30,38 @@ type Props = {
 };
 
 function extractPaymentId(n: NotificationItem): string {
+  // 1) Fonte canônica: entityId (quando o backend já manda paymentId Asaas)
   const byEntity = String((n as any)?.entityId ?? "").trim();
   if (byEntity) return byEntity;
 
+  // 2) Fallback: actionUrl (pode vir em formatos diferentes)
   const url = String((n as any)?.actionUrl ?? "").trim();
   if (!url) return "";
 
-  // tenta achar ".../pix/<id>" ou ".../pix/pay_<id>"
-  const m = url.match(/\/pix\/([^/?#]+)/i);
-  return m?.[1] ? String(m[1]).trim() : "";
+  // Aceitar:
+  // - .../pix/pay_XXXX
+  // - .../pix/pay/pay_XXXX
+  // - .../pix/XXXX
+  // - .../pix/pay_XXXX?...
+  // - .../pix/pay/pay_XXXX?...
+  //
+  // Estratégia:
+  // a) tenta capturar explicitamente pay_...
+  let m = url.match(/\/pix\/(?:pay\/)?(pay_[^/?#]+)/i);
+  if (m?.[1]) return String(m[1]).trim();
+
+  // b) tenta capturar /pix/<segmento> (mas evita retornar literal "pay")
+  m = url.match(/\/pix\/([^/?#]+)/i);
+  const seg = m?.[1] ? String(m[1]).trim() : "";
+  if (!seg) return "";
+
+  // Se veio "pay" (ex: /pix/pay/<id>), tenta pegar o próximo segmento
+  if (seg.toLowerCase() === "pay") {
+    const m2 = url.match(/\/pix\/pay\/([^/?#]+)/i);
+    return m2?.[1] ? String(m2[1]).trim() : "";
+  }
+
+  return seg;
 }
 
 function hasPixHint(n: NotificationItem): boolean {
@@ -67,6 +94,7 @@ export default function NotificationsDesktop({
     setMounted(true);
   }, []);
 
+  // ESC fecha
   useEffect(() => {
     if (!mounted) return;
 
@@ -77,6 +105,7 @@ export default function NotificationsDesktop({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [mounted, onRequestClose]);
 
+  // trava scroll do body enquanto o dropdown estiver aberto (evita “scroll da página por trás”)
   useEffect(() => {
     if (!mounted) return;
     const prevOverflow = document.body.style.overflow;
@@ -86,6 +115,7 @@ export default function NotificationsDesktop({
     };
   }, [mounted]);
 
+  // posiciona o dropdown com base no sino (portal-safe)
   useEffect(() => {
     if (!mounted) return;
 
@@ -101,6 +131,8 @@ export default function NotificationsDesktop({
     }
 
     compute();
+
+    // reposiciona em scroll/resize (captura scroll em qualquer container)
     window.addEventListener("resize", compute);
     window.addEventListener("scroll", compute, true);
 
@@ -114,8 +146,8 @@ export default function NotificationsDesktop({
     if (!onHoverItemId) return;
 
     const id = String(n?.id || "").trim();
-    if (!id) return;
-    if (n.readAt) return;
+    if (!id) return; // ✅ evita //read
+    if (n.readAt) return; // só unread
 
     void Promise.resolve(onHoverItemId(id)).catch(() => null);
   }
@@ -124,6 +156,8 @@ export default function NotificationsDesktop({
 
   return createPortal(
     <div
+      // Backdrop precisa existir pra fechar ao clicar fora,
+      // mas NÃO pode bloquear o TopNav (sino) => zIndex menor que o header
       className="hNotifDrop__backdrop"
       role="presentation"
       onPointerDown={() => onRequestClose()}
@@ -131,7 +165,7 @@ export default function NotificationsDesktop({
         position: "fixed",
         inset: 0,
         background: "transparent",
-        zIndex: 40,
+        zIndex: 40, // header tem z-index 50
       }}
     >
       <div
@@ -143,7 +177,7 @@ export default function NotificationsDesktop({
           position: "fixed",
           top: pos.top,
           right: pos.right,
-          zIndex: 60,
+          zIndex: 60, // acima do conteúdo (e abaixo/fora do sino porque não cobre o topo)
         }}
       >
         <div className="hNotifDrop__head">
@@ -180,6 +214,7 @@ export default function NotificationsDesktop({
             {items.map((n, idx) => {
               const id = String(n?.id || "").trim();
               const isUnread = !n.readAt;
+
               const key = id ? id : `notif_${idx}`;
 
               const showPixLink = Boolean(onPixOpen) && hasPixHint(n);
@@ -195,7 +230,9 @@ export default function NotificationsDesktop({
                 >
                   <div className="hNotifDrop__itemTop">
                     <div className="hNotifDrop__itemTitle">{n.title || "Notificação"}</div>
-                    <div className="hNotifDrop__itemTime">{n.createdAt ? timeAgo(n.createdAt) : ""}</div>
+                    <div className="hNotifDrop__itemTime">
+                      {n.createdAt ? timeAgo(n.createdAt) : ""}
+                    </div>
                   </div>
 
                   {n.message ? <div className="hNotifDrop__itemMsg">{n.message}</div> : null}

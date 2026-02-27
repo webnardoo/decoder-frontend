@@ -12,9 +12,9 @@ export type NotificationItem = {
   channel?: string | null;
   source?: string | null;
 
-  // ✅ NOVO: necessário para “PIX gerado” consultar depois (cross-device)
+  // ✅ necessário para “PIX gerado” consultar depois (cross-device)
   entityType?: string | null; // ex: "PAYMENT"
-  entityId?: string | null; // ex: payment.id do Asaas
+  entityId?: string | null; // ex: payment.id do Asaas (pay_...)
 };
 
 export type PixDetails = {
@@ -159,10 +159,10 @@ export async function postReadMany(ids: string[]): Promise<number | null> {
 
 /**
  * ✅ CONSULTA PIX por paymentId (Asaas)
- * FRONT via proxy real do Next (conforme sua árvore):
- *   GET /api/billing/addons/asaas/pix/:paymentId
+ * FRONT via proxy do Next:
+ *   GET /api/v1/billing/addons/asaas/pix/:paymentId
  *
- * (mapeia para o BACK:
+ * (proxy mapeia para o BACK:
  *   GET /api/v1/billing/asaas/pix/:paymentId)
  */
 export async function fetchPixDetails(
@@ -173,7 +173,7 @@ export async function fetchPixDetails(
     const pid = String(paymentId || "").trim();
     if (!pid) return null;
 
-    const res = await fetch(`/api/billing/addons/asaas/pix/${encodeURIComponent(pid)}`, {
+    const res = await fetch(`/api/v1/billing/addons/asaas/pix/${encodeURIComponent(pid)}`, {
       method: "GET",
       headers: { Accept: "application/json" },
       cache: "no-store",
