@@ -1,4 +1,4 @@
-// src/app/api/v1/billing/addons/asaas/pix/[paymentId]/route.ts
+// src/app/api/v1/billing/asaas/pix/[paymentId]/route.ts
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -40,7 +40,6 @@ export async function GET(
   context: { params: Promise<{ paymentId?: string }> | { paymentId?: string } }
 ) {
   try {
-    // ✅ Next dev/turbo: params pode ser Promise
     const resolvedParams =
       typeof (context as any)?.params?.then === "function"
         ? await (context.params as Promise<{ paymentId?: string }>)
