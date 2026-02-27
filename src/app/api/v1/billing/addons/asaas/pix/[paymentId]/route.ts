@@ -37,11 +37,16 @@ function extractTokenFromCookie(req: Request): string | null {
 
 export async function GET(
   req: Request,
-  context: { params: { paymentId?: string } }
+  context: { params: Promise<{ paymentId?: string }> | { paymentId?: string } }
 ) {
   try {
-    // ✅ garantir leitura segura do param
-    const paymentId = String(context?.params?.paymentId || "").trim();
+    // ✅ Next dev/turbo: params pode ser Promise
+    const resolvedParams =
+      typeof (context as any)?.params?.then === "function"
+        ? await (context.params as Promise<{ paymentId?: string }>)
+        : (context.params as { paymentId?: string });
+
+    const paymentId = String(resolvedParams?.paymentId || "").trim();
 
     if (!paymentId) {
       return NextResponse.json(
@@ -57,10 +62,8 @@ export async function GET(
       Accept: "application/json",
     };
 
-    // ✅ repassa auth pro backend (cookie -> bearer)
     if (token) headers.Authorization = `Bearer ${token}`;
 
-    // ✅ timeout curto pra evitar “function hanging”
     const controller = new AbortController();
     const timeoutMs = 10_000;
     const timeout = setTimeout(() => controller.abort("timeout"), timeoutMs);
@@ -75,7 +78,6 @@ export async function GET(
       }
     ).finally(() => clearTimeout(timeout));
 
-    // ✅ pass-through body (stream) + headers essenciais
     const outHeaders = new Headers();
     outHeaders.set(
       "content-type",
@@ -84,7 +86,6 @@ export async function GET(
     );
     outHeaders.set("cache-control", "no-store");
 
-    // se body vier null, cai pra text
     if (!backendRes.body) {
       const raw = await backendRes.text().catch(() => "");
       return new NextResponse(raw, { status: backendRes.status, headers: outHeaders });
