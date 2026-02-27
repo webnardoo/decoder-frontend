@@ -15,6 +15,8 @@ import MarketingTopNav from "@/components/marketing/MarketingTopNav";
 import { AppFooter } from "@/components/app-footer";
 import { OnboardingRouteGuard } from "@/components/onboarding/OnboardingRouteGuard";
 
+import { CreditsBalanceRealtimeProvider } from "@/lib/credits-balance-realtime";
+
 type OnboardingStatus = {
   creditsBalance?: number;
   journey?: string;
@@ -51,6 +53,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const [showBuyCredits, setShowBuyCredits] = useState(false);
   const [unreadCount, setUnreadCount] = useState<number>(0);
 
+  // ✅ saldo inicial do app (sem SSE aqui para não duplicar stream; TopNav já faz SSE)
+  const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
+
   useEffect(() => {
     let alive = true;
 
@@ -59,6 +64,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         if (alive) {
           setShowBuyCredits(false);
           setUnreadCount(0);
+          setCreditsBalance(null);
         }
         return;
       }
@@ -70,12 +76,19 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         ]);
 
         if (!onbRes || !onbRes.ok) {
-          if (alive) setShowBuyCredits(false);
+          if (alive) {
+            setShowBuyCredits(false);
+            setCreditsBalance(null);
+          }
         } else {
           const data = (await onbRes.json()) as OnboardingStatus;
           const bal = typeof data?.creditsBalance === "number" ? data.creditsBalance : null;
           const should = typeof bal === "number" && bal < 10;
-          if (alive) setShowBuyCredits(should);
+
+          if (alive) {
+            setShowBuyCredits(should);
+            setCreditsBalance(bal);
+          }
         }
 
         if (!unreadRes || !unreadRes.ok) {
@@ -89,6 +102,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         if (alive) {
           setShowBuyCredits(false);
           setUnreadCount(0);
+          setCreditsBalance(null);
         }
       }
     }
@@ -120,7 +134,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <div className="flex flex-col flex-1">
         <main className="app-main w-full flex-1 flex">
           <div className="mx-auto w-full max-w-6xl px-4 py-6 flex flex-1 flex-col">
-            {children}
+            <CreditsBalanceRealtimeProvider value={{ creditsBalance }}>
+              {children}
+            </CreditsBalanceRealtimeProvider>
           </div>
         </main>
       </div>

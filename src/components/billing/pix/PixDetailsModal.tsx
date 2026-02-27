@@ -23,6 +23,64 @@ type PixDetailsResult = {
   };
 };
 
+type AsaasApiErrorShape = {
+  message?: string;
+  error?: string;
+  statusCode?: number;
+  errors?: Array<{
+    code?: string;
+    description?: string;
+  }>;
+};
+
+function safeJsonParse(text: string): any | null {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function mapPixErrorToUiMessage(input: { status?: number; bodyText?: string }): string {
+  const status = input.status;
+  const bodyText = String(input.bodyText ?? "").trim();
+
+  // 1) tentar parsear JSON do backend (que pode encapsular erro do Asaas)
+  const parsed = bodyText ? safeJsonParse(bodyText) : null;
+
+  // Caso o backend mande { message, statusCode, error, ... }
+  const root: AsaasApiErrorShape | null =
+    parsed && typeof parsed === "object" ? (parsed as any) : null;
+
+  const statusCode = Number((root as any)?.statusCode ?? status ?? 0) || status;
+  const nestedErrors = Array.isArray((root as any)?.errors) ? (root as any)?.errors : [];
+
+  const code = String(nestedErrors?.[0]?.code ?? "").trim().toLowerCase();
+  const desc = String(nestedErrors?.[0]?.description ?? "").trim();
+
+  // 2) Regra específica do print: invalid_action => cobrança não pode mais ser paga
+  if ((statusCode === 400 && code === "invalid_action") || desc.toLowerCase().includes("não pode mais ser paga")) {
+    return "Este PIX não está mais disponível para pagamento (provavelmente expirou). Gere uma nova cobrança para continuar.";
+  }
+
+  // 3) Se veio algo legível no JSON, usar versão humana (sem exibir JSON cru)
+  const msg = String((root as any)?.message ?? "").trim();
+  if (msg) {
+    // msg pode vir como "asaas_400: {...}" => limpar
+    if (msg.toLowerCase().startsWith("asaas_")) {
+      return "Não foi possível carregar os dados deste PIX. Verifique se ele ainda está disponível para pagamento.";
+    }
+    return msg;
+  }
+
+  // 4) fallback por status
+  if (statusCode === 404) return "Não encontramos este PIX. Verifique se o ID está correto.";
+  if (statusCode === 401 || statusCode === 403) return "Você não tem permissão para acessar este PIX.";
+  if (statusCode && statusCode >= 500) return "Falha temporária ao carregar o PIX. Tente novamente em instantes.";
+
+  return "Falha ao carregar dados do PIX.";
+}
+
 export default function PixDetailsModal({ open, paymentId, onClose }: Props) {
   const pid = useMemo(() => String(paymentId ?? "").trim(), [paymentId]);
   const [loading, setLoading] = useState(false);
@@ -52,8 +110,6 @@ export default function PixDetailsModal({ open, paymentId, onClose }: Props) {
       setData(null);
 
       try {
-        // ✅ usa o proxy que já existe no Front:
-        // /api/v1/billing/addons/asaas/pix/[paymentId]
         const res = await fetch(`/api/v1/billing/addons/asaas/pix/${encodeURIComponent(pid)}`, {
           method: "GET",
           cache: "no-store",
@@ -62,8 +118,9 @@ export default function PixDetailsModal({ open, paymentId, onClose }: Props) {
         });
 
         if (!res.ok) {
-          const t = await res.text().catch(() => "");
-          throw new Error(t || `HTTP_${res.status}`);
+          const bodyText = await res.text().catch(() => "");
+          const uiMsg = mapPixErrorToUiMessage({ status: res.status, bodyText });
+          throw new Error(uiMsg);
         }
 
         const json = (await res.json()) as PixDetailsResult;
@@ -100,12 +157,7 @@ export default function PixDetailsModal({ open, paymentId, onClose }: Props) {
       >
         <div className="hPixModal__head">
           <div className="hPixModal__title">Pagamento PIX</div>
-          <button
-            type="button"
-            className="hPixModal__close"
-            onClick={onClose}
-            aria-label="Fechar"
-          >
+          <button type="button" className="hPixModal__close" onClick={onClose} aria-label="Fechar">
             ✕
           </button>
         </div>

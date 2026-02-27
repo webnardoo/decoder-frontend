@@ -4,55 +4,72 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function backendBaseUrl() {
-  const base =
-    process.env.BACKEND_URL ||
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    process.env.API_BASE_URL;
+function getBackendBaseUrl(): string {
+  const a = String(process.env.BACKEND_URL || "").trim().replace(/\/$/, "");
+  const b = String(process.env.NEXT_PUBLIC_API_BASE_URL || "")
+    .trim()
+    .replace(/\/$/, "");
 
-  if (!base) {
-    throw new Error(
-      "BACKEND_URL não configurado no Front (Vercel). Defina BACKEND_URL apontando para o backend (ex: https://api-hml.hitchai.online).",
-    );
-  }
+  if (a) return a;
+  if (b) return b;
 
-  return String(base).replace(/\/+$/, "");
+  // dev local do backend
+  return "http://localhost:4100";
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const base = backendBaseUrl();
+    const base = getBackendBaseUrl();
     const url = `${base}/api/v1/billing/addons/asaas/pix-checkout`;
 
     const body = await req.text();
 
-    const res = await fetch(url, {
+    const controller = new AbortController();
+    const timeoutMs = 12_000;
+    const timeout = setTimeout(() => controller.abort("timeout"), timeoutMs);
+
+    const backendRes = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": req.headers.get("content-type") || "application/json",
-        // repassa cookies para autenticação no backend (JWT cookie / session)
+        Accept: "application/json",
+        // repassa cookies para autenticação no backend
         cookie: req.headers.get("cookie") || "",
       },
       body,
       cache: "no-store",
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
 
-    const text = await res.text();
+    const outHeaders = new Headers();
+    outHeaders.set(
+      "content-type",
+      backendRes.headers.get("content-type") || "application/json; charset=utf-8"
+    );
+    outHeaders.set("cache-control", "no-store");
 
-    return new NextResponse(text, {
-      status: res.status,
-      headers: {
-        "Content-Type": res.headers.get("content-type") || "application/json",
-        "Cache-Control": "no-store",
-      },
+    // mantém o body “streamado” quando existir
+    if (!backendRes.body) {
+      const raw = await backendRes.text().catch(() => "");
+      return new NextResponse(raw, { status: backendRes.status, headers: outHeaders });
+    }
+
+    return new NextResponse(backendRes.body, {
+      status: backendRes.status,
+      headers: outHeaders,
     });
-  } catch (e: any) {
+  } catch (err: any) {
+    const msg = String(err?.message || err || "unknown");
+    const aborted =
+      msg.includes("aborted") || msg.includes("timeout") || msg.includes("AbortError");
+
     return NextResponse.json(
       {
         ok: false,
-        message: e?.message || "Falha ao encaminhar requisição para o backend.",
+        error: aborted ? "proxy_timeout" : "proxy_failed",
+        message: msg,
       },
-      { status: 502 },
+      { status: aborted ? 504 : 502 }
     );
   }
 }

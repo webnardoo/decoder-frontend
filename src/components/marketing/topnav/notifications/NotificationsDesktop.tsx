@@ -16,42 +16,36 @@ type Props = {
   onClickItem: (n: NotificationItem) => void | Promise<void>;
   onOpenAll?: () => void | Promise<void>;
 
+  // fecha ao clicar fora / ESC
   onRequestClose: () => void;
 
+  // ✅ hover marca como lida (sem navegar)
   onHoverItemId?: (id: string) => void | Promise<void>;
+
+  // ✅ âncora (sino) para posicionar o dropdown corretamente
   anchorEl?: HTMLElement | null;
 
-  // ✅ novo: abre modal PIX
+  // ✅ abre modal PIX
   onPixOpen?: (paymentId: string) => void;
+
+  // ✅ NEW: dropdown expandido
+  expanded?: boolean;
 };
 
 function extractPaymentId(n: NotificationItem): string {
-  // 1) Fonte canônica: entityId (quando o backend já manda paymentId Asaas)
   const byEntity = String((n as any)?.entityId ?? "").trim();
   if (byEntity) return byEntity;
 
-  // 2) Fallback: actionUrl (pode vir em formatos diferentes)
   const url = String((n as any)?.actionUrl ?? "").trim();
   if (!url) return "";
 
-  // Aceitar:
-  // - .../pix/pay_XXXX
-  // - .../pix/pay/pay_XXXX
-  // - .../pix/XXXX
-  // - .../pix/pay_XXXX?...
-  // - .../pix/pay/pay_XXXX?...
-  //
-  // Estratégia:
-  // a) tenta capturar explicitamente pay_...
   let m = url.match(/\/pix\/(?:pay\/)?(pay_[^/?#]+)/i);
   if (m?.[1]) return String(m[1]).trim();
 
-  // b) tenta capturar /pix/<segmento> (mas evita retornar literal "pay")
   m = url.match(/\/pix\/([^/?#]+)/i);
   const seg = m?.[1] ? String(m[1]).trim() : "";
   if (!seg) return "";
 
-  // Se veio "pay" (ex: /pix/pay/<id>), tenta pegar o próximo segmento
   if (seg.toLowerCase() === "pay") {
     const m2 = url.match(/\/pix\/pay\/([^/?#]+)/i);
     return m2?.[1] ? String(m2[1]).trim() : "";
@@ -68,15 +62,12 @@ function isPixCreatedNotification(n: NotificationItem): boolean {
   const code = String((n as any)?.code ?? "").toLowerCase();
   const et = String((n as any)?.entityType ?? "").toLowerCase();
 
-  // ✅ heurística segura: só “PIX gerado / criado”
   if (t.includes("pix gerado") || t.includes("pix criado")) return true;
   if (m.includes("pix foi gerado") || m.includes("pix gerado") || m.includes("pix criado")) return true;
 
-  // ✅ se o backend já tiver tipo/código explícito (caso exista)
   if (type.includes("pix_created") || type.includes("pix_gerado") || type.includes("pix_criado")) return true;
   if (code.includes("pix_created") || code.includes("pix_gerado") || code.includes("pix_criado")) return true;
 
-  // ✅ caso exista modelagem “PAYMENT” com mensagem de gerado (evita “expirou”)
   if (et === "payment" && (t.includes("gerado") || m.includes("gerado"))) return true;
 
   return false;
@@ -94,6 +85,7 @@ export default function NotificationsDesktop({
   onHoverItemId,
   anchorEl,
   onPixOpen,
+  expanded = false,
 }: Props) {
   const [mounted, setMounted] = useState(false);
   const [pos, setPos] = useState<{ top: number; right: number }>({ top: 74, right: 16 });
@@ -160,6 +152,19 @@ export default function NotificationsDesktop({
 
   if (!mounted) return null;
 
+  const dropStyle: React.CSSProperties = {
+    position: "fixed",
+    top: pos.top,
+    right: pos.right,
+    zIndex: 60,
+    width: expanded ? 520 : undefined,
+    maxWidth: expanded ? "min(520px, calc(100vw - 24px))" : undefined,
+  };
+
+  const listStyle: React.CSSProperties = {
+    maxHeight: expanded ? "min(70vh, 520px)" : undefined,
+  };
+
   return createPortal(
     <div
       className="hNotifDrop__backdrop"
@@ -173,16 +178,11 @@ export default function NotificationsDesktop({
       }}
     >
       <div
-        className="hNotifDrop"
+        className={`hNotifDrop ${expanded ? "hNotifDrop--expanded" : ""}`}
         role="dialog"
         aria-label="Notificações"
         onPointerDown={(e) => e.stopPropagation()}
-        style={{
-          position: "fixed",
-          top: pos.top,
-          right: pos.right,
-          zIndex: 60,
-        }}
+        style={dropStyle}
       >
         <div className="hNotifDrop__head">
           <div className="hNotifDrop__title">
@@ -214,13 +214,13 @@ export default function NotificationsDesktop({
         ) : items.length === 0 ? (
           <div className="hNotifDrop__state">Nenhuma notificação encontrada.</div>
         ) : (
-          <div className="hNotifDrop__list">
+          <div className="hNotifDrop__list" style={listStyle}>
             {items.map((n, idx) => {
               const id = String(n?.id || "").trim();
               const isUnread = !n.readAt;
+
               const key = id ? id : `notif_${idx}`;
 
-              // ✅ agora: link só aparece em NOTIFICAÇÃO DE PIX CRIADO
               const showPixLink = Boolean(onPixOpen) && isPixCreatedNotification(n);
               const pixPaymentId = showPixLink ? extractPaymentId(n) : "";
 
