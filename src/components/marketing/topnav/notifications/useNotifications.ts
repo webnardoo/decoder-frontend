@@ -9,6 +9,7 @@ import {
   postMarkRead,
   postReadAll,
 } from "./notifications.service";
+import { setCreditsBalanceRealtimeGlobal } from "@/lib/credits-balance-realtime";
 
 type ToastPayload = {
   id: string;
@@ -17,11 +18,19 @@ type ToastPayload = {
   message?: string | null;
 };
 
+type CreditsBalancePayload = {
+  creditsBalance: number;
+  sourceNotificationId?: string;
+};
+
 export function useNotifications(enabled: boolean) {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ✅ REALTIME: último saldo resolvido recebido via SSE (plan + addon)
+  const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
 
   // ✅ evita duplicação por id (hover pode re-entrar)
   const inFlightRef = useRef<Set<string>>(new Set());
@@ -32,6 +41,9 @@ export function useNotifications(enabled: boolean) {
 
   // ✅ Toast bridge (sem acoplar componente aqui)
   const toastListenersRef = useRef<Set<(t: ToastPayload) => void>>(new Set());
+
+  // ✅ Credits bridge (sem acoplar store global aqui)
+  const creditsListenersRef = useRef<Set<(p: CreditsBalancePayload) => void>>(new Set());
 
   const hasUnread = useMemo(() => items.some((n) => !n.readAt), [items]);
 
@@ -48,6 +60,21 @@ export function useNotifications(enabled: boolean) {
   function onToast(fn: (t: ToastPayload) => void) {
     toastListenersRef.current.add(fn);
     return () => toastListenersRef.current.delete(fn);
+  }
+
+  function emitCreditsBalance(p: CreditsBalancePayload) {
+    creditsListenersRef.current.forEach((fn) => {
+      try {
+        fn(p);
+      } catch {
+        // noop
+      }
+    });
+  }
+
+  function onCreditsBalance(fn: (p: CreditsBalancePayload) => void) {
+    creditsListenersRef.current.add(fn);
+    return () => creditsListenersRef.current.delete(fn);
   }
 
   async function load(limit: number) {
@@ -123,14 +150,29 @@ export function useNotifications(enabled: boolean) {
     if ((n as any)?.actionUrl) router.push((n as any).actionUrl);
   }
 
-  // ✅ SSE: aplica evento no estado local (badge + lista + toast)
+  // ✅ SSE: aplica evento no estado local (badge + lista + toast + creditsBalance)
   function applyRealtime(dto: any) {
     const id = String(dto?.id || "").trim();
     if (!id) return;
 
+    
+
     // dedupe por id (evita duplicação em reconexões)
     if (seenRealtimeIdsRef.current.has(id)) return;
     seenRealtimeIdsRef.current.add(id);
+
+    // ✅ saldo resolvido (plan + addon) — realtime only
+    const maybeCreditsBalance = dto?.creditsBalance;
+    if (typeof maybeCreditsBalance === "number" && Number.isFinite(maybeCreditsBalance)) {
+      setCreditsBalance(maybeCreditsBalance);
+      emitCreditsBalance({ creditsBalance: maybeCreditsBalance, sourceNotificationId: id });
+    }
+
+    if (typeof maybeCreditsBalance === "number" && Number.isFinite(maybeCreditsBalance)) {
+  setCreditsBalanceRealtimeGlobal(maybeCreditsBalance);
+  setCreditsBalance(maybeCreditsBalance);
+  emitCreditsBalance({ creditsBalance: maybeCreditsBalance, sourceNotificationId: id });
+}
 
     const createdAt = dto?.createdAt ?? new Date().toISOString();
     const readAt = dto?.readAt ?? null;
@@ -146,6 +188,9 @@ export function useNotifications(enabled: boolean) {
       readAt,
       channel: dto?.channel ?? null,
       source: dto?.source ?? null,
+      // mantém campos extras se existirem
+      ...(dto?.entityType ? { entityType: dto.entityType } : {}),
+      ...(dto?.entityId ? { entityId: dto.entityId } : {}),
     } as any;
 
     // 🔥 badge: se chegou unread, incrementa
@@ -190,7 +235,10 @@ export function useNotifications(enabled: boolean) {
         } catch {
           // ignore
         }
+        
       });
+
+      
 
       // opcional: ping só para debug (não precisa fazer nada)
       es.addEventListener("ping", () => null);
@@ -230,5 +278,9 @@ export function useNotifications(enabled: boolean) {
 
     // ✅ para o TopNav registrar o renderer da bandeja/toast
     onToast,
+
+    // ✅ realtime credits
+    creditsBalance,
+    onCreditsBalance,
   };
 }

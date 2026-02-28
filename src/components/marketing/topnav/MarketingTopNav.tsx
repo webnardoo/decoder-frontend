@@ -83,6 +83,7 @@ export default function MarketingTopNav({
   const isMobile = useMediaQuery("(max-width: 819px)");
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [dropdownExpanded, setDropdownExpanded] = useState(false); // ✅ NEW
   const [mobileOpen, setMobileOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
 
@@ -105,6 +106,7 @@ export default function MarketingTopNav({
 
     // fecha overlays de notificação
     setDropdownOpen(false);
+    setDropdownExpanded(false);
     setMobileOpen(false);
     setPanelOpen(false);
   }, []);
@@ -192,11 +194,13 @@ export default function MarketingTopNav({
 
   const closeDropdown = useCallback(() => {
     setDropdownOpen(false);
+    setDropdownExpanded(false);
   }, []);
 
   const openDropdownDesktop = useCallback(async () => {
     await load(5);
     setDropdownOpen(true);
+    setDropdownExpanded(false);
     setMobileOpen(false);
     setPanelOpen(false);
   }, [load]);
@@ -205,6 +209,7 @@ export default function MarketingTopNav({
     await load(50);
     setMobileOpen(true);
     setDropdownOpen(false);
+    setDropdownExpanded(false);
     setPanelOpen(false);
   }, [load]);
 
@@ -212,7 +217,17 @@ export default function MarketingTopNav({
     await load(50);
     setPanelOpen(true);
     setDropdownOpen(false);
+    setDropdownExpanded(false);
     setMobileOpen(false);
+  }, [load]);
+
+  // ✅ “Ver todas” no desktop vira expansão do dropdown (maior)
+  const expandDropdownDesktop = useCallback(async () => {
+    await load(50);
+    setDropdownExpanded(true);
+    setDropdownOpen(true);
+    setMobileOpen(false);
+    setPanelOpen(false);
   }, [load]);
 
   // ✅ clique no item: marca como lida
@@ -226,10 +241,10 @@ export default function MarketingTopNav({
         await markReadOnly(id);
       }
 
-      // ✅ Mobile fica aberto; só o sino/backdrop/X fecham.
       if (isMobile) return;
 
       setDropdownOpen(false);
+      setDropdownExpanded(false);
       setMobileOpen(false);
       setPanelOpen(false);
     },
@@ -307,7 +322,9 @@ export default function MarketingTopNav({
                         onMarkAll={markAllAsRead}
                         onClickItem={handleClickItem}
                         onRequestClose={closeDropdown}
-                        onOpenAll={openPanelAll}
+                        // ✅ troca: antes abria panel (e fechava dropdown). Agora expande dropdown.
+                        onOpenAll={expandDropdownDesktop}
+                        expanded={dropdownExpanded}
                         onHoverItemId={async (id) => {
                           await markReadOnly(id);
                         }}
