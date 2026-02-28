@@ -26,9 +26,7 @@ import AnalysisProgressModal, {
 
 import Button from "@/components/ui/Button";
 
-
 import { useCreditsBalanceRealtime } from "@/lib/credits-balance-realtime";
-
 
 type Mode = "AVULSA" | "CONVERSA";
 type QuickMode = "RESUMO" | "RESPONDER";
@@ -197,7 +195,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-
 function clampInt(n: number): number {
   if (!Number.isFinite(n)) return 0;
   return Math.max(0, Math.floor(n));
@@ -222,7 +219,6 @@ function formatPtInt(n: number): string {
   return new Intl.NumberFormat("pt-BR").format(clampInt(n));
 }
 
-
 export default function HomePage() {
   const [mode, setMode] = useState<Mode>("AVULSA");
   const [quickMode, setQuickMode] = useState<QuickMode | null>(null);
@@ -237,14 +233,25 @@ export default function HomePage() {
 
   const [conversas, setConversas] = useState<{ id: string; name: string }[]>([]);
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
+  const [balanceBump, setBalanceBump] = useState(false);
+const bumpTimerRef = useRef<number | null>(null);
 
-  const { creditsBalance: creditsBalanceRealtime } = useCreditsBalanceRealtime();
+const { creditsBalance: creditsBalanceRealtime } = useCreditsBalanceRealtime();
 
-  useEffect(() => {
-    if (typeof creditsBalanceRealtime === "number" && Number.isFinite(creditsBalanceRealtime)) {
-      setCreditsBalance(creditsBalanceRealtime);
-    }
-  }, [creditsBalanceRealtime]);
+useEffect(() => {
+  if (typeof creditsBalanceRealtime !== "number" || !Number.isFinite(creditsBalanceRealtime)) return;
+
+  // só dá bump se mudou mesmo
+  if (bumpTimerRef.current) window.clearTimeout(bumpTimerRef.current);
+
+  setCreditsBalance(creditsBalanceRealtime);
+  setBalanceBump(true);
+
+  bumpTimerRef.current = window.setTimeout(() => {
+    setBalanceBump(false);
+  }, 900);
+}, [creditsBalanceRealtime]);
+
 
   const [onboarding, setOnboarding] = useState<OnboardingStatus | null>(null);
   const [showTrialStart, setShowTrialStart] = useState(false);
@@ -328,7 +335,12 @@ export default function HomePage() {
       const data = (await res.json()) as OnboardingStatus;
       setOnboarding(data);
 
-      if (typeof data?.creditsBalance === "number") setCreditsBalance(data.creditsBalance);
+      useEffect(() => {
+  if (typeof creditsBalanceRealtime === "number" && Number.isFinite(creditsBalanceRealtime)) {
+    setCreditsBalance(creditsBalanceRealtime);
+    
+  }
+}, );
 
       if (skipOnboardingOnce) {
         setShowTrialStart(false);
@@ -971,17 +983,16 @@ export default function HomePage() {
 
   const balanceLabel = typeof effectiveBalanceNum === "number" ? `${effectiveBalanceNum} créditos` : "—";
 
-
   const balanceNumber = useMemo(() => parseBalanceNumber(balanceLabel), [balanceLabel]);
 
   // ===== saldo animado (counting + highlight roxo) =====
   const [animatedBalance, setAnimatedBalance] = useState<number>(() =>
     typeof effectiveBalanceNum === "number" ? clampInt(effectiveBalanceNum) : 0
   );
-  const [balanceBump, setBalanceBump] = useState(false);
+
 
   const prevBalanceRef = useRef<number | null>(null);
-  const bumpTimerRef = useRef<number | null>(null);
+ 
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -1060,7 +1071,6 @@ export default function HomePage() {
   const balanceBumpClass = balanceBump
     ? "text-[var(--h-accent)] drop-shadow-[0_0_18px_rgba(108,99,255,0.35)]"
     : "";
-
 
   // ✅ condição do CTA dentro do card
   const showContextualBuyCredits = typeof effectiveBalanceNum === "number" && effectiveBalanceNum < 10;
@@ -1283,23 +1293,23 @@ export default function HomePage() {
           border-color: rgba(108, 99, 255, 0.75);
           box-shadow: 0 22px 62px rgba(0, 0, 0, 0.55), 0 0 56px rgba(108, 99, 255, 0.16);
         }
-
-          /* saldo: highlight roxo quando aumenta */
-.balanceBump {
+        .balanceBump {
   color: var(--h-accent) !important;
   text-shadow:
     0 0 18px rgba(108, 99, 255, 0.55),
     0 0 42px rgba(108, 99, 255, 0.28);
+
+  display: inline-block; /* 🔴 garante que o transform funciona */
+  transform-origin: center;
   animation: balancePop 900ms ease-out;
 }
 
 @keyframes balancePop {
-  0%   { transform: translateY(0) scale(1); filter: brightness(1); }
-  18%  { transform: translateY(-1px) scale(1.06); filter: brightness(1.15); }
-  55%  { transform: translateY(0) scale(1.02); filter: brightness(1.06); }
-  100% { transform: translateY(0) scale(1); filter: brightness(1); }
+  0%   { transform: scale(1); }
+  18%  { transform: scale(2.90); } /* 🔴 aumenta visivelmente */
+  55%  { transform: scale(1.10); }
+  100% { transform: scale(1); }
 }
-
       `}</style>
 
       <div className="px-6 py-8">
@@ -1371,9 +1381,7 @@ export default function HomePage() {
           />
 
           {isTrialGuided && showTrialStart && (
-
             <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/30">
-
               <div
                 ref={startModalRef}
                 role="dialog"
@@ -1397,9 +1405,7 @@ export default function HomePage() {
           )}
 
           {isTrialGuided && showTrialEnd && (
-
             <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/30">
-
               <div
                 ref={endModalRef}
                 role="dialog"
@@ -1458,16 +1464,14 @@ export default function HomePage() {
 
               <div className="text-xs text-[var(--h-muted)] sm:text-right">
                 Seu saldo atual de créditos é de:{" "}
-
                 <span
   className={[
-    "font-semibold inline-block transition-colors duration-200",
+    "font-semibold inline-block transition-all duration-200",
     balanceBump ? "balanceBump" : "text-[var(--h-text)]",
   ].join(" ")}
 >
   {animatedBalanceLabel}
 </span>
-
               </div>
             </div>
 
@@ -1639,11 +1643,7 @@ function OkModal({
   if (!open) return null;
 
   return (
-
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30">
-
-
-
       <div
         ref={panelRef}
         role="dialog"

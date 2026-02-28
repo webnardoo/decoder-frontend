@@ -135,8 +135,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <main className="app-main w-full flex-1 flex">
           <div className="mx-auto w-full max-w-6xl px-4 py-6 flex flex-1 flex-col">
             <CreditsBalanceRealtimeProvider value={{ creditsBalance }}>
-              {children}
-            </CreditsBalanceRealtimeProvider>
+  {children}
+</CreditsBalanceRealtimeProvider>
           </div>
         </main>
       </div>

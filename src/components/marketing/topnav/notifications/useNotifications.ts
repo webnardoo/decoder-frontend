@@ -9,6 +9,7 @@ import {
   postMarkRead,
   postReadAll,
 } from "./notifications.service";
+import { setCreditsBalanceRealtimeGlobal } from "@/lib/credits-balance-realtime";
 
 type ToastPayload = {
   id: string;
@@ -154,6 +155,8 @@ export function useNotifications(enabled: boolean) {
     const id = String(dto?.id || "").trim();
     if (!id) return;
 
+    
+
     // dedupe por id (evita duplicação em reconexões)
     if (seenRealtimeIdsRef.current.has(id)) return;
     seenRealtimeIdsRef.current.add(id);
@@ -164,6 +167,12 @@ export function useNotifications(enabled: boolean) {
       setCreditsBalance(maybeCreditsBalance);
       emitCreditsBalance({ creditsBalance: maybeCreditsBalance, sourceNotificationId: id });
     }
+
+    if (typeof maybeCreditsBalance === "number" && Number.isFinite(maybeCreditsBalance)) {
+  setCreditsBalanceRealtimeGlobal(maybeCreditsBalance);
+  setCreditsBalance(maybeCreditsBalance);
+  emitCreditsBalance({ creditsBalance: maybeCreditsBalance, sourceNotificationId: id });
+}
 
     const createdAt = dto?.createdAt ?? new Date().toISOString();
     const readAt = dto?.readAt ?? null;
@@ -226,7 +235,10 @@ export function useNotifications(enabled: boolean) {
         } catch {
           // ignore
         }
+        
       });
+
+      
 
       // opcional: ping só para debug (não precisa fazer nada)
       es.addEventListener("ping", () => null);
