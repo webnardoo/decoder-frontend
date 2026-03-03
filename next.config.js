@@ -3,11 +3,11 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: "/(.*)",
         headers: [
           {
-            key: 'Permissions-Policy',
-            value: 'picture-in-picture=*, fullscreen=*, autoplay=*, encrypted-media=*',
+            key: "Permissions-Policy",
+            value: "picture-in-picture=*, fullscreen=*, autoplay=*, encrypted-media=*",
           },
         ],
       },
@@ -15,4 +15,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;
