@@ -465,14 +465,19 @@ export default function BillingPlanPage() {
 
     setPixStep("loading");
     try {
+      const cookies = typeof document !== "undefined" ? document.cookie : "";
+const fbp = cookies.match(/(?:^|;\s*)_fbp=([^;]+)/)?.[1] ?? null;
+const fbc = cookies.match(/(?:^|;\s*)_fbc=([^;]+)/)?.[1] ?? null;
       const res = await fetch("/api/v1/billing/addons/asaas/pix-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
         credentials: "include",
         body: JSON.stringify({
-          addOnCode: selected.code,
-          cpfCnpj: digits,
+  addOnCode: selected.code,
+  cpfCnpj: digits,
+  fbp,
+  fbc,
         }),
       });
 
