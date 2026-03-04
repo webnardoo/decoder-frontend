@@ -486,13 +486,7 @@ export default function BillingPlanPage() {
       // ✅ salva resposta e abre UI
       setPixRes(data);
       setPixStep("ready");
-      const eventID = (data as any)?.meta?.initiateCheckoutEventId;
-const value = Number((data as any)?.payment?.value ?? 0);
-const currency = String((data as any)?.addOn?.currency ?? "BRL");
 
-if (typeof (window as any).fbq === "function" && eventID) {
-  (window as any).fbq("track", "InitiateCheckout", { value, currency }, { eventID });
-}
 
       // ✅ Pixel (browser): InitiateCheckout com eventID do BACK (dedupe)
       try {
