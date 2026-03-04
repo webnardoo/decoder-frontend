@@ -332,6 +332,7 @@ export default function BillingPlanPage() {
   const [cpfCnpj, setCpfCnpj] = useState<string>("");
   const [pixErr, setPixErr] = useState<string | null>(null);
   const [pixRes, setPixRes] = useState<PixCheckoutResponse | null>(null);
+  
 
   useEffect(() => {
     let cancelled = false;
@@ -446,51 +447,81 @@ export default function BillingPlanPage() {
     setCpfCnpj("");
   }
 
-  async function onPixPrimaryClick() {
-    setPixErr(null);
-    setPixRes(null);
+ async function onPixPrimaryClick() {
+  setPixErr(null);
+  setPixRes(null);
 
-    if (pixStep === "idle") {
-      setPixStep("cpf");
-      return;
-    }
-
-    if (pixStep === "cpf") {
-      const digits = onlyDigits(cpfCnpj);
-      if (digits.length < 11) {
-        setPixErr("Informe seu CPF/CNPJ para emissão do pagamento.");
-        return;
-      }
-
-      setPixStep("loading");
-      try {
-        const res = await fetch("/api/v1/billing/addons/asaas/pix-checkout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          cache: "no-store",
-          credentials: "include",
-          body: JSON.stringify({
-            addOnCode: selected.code,
-            cpfCnpj: digits,
-          }),
-        });
-
-        const data = (await res.json().catch(() => ({}))) as PixCheckoutResponse;
-
-        if (!res.ok || (data as any)?.ok !== true) {
-          const msg = extractMessage(data) || "Falha ao gerar PIX.";
-          throw new Error(msg);
-        }
-
-        setPixRes(data);
-        setPixStep("ready");
-      } catch (e: any) {
-        setPixErr(String(e?.message || "Falha ao gerar PIX."));
-        setPixStep("cpf");
-      }
-      return;
-    }
+  if (pixStep === "idle") {
+    setPixStep("cpf");
+    return;
   }
+
+  if (pixStep === "cpf") {
+    const digits = onlyDigits(cpfCnpj);
+    if (digits.length < 11) {
+      setPixErr("Informe seu CPF/CNPJ para emissão do pagamento.");
+      return;
+    }
+
+    setPixStep("loading");
+    try {
+      const res = await fetch("/api/v1/billing/addons/asaas/pix-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        credentials: "include",
+        body: JSON.stringify({
+          addOnCode: selected.code,
+          cpfCnpj: digits,
+        }),
+      });
+
+      const data = (await res.json().catch(() => ({}))) as PixCheckoutResponse;
+
+      if (!res.ok || (data as any)?.ok !== true) {
+        const msg = extractMessage(data) || "Falha ao gerar PIX.";
+        throw new Error(msg);
+      }
+
+      // ✅ salva resposta e abre UI
+      setPixRes(data);
+      setPixStep("ready");
+      const eventID = (data as any)?.meta?.initiateCheckoutEventId;
+const value = Number((data as any)?.payment?.value ?? 0);
+const currency = String((data as any)?.addOn?.currency ?? "BRL");
+
+if (typeof (window as any).fbq === "function" && eventID) {
+  (window as any).fbq("track", "InitiateCheckout", { value, currency }, { eventID });
+}
+
+      // ✅ Pixel (browser): InitiateCheckout com eventID do BACK (dedupe)
+      try {
+        const meta = (data as any)?.meta;
+        const eventID = meta?.initiateCheckoutEventId;
+
+        const value = Number((data as any)?.payment?.value ?? 0);
+        const currency = String((data as any)?.addOn?.currency ?? "BRL");
+
+        const fbq = typeof window !== "undefined" ? (window as any).fbq : null;
+
+        if (typeof fbq === "function" && eventID) {
+          fbq(
+            "track",
+            "InitiateCheckout",
+            { value, currency },
+            { eventID }
+          );
+        }
+      } catch {
+        // silencioso: nunca pode quebrar checkout
+      }
+    } catch (e: any) {
+      setPixErr(String(e?.message || "Falha ao gerar PIX."));
+      setPixStep("cpf");
+    }
+    return;
+  }
+}
 
   const creditsIsSelected = tab === "credits";
   const plansIsSelected = tab === "plans";
