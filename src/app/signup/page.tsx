@@ -1,3 +1,4 @@
+// src/app/signup/page.tsx
 "use client";
 
 import React, { Suspense, useEffect, useMemo, useState } from "react";
@@ -44,6 +45,161 @@ async function markJourney(journey: Journey) {
   }
 }
 
+/**
+ * =========================================================
+ * Tracking (InLead → Hitch) — persistência first-party cookie
+ * =========================================================
+ */
+
+type HitchTrack = {
+  fbclid?: string | null;
+  fbc?: string | null;
+  fbp?: string | null;
+
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  utm_content?: string | null;
+  utm_term?: string | null;
+  utm_id?: string | null;
+
+  landing_url?: string | null;
+  first_seen_at?: number | null;
+};
+
+const HITCH_TRACK_COOKIE = "hitch_track";
+const HITCH_TRACK_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 dias
+
+function safeTrim(v: string | null): string | null {
+  const s = (v ?? "").trim();
+  return s ? s : null;
+}
+
+function getCookie(name: string): string | null {
+  try {
+    const all = typeof document !== "undefined" ? document.cookie : "";
+    if (!all) return null;
+
+    const parts = all.split(";").map((p) => p.trim());
+    for (const p of parts) {
+      if (p.startsWith(name + "=")) {
+        return decodeURIComponent(p.substring(name.length + 1));
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function setCookie(name: string, value: string, maxAgeSeconds: number) {
+  try {
+    const secure =
+      typeof window !== "undefined" && window.location.protocol === "https:"
+        ? "; Secure"
+        : "";
+
+    document.cookie = `${name}=${encodeURIComponent(
+      value
+    )}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax${secure}`;
+  } catch {
+    // silencioso
+  }
+}
+
+function readHitchTrackCookie(): HitchTrack | null {
+  const raw = getCookie(HITCH_TRACK_COOKIE);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") return parsed as HitchTrack;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function writeHitchTrackCookie(track: HitchTrack) {
+  setCookie(
+    HITCH_TRACK_COOKIE,
+    JSON.stringify(track),
+    HITCH_TRACK_MAX_AGE_SECONDS
+  );
+}
+
+/**
+ * Formato padrão do Meta:
+ * fbc = fb.1.<timestamp>.<fbclid>
+ */
+function buildFbcFromFbclid(fbclid: string, nowMs: number): string {
+  const ts = Math.floor(nowMs / 1000);
+  return `fb.1.${ts}.${fbclid}`;
+}
+
+function hasMarketingParams(sp: URLSearchParams | null): boolean {
+  if (!sp) return false;
+  const keys = [
+    "fbclid",
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_content",
+    "utm_term",
+    "utm_id",
+  ];
+  return keys.some((k) => {
+    const v = sp.get(k);
+    return v != null && String(v).trim().length > 0;
+  });
+}
+
+function stripMarketingParamsKeepingFlowParams(
+  sp: URLSearchParams | null
+): string {
+  // mantém apenas os params do funil (não marketing)
+  const keep = new URLSearchParams();
+
+  const next = sp?.get("next");
+  const journey = sp?.get("journey");
+  const email = sp?.get("email");
+
+  if (next) keep.set("next", next);
+  if (journey) keep.set("journey", journey);
+  if (email) keep.set("email", email);
+
+  const q = keep.toString();
+  return q ? `?${q}` : "";
+}
+
+function pickNonNull<T>(incoming: T | null | undefined, existing: T | null | undefined): T | null | undefined {
+  return incoming != null ? incoming : existing;
+}
+
+/**
+ * Merge seguro: nunca sobrescreve valor existente com null.
+ * Também preserva first_seen_at e landing_url do primeiro toque.
+ */
+function mergeTrackSafe(existing: HitchTrack | null, incoming: HitchTrack): HitchTrack {
+  const base: HitchTrack = existing ?? {};
+
+  return {
+    fbclid: pickNonNull(incoming.fbclid, base.fbclid) ?? null,
+    fbc: pickNonNull(incoming.fbc, base.fbc) ?? null,
+    fbp: pickNonNull(incoming.fbp, base.fbp) ?? null,
+
+    utm_source: pickNonNull(incoming.utm_source, base.utm_source) ?? null,
+    utm_medium: pickNonNull(incoming.utm_medium, base.utm_medium) ?? null,
+    utm_campaign: pickNonNull(incoming.utm_campaign, base.utm_campaign) ?? null,
+    utm_content: pickNonNull(incoming.utm_content, base.utm_content) ?? null,
+    utm_term: pickNonNull(incoming.utm_term, base.utm_term) ?? null,
+    utm_id: pickNonNull(incoming.utm_id, base.utm_id) ?? null,
+
+    // preserva o primeiro
+    landing_url: (base.landing_url ?? incoming.landing_url) ?? null,
+    first_seen_at: (base.first_seen_at ?? incoming.first_seen_at) ?? null,
+  };
+}
+
 export default function SignupPage() {
   return (
     <Suspense
@@ -72,11 +228,85 @@ function SignupInner() {
   const journeyParam = sp?.get("journey");
   const journey = useMemo(() => normalizeJourney(journeyParam), [journeyParam]);
 
-  // ✅ /signup é PAID por padrão, mas se vier journey na URL, respeita.
-  // ✅ isso só funciona se /api/journey/start setar cookie hitch_journey.
   useEffect(() => {
     void markJourney(journey);
   }, [journey]);
+
+  /**
+   * Tracking capture robusto e persistência em cookie.
+   * Importante: não sobrescrever com null após a limpeza da URL.
+   */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const now = Date.now();
+    const existing = readHitchTrackCookie();
+
+    // leitura robusta do momento atual
+    const qs = new URLSearchParams(window.location.search);
+
+    const fbclid = safeTrim(qs.get("fbclid"));
+    const utm_source = safeTrim(qs.get("utm_source"));
+    const utm_medium = safeTrim(qs.get("utm_medium"));
+    const utm_campaign = safeTrim(qs.get("utm_campaign"));
+    const utm_content = safeTrim(qs.get("utm_content"));
+    const utm_term = safeTrim(qs.get("utm_term"));
+    const utm_id = safeTrim(qs.get("utm_id"));
+
+    // lê _fbp se existir (cookie do pixel)
+    const fbp = safeTrim(getCookie("_fbp"));
+
+    // só gera fbc quando fbclid existe
+    const fbc = fbclid ? buildFbcFromFbclid(fbclid, now) : null;
+
+    const anyMarketing =
+      !!fbclid ||
+      !!utm_source ||
+      !!utm_medium ||
+      !!utm_campaign ||
+      !!utm_content ||
+      !!utm_term ||
+      !!utm_id;
+
+    /**
+     * Regra anti-wipe:
+     * - se NÃO há marketing params agora e já existe cookie, NÃO escreve nada.
+     * - evita sobrescrever campos com null após router.replace limpar a URL.
+     */
+    const shouldWrite =
+      anyMarketing || (!existing && !!fbp);
+
+    if (shouldWrite) {
+      const incoming: HitchTrack = {
+        fbclid,
+        fbc,
+        fbp,
+
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        utm_content,
+        utm_term,
+        utm_id,
+
+        landing_url: window.location.href,
+        first_seen_at: now,
+      };
+
+      const merged = mergeTrackSafe(existing, incoming);
+      writeHitchTrackCookie(merged);
+    }
+
+    // limpa URL para não carregar marketing params no funil
+    // usa sp (Next) para preservar next/journey/email
+    if (sp) {
+      const spNative = new URLSearchParams(sp.toString());
+      if (hasMarketingParams(spNative)) {
+        const kept = stripMarketingParamsKeepingFlowParams(spNative);
+        router.replace(`/signup${kept}`);
+      }
+    }
+  }, [sp, router]);
 
   const [email, setEmail] = useState(sp?.get("email") ?? "");
   const [password, setPassword] = useState("");
