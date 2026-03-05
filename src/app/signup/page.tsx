@@ -92,6 +92,32 @@ function getCookie(name: string): string | null {
   }
 }
 
+/**
+ * Define Domain= para evitar perda de cookie entre:
+ * - hitchai.online  <-> www.hitchai.online (PRD)
+ * - hml.hitchai.online <-> www.hml.hitchai.online (HML, se existir)
+ */
+function resolveCookieDomainAttr(): string {
+  try {
+    if (typeof window === "undefined") return "";
+    const host = window.location.hostname.toLowerCase();
+
+    // PRD: hitchai.online e www.hitchai.online
+    if (host === "hitchai.online" || host === "www.hitchai.online") {
+      return "; Domain=.hitchai.online";
+    }
+
+    // HML (se existir www.hml.hitchai.online)
+    if (host === "hml.hitchai.online" || host === "www.hml.hitchai.online") {
+      return "; Domain=.hml.hitchai.online";
+    }
+
+    return "";
+  } catch {
+    return "";
+  }
+}
+
 function setCookie(name: string, value: string, maxAgeSeconds: number) {
   try {
     const secure =
@@ -99,9 +125,11 @@ function setCookie(name: string, value: string, maxAgeSeconds: number) {
         ? "; Secure"
         : "";
 
+    const domainAttr = resolveCookieDomainAttr();
+
     document.cookie = `${name}=${encodeURIComponent(
       value
-    )}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax${secure}`;
+    )}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax${secure}${domainAttr}`;
   } catch {
     // silencioso
   }
@@ -171,7 +199,10 @@ function stripMarketingParamsKeepingFlowParams(
   return q ? `?${q}` : "";
 }
 
-function pickNonNull<T>(incoming: T | null | undefined, existing: T | null | undefined): T | null | undefined {
+function pickNonNull<T>(
+  incoming: T | null | undefined,
+  existing: T | null | undefined
+): T | null | undefined {
   return incoming != null ? incoming : existing;
 }
 
@@ -179,7 +210,10 @@ function pickNonNull<T>(incoming: T | null | undefined, existing: T | null | und
  * Merge seguro: nunca sobrescreve valor existente com null.
  * Também preserva first_seen_at e landing_url do primeiro toque.
  */
-function mergeTrackSafe(existing: HitchTrack | null, incoming: HitchTrack): HitchTrack {
+function mergeTrackSafe(
+  existing: HitchTrack | null,
+  incoming: HitchTrack
+): HitchTrack {
   const base: HitchTrack = existing ?? {};
 
   return {
@@ -273,8 +307,7 @@ function SignupInner() {
      * - se NÃO há marketing params agora e já existe cookie, NÃO escreve nada.
      * - evita sobrescrever campos com null após router.replace limpar a URL.
      */
-    const shouldWrite =
-      anyMarketing || (!existing && !!fbp);
+    const shouldWrite = anyMarketing || (!existing && !!fbp);
 
     if (shouldWrite) {
       const incoming: HitchTrack = {
