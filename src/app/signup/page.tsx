@@ -118,6 +118,20 @@ function resolveCookieDomainAttr(): string {
   }
 }
 
+function deleteHostOnlyCookie(name: string) {
+  try {
+    const secure =
+      typeof window !== "undefined" && window.location.protocol === "https:"
+        ? "; Secure"
+        : "";
+
+    // host-only delete (sem Domain=)
+    document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+  } catch {
+    // silencioso
+  }
+}
+
 function setCookie(name: string, value: string, maxAgeSeconds: number) {
   try {
     const secure =
@@ -127,9 +141,15 @@ function setCookie(name: string, value: string, maxAgeSeconds: number) {
 
     const domainAttr = resolveCookieDomainAttr();
 
+    // 1) grava cookie com Domain (quando aplicável)
     document.cookie = `${name}=${encodeURIComponent(
       value
     )}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax${secure}${domainAttr}`;
+
+    // 2) remove duplicata host-only (se existir), mantendo apenas o Domain cookie
+    if (domainAttr) {
+      deleteHostOnlyCookie(name);
+    }
   } catch {
     // silencioso
   }
