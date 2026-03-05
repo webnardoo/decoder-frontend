@@ -37,34 +37,72 @@ function parseTrackCookie(raw?: string) {
   }
 }
 
-function getClientIp(req: NextRequest) {
-  const xff = req.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0]?.trim() ?? "";
-  return req.headers.get("x-real-ip")?.trim() ?? "";
+function firstIpFromXff(xff?: string | null) {
+  const v = (xff ?? "").trim();
+  if (!v) return "";
+  return v.split(",")[0]?.trim() ?? "";
 }
 
-function getMetaPixelId() {
-  // Preferimos server env, mas mantemos compat com seu setup atual no Vercel
-  return (
-    (process.env.META_PIXEL_ID ?? "").trim() ||
-    (process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "").trim() ||
-    null
-  );
+function getEnvPixelId() {
+  return (process.env.META_PIXEL_ID ?? process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "").trim();
 }
 
-function getMetaCapiToken() {
-  // Preferimos META_CAPI_ACCESS_TOKEN (o que você já tem),
-  // mas aceitamos META_CAPI_TOKEN por compatibilidade
-  return (
-    (process.env.META_CAPI_ACCESS_TOKEN ?? "").trim() ||
-    (process.env.META_CAPI_TOKEN ?? "").trim() ||
-    null
-  );
+function getEnvAccessToken() {
+  return (process.env.META_CAPI_ACCESS_TOKEN ?? process.env.META_CAPI_TOKEN ?? "").trim();
 }
 
-function getMetaTestEventCode() {
-  const v = (process.env.META_CAPI_TEST_EVENT_CODE ?? "").trim();
-  return v || null;
+function getEnvTestEventCode() {
+  return (process.env.META_CAPI_TEST_EVENT_CODE ?? "").trim();
+}
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function postJsonWithRetry(
+  url: string,
+  payload: any,
+  attempts: number,
+  baseDelayMs: number,
+) {
+  let last: any = null;
+
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      });
+
+      const traceId = res.headers.get("x-fb-trace-id") ?? res.headers.get("x-fb-debug") ?? "";
+      const text = await res.text().catch(() => "");
+
+      // sucesso
+      if (res.ok) {
+        return { ok: true, status: res.status, traceId, body: text };
+      }
+
+      // erro 4xx: não adianta retry (token/payload/perm)
+      if (res.status >= 400 && res.status < 500) {
+        return { ok: false, status: res.status, traceId, body: text };
+      }
+
+      // 5xx: retry
+      last = { ok: false, status: res.status, traceId, body: text };
+    } catch (err: any) {
+      last = { ok: false, status: 0, traceId: "", body: err?.message ?? String(err) };
+    }
+
+    // backoff curto
+    if (i < attempts - 1) {
+      const delay = baseDelayMs * Math.pow(2, i);
+      await sleep(delay);
+    }
+  }
+
+  return last ?? { ok: false, status: 0, traceId: "", body: "unknown error" };
 }
 
 async function sendLeadEvent({
@@ -76,86 +114,75 @@ async function sendLeadEvent({
   track: any;
   req: NextRequest;
 }) {
-  const PIXEL_ID = getMetaPixelId();
-  const TOKEN = getMetaCapiToken();
-  const TEST_EVENT_CODE = getMetaTestEventCode();
+  const PIXEL_ID = getEnvPixelId();
+  const TOKEN = getEnvAccessToken();
+  const TEST_EVENT_CODE = getEnvTestEventCode();
 
   if (!PIXEL_ID || !TOKEN) {
-    console.warn("[CAPI] env ausente", {
-      hasPixelId: !!PIXEL_ID,
+    console.warn("[CAPI] pixel/token ausente", {
+      hasPixel: !!PIXEL_ID,
       hasToken: !!TOKEN,
-      hasTestEventCode: !!TEST_EVENT_CODE,
     });
     return;
   }
 
-  const ip = getClientIp(req);
-  const ua = req.headers.get("user-agent") ?? "";
+  const ip =
+    firstIpFromXff(req.headers.get("x-forwarded-for")) ||
+    (req.headers.get("x-real-ip") ?? "").trim();
 
-  const eventId = crypto.randomUUID();
+  const ua = (req.headers.get("user-agent") ?? "").trim();
 
-  const payload: any = {
+  const event = {
     data: [
       {
         event_name: "Lead",
         event_time: Math.floor(Date.now() / 1000),
-        event_id: eventId,
+        event_id: crypto.randomUUID(),
         action_source: "website",
-        event_source_url: track?.landing_url ?? "",
+        event_source_url: String(track?.landing_url ?? ""),
+
         user_data: {
           em: [sha256(email)],
-          client_ip_address: ip,
-          client_user_agent: ua,
+          client_ip_address: ip || undefined,
+          client_user_agent: ua || undefined,
           fbp: track?.fbp ?? undefined,
           fbc: track?.fbc ?? undefined,
         },
+
         custom_data: {
           utm_source: track?.utm_source ?? undefined,
           utm_medium: track?.utm_medium ?? undefined,
           utm_campaign: track?.utm_campaign ?? undefined,
           utm_content: track?.utm_content ?? undefined,
           utm_term: track?.utm_term ?? undefined,
+          utm_id: track?.utm_id ?? undefined,
         },
       },
     ],
+
+    // ✅ garante visibilidade no Events Manager (Eventos de teste)
+    ...(TEST_EVENT_CODE ? { test_event_code: TEST_EVENT_CODE } : {}),
   };
 
-  if (TEST_EVENT_CODE) {
-    payload.test_event_code = TEST_EVENT_CODE;
-  }
-
   const url = `https://graph.facebook.com/v19.0/${PIXEL_ID}/events?access_token=${encodeURIComponent(
-    TOKEN
+    TOKEN,
   )}`;
 
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      cache: "no-store",
-    });
+  const r = await postJsonWithRetry(url, event, 3, 500);
 
-    const text = await res.text().catch(() => "");
-    if (!res.ok) {
-      console.error("[CAPI] Lead send failed", {
-        status: res.status,
-        body: text,
-      });
-      return;
-    }
-
-    // Log mínimo para debug em HML sem vazar dados sensíveis
-    console.log("[CAPI] Lead sent", {
-      eventId,
-      hasTrack: !!track,
-      hasFbp: !!track?.fbp,
-      hasFbc: !!track?.fbc,
-      hasTestEventCode: !!TEST_EVENT_CODE,
+  if (!r?.ok) {
+    console.error("[CAPI] Lead send failed", {
+      status: r?.status,
+      traceId: r?.traceId,
+      body: r?.body,
     });
-  } catch (err) {
-    console.error("[CAPI] Lead send failed (network/runtime)", err);
+    return;
   }
+
+  console.log("[CAPI] Lead sent", {
+    status: r.status,
+    traceId: r.traceId,
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -166,7 +193,7 @@ export async function POST(req: NextRequest) {
     console.error("[/api/auth/register] BACKEND_URL ausente em runtime (production).");
     return NextResponse.json(
       { message: "Configuração ausente: BACKEND_URL não está definida em PRD." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
@@ -174,12 +201,11 @@ export async function POST(req: NextRequest) {
     console.error("[/api/auth/register] BACKEND_URL inválida:", baseUrl);
     return NextResponse.json(
       { message: "Configuração inválida: BACKEND_URL deve começar com http(s)://." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
   const url = `${baseUrl}/api/v1/auth/signup/request-otp`;
-
   const bodyText = await req.text();
 
   const controller = new AbortController();
@@ -213,15 +239,13 @@ export async function POST(req: NextRequest) {
         typeof payload === "string"
           ? { message: payload || "request-otp falhou" }
           : payload ?? { message: "request-otp falhou" },
-        { status: upstream.status }
+        { status: upstream.status },
       );
     }
 
-    /**
-     * ======================================
-     * DISPARO DO LEAD (Meta CAPI)
-     * ======================================
-     */
+    // ======================================
+    // DISPARO DO LEAD (Meta CAPI)
+    // ======================================
     try {
       const body = JSON.parse(bodyText || "{}");
       const email = body?.email;
@@ -231,9 +255,13 @@ export async function POST(req: NextRequest) {
 
       if (email) {
         await sendLeadEvent({ email, track, req });
+      } else {
+        console.warn("[CAPI] Lead skipped: email ausente no body");
       }
-    } catch (err) {
-      console.warn("[CAPI] Lead skipped", err);
+    } catch (err: any) {
+      console.warn("[CAPI] Lead skipped (exception)", {
+        message: err?.message ?? String(err),
+      });
     }
 
     return NextResponse.json(payload, { status: upstream.status });
@@ -251,7 +279,7 @@ export async function POST(req: NextRequest) {
           ? "Falha ao chamar o backend (timeout)."
           : "Falha ao chamar o backend (erro de rede/runtime).",
       },
-      { status: 502 }
+      { status: 502 },
     );
   } finally {
     clearTimeout(timeout);
