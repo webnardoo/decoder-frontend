@@ -188,12 +188,16 @@ function hasMarketingParams(sp: URLSearchParams | null): boolean {
   if (!sp) return false;
   const keys = [
     "fbclid",
+    "fbc",
+    "fbp",
     "utm_source",
     "utm_medium",
     "utm_campaign",
     "utm_content",
     "utm_term",
     "utm_id",
+    "src_url",
+    "landing_url",
   ];
   return keys.some((k) => {
     const v = sp.get(k);
@@ -248,10 +252,31 @@ function mergeTrackSafe(
     utm_term: pickNonNull(incoming.utm_term, base.utm_term) ?? null,
     utm_id: pickNonNull(incoming.utm_id, base.utm_id) ?? null,
 
-    // preserva o primeiro
+    // preserva o primeiro toque real (InLead / origem)
     landing_url: (base.landing_url ?? incoming.landing_url) ?? null,
     first_seen_at: (base.first_seen_at ?? incoming.first_seen_at) ?? null,
   };
+}
+
+function resolveLandingUrlFromSignup(
+  qs: URLSearchParams,
+  existing: HitchTrack | null
+): string | null {
+  const srcUrl = safeTrim(qs.get("src_url"));
+  if (srcUrl) return srcUrl;
+
+  const landingUrl = safeTrim(qs.get("landing_url"));
+  if (landingUrl) return landingUrl;
+
+  const existingLanding = safeTrim(existing?.landing_url ?? null);
+  if (existingLanding) return existingLanding;
+
+  if (typeof document !== "undefined") {
+    const ref = safeTrim(document.referrer);
+    if (ref) return ref;
+  }
+
+  return null;
 }
 
 export default function SignupPage() {
@@ -307,20 +332,25 @@ function SignupInner() {
     const utm_term = safeTrim(qs.get("utm_term"));
     const utm_id = safeTrim(qs.get("utm_id"));
 
-    // lê _fbp se existir (cookie do pixel)
-    const fbp = safeTrim(getCookie("_fbp"));
+    // prioridade: query params vindos da InLead -> cookies -> geração local
+    const fbp = safeTrim(qs.get("fbp")) ?? safeTrim(getCookie("_fbp"));
+    const fbc =
+      safeTrim(qs.get("fbc")) ??
+      (fbclid ? buildFbcFromFbclid(fbclid, now) : null);
 
-    // só gera fbc quando fbclid existe
-    const fbc = fbclid ? buildFbcFromFbclid(fbclid, now) : null;
+    const resolvedLandingUrl = resolveLandingUrlFromSignup(qs, existing);
 
     const anyMarketing =
       !!fbclid ||
+      !!fbp ||
+      !!fbc ||
       !!utm_source ||
       !!utm_medium ||
       !!utm_campaign ||
       !!utm_content ||
       !!utm_term ||
-      !!utm_id;
+      !!utm_id ||
+      !!resolvedLandingUrl;
 
     /**
      * Regra anti-wipe:
@@ -342,7 +372,8 @@ function SignupInner() {
         utm_term,
         utm_id,
 
-        landing_url: window.location.href,
+        // ✅ prioridade para src_url/landing_url/referrer; nunca usar signup como origem
+        landing_url: resolvedLandingUrl,
         first_seen_at: now,
       };
 
