@@ -26,7 +26,6 @@ export async function POST(req: NextRequest) {
     const backend = ensureApiV1(getBackendBaseUrl());
     const bodyText = await req.text();
 
-    // Mantém compat com payload { email, code }
     let email = "";
     let code = "";
 
@@ -35,14 +34,29 @@ export async function POST(req: NextRequest) {
       email = typeof obj?.email === "string" ? obj.email : "";
       code = typeof obj?.code === "string" ? obj.code : "";
     } catch {
-      // Se não for JSON, deixa upstream validar
+      // deixa upstream validar
     }
+
+    const incomingCookie = req.headers.get("cookie") ?? "";
+    const incomingUserAgent = req.headers.get("user-agent") ?? "";
+    const incomingForwardedFor = req.headers.get("x-forwarded-for") ?? "";
+    const incomingRealIp = req.headers.get("x-real-ip") ?? "";
 
     const upstream = await fetch(`${backend}/auth/signup/verify-otp`, {
       method: "POST",
       headers: {
         accept: "application/json",
         "content-type": req.headers.get("content-type") ?? "application/json",
+
+        // ✅ repassa cookies do browser (inclui hitch_track)
+        ...(incomingCookie ? { cookie: incomingCookie } : {}),
+
+        // ✅ repassa contexto do cliente
+        ...(incomingUserAgent ? { "user-agent": incomingUserAgent } : {}),
+        ...(incomingForwardedFor
+          ? { "x-forwarded-for": incomingForwardedFor }
+          : {}),
+        ...(incomingRealIp ? { "x-real-ip": incomingRealIp } : {}),
       },
       body: JSON.stringify({ email, code }),
       cache: "no-store",
@@ -55,27 +69,34 @@ export async function POST(req: NextRequest) {
       data = text ? JSON.parse(text) : null;
     } catch {
       return NextResponse.json(
-        { message: "Resposta inválida do backend (não-JSON).", raw: text || null },
-        { status: 502 },
+        {
+          message: "Resposta inválida do backend (não-JSON).",
+          raw: text || null,
+        },
+        { status: 502 }
       );
     }
 
     if (!upstream.ok) {
-      return NextResponse.json(data ?? { message: "Falha ao validar código." }, {
-        status: upstream.status,
-      });
+      return NextResponse.json(
+        data ?? { message: "Falha ao validar código." },
+        {
+          status: upstream.status,
+        }
+      );
     }
 
-    // Backend retorna accessToken
     const token =
-      (typeof data?.accessToken === "string" && data.accessToken.trim()) ? data.accessToken.trim() :
-      (typeof data?.token === "string" && data.token.trim()) ? data.token.trim() :
-      "";
+      typeof data?.accessToken === "string" && data.accessToken.trim()
+        ? data.accessToken.trim()
+        : typeof data?.token === "string" && data.token.trim()
+        ? data.token.trim()
+        : "";
 
     if (!token) {
       return NextResponse.json(
         { ...data, message: data?.message ?? "Código validado, mas token ausente." },
-        { status: 200 },
+        { status: 200 }
       );
     }
 
@@ -93,7 +114,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       { ...data, accessToken: undefined, token: undefined },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (e: any) {
     return NextResponse.json(
@@ -101,7 +122,7 @@ export async function POST(req: NextRequest) {
         message: "Falha ao validar OTP (proxy).",
         error: String(e?.message ?? e),
       },
-      { status: 502 },
+      { status: 502 }
     );
   }
 }
