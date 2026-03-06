@@ -17,10 +17,8 @@ function sanitizeNext(nextParam: string | null): string {
   if (!raw) return "/signup/nickname";
   if (raw === "/") return "/signup/nickname";
 
-  // allowlist: só permite manter dentro do funil /signup
   if (raw.startsWith("/signup")) return raw;
 
-  // default seguro do funil
   return "/signup/nickname";
 }
 
@@ -92,22 +90,15 @@ function getCookie(name: string): string | null {
   }
 }
 
-/**
- * Define Domain= para evitar perda de cookie entre:
- * - hitchai.online  <-> www.hitchai.online (PRD)
- * - hml.hitchai.online <-> www.hml.hitchai.online (HML, se existir)
- */
 function resolveCookieDomainAttr(): string {
   try {
     if (typeof window === "undefined") return "";
     const host = window.location.hostname.toLowerCase();
 
-    // PRD: hitchai.online e www.hitchai.online
     if (host === "hitchai.online" || host === "www.hitchai.online") {
       return "; Domain=.hitchai.online";
     }
 
-    // HML (se existir www.hml.hitchai.online)
     if (host === "hml.hitchai.online" || host === "www.hml.hitchai.online") {
       return "; Domain=.hml.hitchai.online";
     }
@@ -125,7 +116,6 @@ function deleteHostOnlyCookie(name: string) {
         ? "; Secure"
         : "";
 
-    // host-only delete (sem Domain=)
     document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
   } catch {
     // silencioso
@@ -141,12 +131,10 @@ function setCookie(name: string, value: string, maxAgeSeconds: number) {
 
     const domainAttr = resolveCookieDomainAttr();
 
-    // 1) grava cookie com Domain (quando aplicável)
     document.cookie = `${name}=${encodeURIComponent(
       value
     )}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax${secure}${domainAttr}`;
 
-    // 2) remove duplicata host-only (se existir), mantendo apenas o Domain cookie
     if (domainAttr) {
       deleteHostOnlyCookie(name);
     }
@@ -175,10 +163,6 @@ function writeHitchTrackCookie(track: HitchTrack) {
   );
 }
 
-/**
- * Formato padrão do Meta:
- * fbc = fb.1.<timestamp>.<fbclid>
- */
 function buildFbcFromFbclid(fbclid: string, nowMs: number): string {
   const ts = Math.floor(nowMs / 1000);
   return `fb.1.${ts}.${fbclid}`;
@@ -208,7 +192,6 @@ function hasMarketingParams(sp: URLSearchParams | null): boolean {
 function stripMarketingParamsKeepingFlowParams(
   sp: URLSearchParams | null
 ): string {
-  // mantém apenas os params do funil (não marketing)
   const keep = new URLSearchParams();
 
   const next = sp?.get("next");
@@ -230,9 +213,52 @@ function pickNonNull<T>(
   return incoming != null ? incoming : existing;
 }
 
+function isHitchSignupUrl(v: string | null | undefined): boolean {
+  const s = safeTrim(v ?? null);
+  if (!s) return false;
+
+  try {
+    const u = new URL(s);
+    const host = u.hostname.toLowerCase();
+    const path = u.pathname.toLowerCase();
+
+    const isHitchHost =
+      host === "hitchai.online" ||
+      host === "www.hitchai.online" ||
+      host === "hml.hitchai.online" ||
+      host === "www.hml.hitchai.online";
+
+    return isHitchHost && path.startsWith("/signup");
+  } catch {
+    return false;
+  }
+}
+
+function chooseLandingUrl(
+  existing: string | null | undefined,
+  incoming: string | null | undefined
+): string | null {
+  const ex = safeTrim(existing ?? null);
+  const inc = safeTrim(incoming ?? null);
+
+  if (!ex && !inc) return null;
+  if (!ex && inc) return inc;
+  if (ex && !inc) return ex;
+
+  // se o existente é ruim (/signup do próprio Hitch) e o incoming é externo/correto, substitui
+  if (isHitchSignupUrl(ex) && inc && !isHitchSignupUrl(inc)) {
+    return inc;
+  }
+
+  // se ambos existem, preserva o primeiro bom
+  return ex ?? inc ?? null;
+}
+
 /**
- * Merge seguro: nunca sobrescreve valor existente com null.
- * Também preserva first_seen_at e landing_url do primeiro toque.
+ * Merge seguro:
+ * - nunca sobrescreve campos válidos com null
+ * - preserva first_seen_at
+ * - corrige landing_url quando o cookie antigo guardou /signup do Hitch
  */
 function mergeTrackSafe(
   existing: HitchTrack | null,
@@ -252,8 +278,7 @@ function mergeTrackSafe(
     utm_term: pickNonNull(incoming.utm_term, base.utm_term) ?? null,
     utm_id: pickNonNull(incoming.utm_id, base.utm_id) ?? null,
 
-    // preserva o primeiro toque real (InLead / origem)
-    landing_url: (base.landing_url ?? incoming.landing_url) ?? null,
+    landing_url: chooseLandingUrl(base.landing_url, incoming.landing_url),
     first_seen_at: (base.first_seen_at ?? incoming.first_seen_at) ?? null,
   };
 }
@@ -269,7 +294,9 @@ function resolveLandingUrlFromSignup(
   if (landingUrl) return landingUrl;
 
   const existingLanding = safeTrim(existing?.landing_url ?? null);
-  if (existingLanding) return existingLanding;
+  if (existingLanding && !isHitchSignupUrl(existingLanding)) {
+    return existingLanding;
+  }
 
   if (typeof document !== "undefined") {
     const ref = safeTrim(document.referrer);
@@ -311,17 +338,11 @@ function SignupInner() {
     void markJourney(journey);
   }, [journey]);
 
-  /**
-   * Tracking capture robusto e persistência em cookie.
-   * Importante: não sobrescrever com null após a limpeza da URL.
-   */
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const now = Date.now();
     const existing = readHitchTrackCookie();
-
-    // leitura robusta do momento atual
     const qs = new URLSearchParams(window.location.search);
 
     const fbclid = safeTrim(qs.get("fbclid"));
@@ -332,7 +353,6 @@ function SignupInner() {
     const utm_term = safeTrim(qs.get("utm_term"));
     const utm_id = safeTrim(qs.get("utm_id"));
 
-    // prioridade: query params vindos da InLead -> cookies -> geração local
     const fbp = safeTrim(qs.get("fbp")) ?? safeTrim(getCookie("_fbp"));
     const fbc =
       safeTrim(qs.get("fbc")) ??
@@ -352,11 +372,6 @@ function SignupInner() {
       !!utm_id ||
       !!resolvedLandingUrl;
 
-    /**
-     * Regra anti-wipe:
-     * - se NÃO há marketing params agora e já existe cookie, NÃO escreve nada.
-     * - evita sobrescrever campos com null após router.replace limpar a URL.
-     */
     const shouldWrite = anyMarketing || (!existing && !!fbp);
 
     if (shouldWrite) {
@@ -372,7 +387,6 @@ function SignupInner() {
         utm_term,
         utm_id,
 
-        // ✅ prioridade para src_url/landing_url/referrer; nunca usar signup como origem
         landing_url: resolvedLandingUrl,
         first_seen_at: now,
       };
@@ -381,8 +395,6 @@ function SignupInner() {
       writeHitchTrackCookie(merged);
     }
 
-    // limpa URL para não carregar marketing params no funil
-    // usa sp (Next) para preservar next/journey/email
     if (sp) {
       const spNative = new URLSearchParams(sp.toString());
       if (hasMarketingParams(spNative)) {
@@ -415,12 +427,11 @@ function SignupInner() {
 
     setLoading(true);
     try {
-      // guarda para a etapa de OTP
       try {
         sessionStorage.setItem("signup_pending_email", eMail);
         sessionStorage.setItem("signup_pending_password", password);
         sessionStorage.setItem("signup_pending_next", redirectNext);
-        sessionStorage.setItem("hitch_journey", journey); // debug/apoio client
+        sessionStorage.setItem("hitch_journey", journey);
       } catch {}
 
       const res = await fetch(`${authApi}/register`, {
