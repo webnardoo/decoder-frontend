@@ -611,19 +611,22 @@ export default function PublicPlansClient() {
   <div className="mt-4 flex items-center justify-center">
     <div className="inline-flex rounded-full border border-white/10 bg-white/5 backdrop-blur p-1 gap-2">
       <button
-        className={
-          creditsIsSelected
-            ? "px-5 py-2 rounded-full text-sm text-zinc-100 bg-white/10 border border-white/10"
-            : "px-5 py-2 rounded-full text-sm text-zinc-300 hover:text-zinc-100"
-        }
-        onClick={() => {
-          setTab("credits");
-          setErr(null);
-        }}
-        type="button"
-      >
-        Comprar Créditos
-      </button>
+  className={
+    creditsIsSelected
+      ? "px-5 py-2 rounded-full text-sm text-zinc-100 bg-white/10 border border-white/10"
+      : "px-5 py-2 rounded-full text-sm text-zinc-300 hover:text-zinc-100"
+  }
+  onClick={() => {
+    setTab("credits");
+    setErr(null);
+  }}
+  type="button"
+>
+  <span className="flex flex-col leading-tight">
+    <span>Comprar Créditos</span>
+    <span>Pix</span>
+  </span>
+</button>
 
       <button
         className={
