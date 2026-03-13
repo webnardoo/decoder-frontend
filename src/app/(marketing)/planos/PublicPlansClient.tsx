@@ -624,7 +624,7 @@ export default function PublicPlansClient() {
 >
   <span className="flex flex-col leading-tight">
     <span>Comprar Créditos</span>
-    <span>Pix</span>
+    <span>Com Pix</span>
   </span>
 </button>
 

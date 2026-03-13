@@ -582,7 +582,7 @@ const fbc = cookies.match(/(?:^|;\s*)_fbc=([^;]+)/)?.[1] ?? null;
 >
   <span className="flex flex-col leading-tight">
     <span>Comprar Créditos</span>
-    <span>Pix</span>
+    <span>Com Pix</span>
   </span>
 </button>
 
